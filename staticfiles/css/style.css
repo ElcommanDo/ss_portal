@@ -1,0 +1,91 @@
+/* ------------------------------------------------------------------ */
+/*                              THEMING                              */
+/* ------------------------------------------------------------------ */
+
+/* --- Default (Light) Mode Variables --- */
+:root {
+    --primary-color: #9f9c9c; /* Bright Blue */
+    --secondary-color: #402fd61f; /* Grey/Light Indigo */
+    --background-color: #f8f9fa; /* Very Light Grey/Off-White */
+    --card-bg-color: #ffffff;
+    --text-color: #212529; /* Dark Grey/Black */
+    --shadow-color: rgba(0, 0, 0, 0.1);
+
+    /* Customizing Bootstrap elements for a softer look */
+    --bs-primary: var(--primary-color);
+    --bs-bg-opacity: 1; 
+}
+
+/* --- Dark Mode Variables --- */
+[data-bs-theme="dark"] {
+    --primary-color: #4CAF50; /* A pleasant Green/Teal for contrast */
+    --secondary-color: #335697;
+    --background-color: #121212; /* Dark background */
+    --card-bg-color: #1e1e1e; /* Slightly lighter dark for cards */
+    --text-color: #b2acac;
+    --shadow-color: rgba(255, 255, 255, 0.1);
+
+    /* Customizing Bootstrap dark elements */
+    --bs-primary: var(--primary-color);
+    --bs-body-color: var(--text-color);
+    --bs-body-bg: var(--background-color);
+    --bs-card-bg: var(--card-bg-color);
+    --bs-table-bg: #282828;
+    --bs-table-striped-bg: #323232;
+    --bs-table-hover-bg: #3a3a3a;
+}
+
+/* ------------------------------------------------------------------ */
+/*                              LAYOUT                               */
+/* ------------------------------------------------------------------ */
+
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+    /* INCREASED PADDING: Pushes content down to clear the fixed-top navbar */
+    padding-top: 75px; 
+}
+
+/* Apply colors to common elements */
+.navbar-dark.bg-primary {
+    background-color: var(--primary-color) !important;
+}
+
+.card {
+    background-color: var(--card-bg-color);
+    color: var(--text-color);
+    box-shadow: 0 4px 12px var(--shadow-color) !important;
+    border: none; /* Ensure border is removed for cleaner shadows */
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+/* Specific adjustments for Admin Tables in Dark Mode */
+[data-bs-theme="dark"] .table {
+    --bs-table-color: var(--text-color);
+}
+[data-bs-theme="dark"] .table-dark {
+    --bs-table-bg: #0d0d0d; /* Even darker header */
+}
+
+/* ------------------------------------------------------------------ */
+/*                              CUSTOM UI                            */
+/* ------------------------------------------------------------------ */
+
+/* Style for Admin Quick Links Card Hover Effect */
+.admin-card-link:hover {
+    /* Lifts the card slightly */
+    transform: translateY(-5px) !important; 
+    /* Increases shadow on hover */
+    box-shadow: 0 1rem 3rem rgba(0,0,0,.175) !important; 
+}
+
+/* Responsive Fix: In dark mode, ensure toggled links are readable */
+[data-bs-theme="dark"] .navbar-collapse .nav-link {
+    color: var(--text-color) !important; 
+}
+
+/* Toggler icon color */
+.navbar-toggler .fa-bars {
+    color: white; /* Ensure the icon is visible against the dark navbar */
+}

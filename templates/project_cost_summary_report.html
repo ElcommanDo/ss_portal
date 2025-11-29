@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Report: Project Cost Summary{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
+    <h1><i class="fas fa-hand-holding-usd me-2 text-success"></i> Project Cost Summary Report</h1>
+    <a href="{% url 'reports_dashboard' %}" class="btn btn-secondary btn-lg">
+        <i class="fas fa-arrow-left me-2"></i> Back to Reports
+    </a>
+</div>
+
+<p class="text-muted mb-4">View the combined cost of man-hours and external expenses (ProjectCost) per project.</p>
+
+<!-- --- Filters --- -->
+<div class="card shadow-sm mb-5 animate__animated animate__fadeIn">
+    <div class="card-body">
+        <h5 class="card-title fw-bold">Filter Projects & Time</h5>
+        <form method="GET" class="row g-3">
+            
+            <!-- Time Period Filter -->
+            <div class="col-md-3 col-sm-6">
+                <label for="filter_period" class="form-label">Time Period</label>
+                <select class="form-select" id="filter_period" name="period">
+                    <option value="month" {% if request.GET.period == 'month' %}selected{% endif %}>Current Month</option>
+                    <option value="quarter" {% if request.GET.period == 'quarter' %}selected{% endif %}>Last Quarter</option>
+                    <option value="all" {% if request.GET.period == 'all' %}selected{% endif %}>All Time</option>
+                </select>
+            </div>
+
+            <!-- Project Filter -->
+            <div class="col-md-3 col-sm-6">
+                <label for="filter_project" class="form-label">Project</label>
+                <select class="form-select" id="filter_project" name="project_pk">
+                    <option value="">All Projects</option>
+                    {# Example dynamic list from context #}
+                    {% for project in all_projects %}
+                        <option value="{{ project.pk }}" {% if request.GET.project_pk|stringformat:"s" == project.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ project.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Employee Filter -->
+            <div class="col-md-3 col-sm-6">
+                <label for="filter_employee" class="form-label">Employee</label>
+                <select class="form-select" id="filter_employee" name="user_pk">
+                    <option value="">All Employees</option>
+                    {# Example dynamic list from context #}
+                    {% for user in all_users %}
+                        <option value="{{ user.pk }}" {% if request.GET.user_pk|stringformat:"s" == user.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ user.full_name|default:user.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="col-12 col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-info w-100 me-2"><i class="fas fa-chart-pie me-2"></i> Generate Report</button>
+                <a href="." class="btn btn-secondary"><i class="fas fa-sync-alt"></i> Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- --- Key Metrics --- -->
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="card text-white bg-success shadow h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Total External Costs</h6>
+                <p class="fs-4 fw-bold">{{ total_external_cost|default:"0.00" }} EGP</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-primary shadow h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Total Man-Hour Cost (Estimated)</h6>
+                <p class="fs-4 fw-bold">{{ total_man_hour_cost|default:"0.00" }} EGP</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-dark shadow h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted">GRAND TOTAL PROJECT COST</h6>
+                <p class="fs-4 fw-bold">{{ grand_total_cost|default:"0.00" }} EGP</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- --- Visualization and Detail Table --- -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <h2>Cost Breakdown by Project</h2>
+        <div class="card shadow">
+            <div class="card-body text-center" style="min-height: 300px;">
+                <p class="text-muted pt-5">
+                    [Placeholder for Chart: Project Cost Breakdown (Man-Hours vs. External Costs) - Stacked Bar/Pie Chart]
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <h2>Detailed Project Cost Table</h2>
+        <div class="table-responsive">
+            <table class="table table-hover table-striped shadow-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Project</th>
+                        <th>Man-Hours (h)</th>
+                        <th>Man-Hour Cost (EGP)</th>
+                        <th>External Cost (EGP)</th>
+                        <th>Total Cost (EGP)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {# Loop through project_cost_data from context #}
+                    {% for data in project_cost_data %}
+                    <tr>
+                        <td class="fw-bold">{{ data.project_name }}</td>
+                        <td>{{ data.total_hours|default:"0.00" }}</td>
+                        <td>{{ data.man_hour_cost|default:"0.00" }}</td>
+                        <td class="text-danger">{{ data.external_cost|default:"0.00" }}</td>
+                        <td><span class="fw-bold text-success">{{ data.total_cost|default:"0.00" }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No cost data available for the selected filters.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

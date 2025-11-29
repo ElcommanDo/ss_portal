@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Report: Status & Compliance{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
+    <h1><i class="fas fa-tasks me-2 text-warning"></i> Status & Compliance Report</h1>
+    <a href="{% url 'reports_dashboard' %}" class="btn btn-secondary btn-lg">
+        <i class="fas fa-arrow-left me-2"></i> Back to Reports
+    </a>
+</div>
+
+<p class="text-muted mb-4">Track the compliance rate by monitoring the ratio of approved, pending, and rejected timesheet entries.</p>
+
+<!-- --- Filters --- -->
+<div class="card shadow-sm mb-5 animate__animated animate__fadeIn">
+    <div class="card-body">
+        <h5 class="card-title fw-bold">Filter by Submission Status</h5>
+        <form method="GET" class="row g-3">
+            
+            <!-- Time Period Filter -->
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_period" class="form-label">Time Period</label>
+                <select class="form-select" id="filter_period" name="period">
+                    <option value="week" {% if request.GET.period == 'week' %}selected{% endif %}>Current Week</option>
+                    <option value="month" {% if request.GET.period == 'month' %}selected{% endif %}>Current Month</option>
+                    <option value="custom" {% if request.GET.period == 'custom' %}selected{% endif %}>Custom Range</option>
+                </select>
+            </div>
+
+            <!-- Employee Filter -->
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_employee" class="form-label">Employee / Team</label>
+                <select class="form-select" id="filter_employee" name="user_pk">
+                    <option value="">All Employees</option>
+                    {% for user in all_users %}
+                        <option value="{{ user.pk }}" {% if request.GET.user_pk|stringformat:"s" == user.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ user.full_name|default:user.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="col-12 col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-info w-100 me-2"><i class="fas fa-search me-2"></i> Generate Report</button>
+                <a href="." class="btn btn-secondary"><i class="fas fa-sync-alt"></i> Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- --- Key Metrics --- -->
+<div class="row g-4 mb-5">
+    <div class="col-md-3">
+        <div class="card text-white bg-dark shadow h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Total Entries</h6>
+                <p class="fs-4 fw-bold">{{ total_entries|default:"0" }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success shadow h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Approved Entries (%)</h6>
+                <p class="fs-4 fw-bold">{{ approved_percent|default:"0.00" }}%</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-dark bg-warning shadow h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Pending Entries</h6>
+                <p class="fs-4 fw-bold">{{ pending_count|default:"0" }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger shadow h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Rejected Entries</h6>
+                <p class="fs-4 fw-bold">{{ rejected_count|default:"0" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- --- Visualization and Detail Table --- -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <h2>Status Distribution Chart</h2>
+        <div class="card shadow">
+            <div class="card-body text-center" style="min-height: 300px;">
+                <p class="text-muted pt-5">
+                    [Placeholder for Chart: Pie Chart or Doughnut Chart showing Status Distribution]
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <h2>Employee Compliance Table</h2>
+        <div class="table-responsive">
+            <table class="table table-hover table-striped shadow-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Employee</th>
+                        <th>Total Entries</th>
+                        <th>Approved (%)</th>
+                        <th>Pending (Count)</th>
+                        <th>Rejected (Count)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {# Loop through compliance_data from context #}
+                    {% for data in compliance_data %}
+                    <tr>
+                        <td>{{ data.employee_name }}</td>
+                        <td>{{ data.total_entries }}</td>
+                        <td><span class="fw-bold text-success">{{ data.approved_percent|default:"0.00" }}%</span></td>
+                        <td class="text-warning">{{ data.pending_count|default:"0" }}</td>
+                        <td class="text-danger">{{ data.rejected_count|default:"0" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No compliance data available for the selected filters.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Report: Project Cost Analysis{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
+    <h1><i class="fas fa-dollar-sign me-2 text-primary"></i> Project Cost Report</h1>
+    <a href="{% url 'reports_dashboard' %}" class="btn btn-secondary btn-lg">
+        <i class="fas fa-arrow-left me-2"></i> Back to Reports
+    </a>
+</div>
+
+<p class="text-muted mb-4">Analyze all logged costs against specific projects and employees.</p>
+
+<div class="card shadow-sm mb-5 animate__animated animate__fadeIn">
+    <div class="card-body">
+        <h5 class="card-title fw-bold">Filter Costs</h5>
+        <form method="GET" class="row g-3">
+            
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_project" class="form-label">Project</label>
+                <select class="form-select" id="filter_project" name="project_pk">
+                    <option value="">All Projects</option>
+                    {% for project in all_projects %}
+                        <option value="{{ project.pk }}" {% if request.GET.project_pk|stringformat:"s" == project.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ project.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_employee" class="form-label">Employee</label>
+                <select class="form-select" id="filter_employee" name="user_pk">
+                    <option value="">All Employees</option>
+                    {% for user in all_users %}
+                        <option value="{{ user.pk }}" {% if request.GET.user_pk|stringformat:"s" == user.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ user.full_name|default:user.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-12 col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-info w-100 me-2"><i class="fas fa-filter me-2"></i> Apply Filters</button>
+                <a href="." class="btn btn-secondary w-50"><i class="fas fa-sync-alt"></i> Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-header bg-dark text-white fw-bold">
+        Cost Entries (Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }})
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Project</th>
+                        <th>Cost Type</th>
+                        <th>Employee</th>
+                        <th>Notes</th>
+                        <th class="text-end">Amount ({{ primary_currency }})</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {# Loop through the paginated entries #}
+                    {% for cost in page_obj %}
+                    <tr>
+                        <td>{{ cost.pk }}</td>
+                        <td>{{ cost.project.name }}</td>
+                        <td>{{ cost.cost_type }}</td>
+                        <td>{{ cost.user.full_name|default:cost.user.username }}</td>
+                        <td>{{ cost.notes|truncatechars:50 }}</td>
+                        <td class="text-end fw-bold">
+                            {{ cost.amount|intcomma }} {{ cost.currency }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No cost entries found matching the current filters.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <!-- <tfoot>
+                    <tr class="table-info fw-bold">
+                        <td colspan="5" class="text-end">Total Cost for Filtered Data:</td>
+                        <td class="text-end">
+                            {{ total_cost|intcomma }} {{ primary_currency }}
+                        </td>
+                    </tr>
+                </tfoot> -->
+            </table>
+        </div>
+    </div>
+    
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer">
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center mb-0">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            Previous
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                {% endif %}
+
+                {# Loop through page numbers (simplified to show current, prev, next) #}
+                {% for i in page_obj.paginator.page_range %}
+                    {% if page_obj.number == i %}
+                        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                    {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            Next
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Next</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Timesheet Task{% endblock %}
+
+{% block content %}
+<h1 class="mb-4 animate__animated animate__fadeInDown">📝 Add New Timesheet Task Entry</h1>
+
+<!-- 
+    START: Django Messages Section 
+    This block displays system messages (errors, success, warnings) 
+-->
+{% if messages %}
+<div class="messages mb-4">
+    {% for message in messages %}
+    <!-- 
+        The message.tags variable automatically provides the context (success, error, warning).
+        We use f"{message.tags}" to dynamically set the Bootstrap alert class. 
+    -->
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show animate__animated animate__fadeIn" role="alert">
+        {{ message }}
+        <!-- Close button for dismissible alert -->
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+<!-- END: Django Messages Section -->
+
+
+<div class="card shadow-sm animate__animated animate__fadeInUp">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label for="id_project" class="form-label fw-bold">Project</label>
+                <select class="form-select" id="id_project" name="project" required>
+                    <option selected disabled>Select a Project</option>
+                    {%for project in projects%}
+                    <option value="{{project.pk}}">{{project.name}}</option>
+                    {%endfor%}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="id_task_description" class="form-label fw-bold">Task Description</label>
+                <textarea class="form-control" id="id_task_description" name="task_description" rows="3" placeholder="A brief description of the work completed..." required></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="id_task_type" class="form-label fw-bold">Task Type</label>
+                <select class="form-select mb-3" name="task_type">
+                    <option value="Delivery">Delivery</option>
+                    <option value="Pre-Sale">Pre-Sale</option>
+                </select>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="id_hours" class="form-label fw-bold">Hours Spent</label>
+                    <input type="number" step="0.5" min="0.5" max="24" class="form-control" id="id_hours" name="hours" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <!-- FIX: Ensure 'for' attribute matches 'id' attribute, and both match 'work_date' -->
+                    <label for="id_work_date" class="form-label fw-bold">Date of Task</label>
+                    <!-- CRUCIAL: The name is correct (work_date), and we ensure the ID is the same -->
+                    <input type="date" class="form-control" id="id_work_date" name="work_date" value="{{ today|date:'Y-m-d' }}" required>
+                </div>
+                
+            </div>
+
+            <button type="submit" class="btn btn-success btn-lg mt-3 w-100">
+                <i class="fas fa-save me-2"></i> Save Timesheet Task
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

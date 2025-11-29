@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Report: Public Project Health{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
+    <h1><i class="fas fa-globe-americas me-2 text-danger"></i> Public Project Health Report</h1>
+    <a href="{% url 'reports_dashboard' %}" class="btn btn-secondary btn-lg">
+        <i class="fas fa-arrow-left me-2"></i> Back to Reports
+    </a>
+</div>
+
+<p class="text-muted mb-4">Summary of resource consumption and financial metrics for all projects flagged as public.</p>
+
+<!-- --- Filters --- -->
+<div class="card shadow-sm mb-5 animate__animated animate__fadeIn">
+    <div class="card-body">
+        <h5 class="card-title fw-bold">Filter Public Projects</h5>
+        <form method="GET" class="row g-3">
+            
+            <!-- Time Period Filter -->
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_period" class="form-label">Time Period</label>
+                <select class="form-select" id="filter_period" name="period">
+                    <option value="all" {% if request.GET.period == 'all' %}selected{% endif %}>All Time</option>
+                    <option value="year" {% if request.GET.period == 'year' %}selected{% endif %}>Last 12 Months</option>
+                </select>
+            </div>
+
+            <!-- Project Filter (Limited to public only) -->
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_project" class="form-label">Public Project</label>
+                <select class="form-select" id="filter_project" name="project_pk">
+                    <option value="">All Public Projects</option>
+                    {# Example dynamic list from context (filtered to is_public=True) #}
+                    {% for project in public_projects %}
+                        <option value="{{ project.pk }}" {% if request.GET.project_pk|stringformat:"s" == project.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ project.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="col-12 col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-info w-100 me-2"><i class="fas fa-search me-2"></i> Generate Report</button>
+                <a href="." class="btn btn-secondary"><i class="fas fa-sync-alt"></i> Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- --- Key Metrics --- -->
+<div class="row g-4 mb-5">
+    <div class="col-md-3">
+        <div class="card text-white bg-dark shadow h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Total Public Projects</h6>
+                <p class="fs-4 fw-bold">{{ public_project_count|default:"0" }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-primary shadow h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Total Public Hours Logged</h6>
+                <p class="fs-4 fw-bold">{{ total_public_hours|default:"0.00" }}h</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success shadow h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Total Man-Hour Cost (Est.)</h6>
+                <p class="fs-4 fw-bold">{{ total_public_man_cost|default:"0.00" }} EGP</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger shadow h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Total External Costs</h6>
+                <p class="fs-4 fw-bold">{{ total_public_external_cost|default:"0.00" }} EGP</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- --- Visualization and Detail Table --- -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <h2>Project Status and Budget Consumption</h2>
+        <div class="card shadow">
+            <div class="card-body text-center" style="min-height: 300px;">
+                <p class="text-muted pt-5">
+                    [Placeholder for Chart: Bar Chart comparing total cost per public project]
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <h2>Public Project Financial Details</h2>
+        <div class="table-responsive">
+            <table class="table table-hover table-striped shadow-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Project</th>
+                        <th>Total Hours</th>
+                        <th>Man-Hour Cost</th>
+                        <th>External Cost</th>
+                        <th>Grand Total Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {# Loop through public_project_data from context #}
+                    {% for data in public_project_data %}
+                    <tr>
+                        <td>{{ data.project_name }}</td>
+                        <td>{{ data.total_hours|default:"0.00" }}h</td>
+                        <td>{{ data.man_hour_cost|default:"0.00" }} EGP</td>
+                        <td class="text-danger">{{ data.external_cost|default:"0.00" }} EGP</td>
+                        <td><span class="fw-bold text-success">{{ data.total_cost|default:"0.00" }} EGP</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No public project data found for the selected filters.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

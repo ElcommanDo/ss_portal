@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reports Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-5 animate__animated animate__fadeInDown">
+    <h1><i class="fas fa-chart-bar me-3 text-info"></i> Financial & Operational Reports</h1>
+</div>
+
+<p class="lead text-muted mb-5">
+    Select a report below to gain deeper insights into resource utilization, project costs, and team performance.
+</p>
+
+<!-- Report Cards Grid -->
+<div class="row g-4">
+    
+    <!-- Report 1: Man-Days / Utilization -->
+    <div class="col-md-6 col-lg-4 animate__animated animate__fadeInUp">
+        <a href="{%url 'reports_man_days' %}" onclick="console.log('Navigate to Man-Days/Utilization Report')" class="card text-decoration-none h-100 shadow-lg report-card-link">
+            <div class="card-body p-4 text-center">
+                <i class="fas fa-users-cog fa-4x text-primary mb-3"></i>
+                <h4 class="card-title fw-bold text-dark mt-2">Man-Days & Utilization</h4>
+                <p class="card-text text-muted">
+                    Analyze total hours logged by the team against available capacity and utilization rates.
+                </p>
+            </div>
+        </a>
+    </div>
+
+    <!-- Report 2: Project Cost & Expense Summary -->
+    <div class="col-md-6 col-lg-4 animate__animated animate__fadeInUp animate__delay-0_1s">
+        <a href="{%url 'reports_project_cost_summary' %}" onclick="console.log('Navigate to Project Cost Report')" class="card text-decoration-none h-100 shadow-lg report-card-link">
+            <div class="card-body p-4 text-center">
+                <i class="fas fa-hand-holding-usd fa-4x text-success mb-3"></i>
+                <h4 class="card-title fw-bold text-dark mt-2">Project Cost Summary</h4>
+                <p class="card-text text-muted">
+                    View total costs, including man-hours and external expenses (travel, visa, etc.), per project.
+                </p>
+            </div>
+        </a>
+    </div>
+
+    <!-- Report 3: Timesheet Status Compliance -->
+    <div class="col-md-6 col-lg-4 animate__animated animate__fadeInUp animate__delay-0_2s">
+        <a href="{%url 'reports_status_compliance' %}" onclick="console.log('Navigate to Status Compliance Report')" class="card text-decoration-none h-100 shadow-lg report-card-link">
+            <div class="card-body p-4 text-center">
+                <i class="fas fa-tasks fa-4x text-warning mb-3"></i>
+                <h4 class="card-title fw-bold text-dark mt-2">Status & Compliance</h4>
+                <p class="card-text text-muted">
+                    Track the ratio of approved, pending, and rejected timesheet entries across all users.
+                </p>
+            </div>
+        </a>
+    </div>
+    
+    <!-- Report 4: Employee Performance / Activity -->
+    <div class="col-md-6 col-lg-4 animate__animated animate__fadeInUp animate__delay-0_3s">
+        <a href="{%url 'reports_employee_activity' %}" onclick="console.log('Navigate to Employee Performance Report')" class="card text-decoration-none h-100 shadow-lg report-card-link">
+            <div class="card-body p-4 text-center">
+                <i class="fas fa-user-chart fa-4x text-info mb-3"></i>
+                <h4 class="card-title fw-bold text-dark mt-2">Employee Activity Log</h4>
+                <p class="card-text text-muted">
+                    Detailed breakdown of hours logged per project for specific employees or teams.
+                </p>
+            </div>
+        </a>
+    </div>
+
+
+</div>
+
+<!-- Custom Styles for hover effect -->
+<style>
+    .report-card-link {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .report-card-link:hover {
+        transform: translateY(-8px) !important;
+        box-shadow: 0 1rem 3rem rgba(0,0,0,.175) !important;
+    }
+</style>
+
+{% endblock %}

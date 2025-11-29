@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Timesheet Entries{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
+    <h1><i class="fas fa-list-alt me-2 text-primary"></i> My Logged Tasks</h1>
+    <a href="{% url 'add_timesheet' %}" class="btn btn-success btn-lg">
+        <i class="fas fa-plus-circle me-2"></i> Log New Entry
+    </a>
+</div>
+
+<!-- Display Django Messages -->
+{% if messages %}
+<div class="messages mb-4">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show animate__animated animate__fadeIn" role="alert">
+        {{ message|safe }} 
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<h2>🔍 Filter My Tasks</h2>
+
+<div class="card shadow-sm mb-5 animate__animated animate__fadeIn">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            
+            <!-- Filter by Project -->
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_project" class="form-label fw-bold">Project</label>
+                <select class="form-select" id="filter_project" name="project_pk">
+                    <option value="">All Projects</option>
+                    {% for project in user_projects %}
+                        <option value="{{ project.pk }}" {% if request.GET.project_pk|stringformat:"s" == project.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ project.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Filter by Status -->
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_status" class="form-label fw-bold">Status</label>
+                <select class="form-select" id="filter_status" name="status">
+                    <option value="">All Statuses</option>
+                    {% for key, display in status_choices %}
+                        <option value="{{ key }}" {% if request.GET.status == key %}selected{% endif %}>
+                            {{ display }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Filter by Specific Date (Day) -->
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_date" class="form-label fw-bold">Specific Day</label>
+                <input type="date" class="form-control" id="filter_date" name="work_date" value="{{ request.GET.work_date }}">
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="col-12 d-flex align-items-end justify-content-end">
+                <button type="submit" class="btn btn-info me-2"><i class="fas fa-search me-2"></i> Apply Filters</button>
+                <a href="." class="btn btn-secondary"><i class="fas fa-sync-alt"></i> Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<h2>📄 My Timesheet Entries (Total: {{ page_obj.paginator.count }})</h2>
+
+<div class="table-responsive animate__animated animate__fadeInUp">
+    <table class="table table-hover table-striped shadow-sm align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Date</th>
+                <th>Project</th>
+                <th>Hours</th>
+                <th>Task Type</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {# Loop over individual TimesheetEntry objects #}
+            {% for entry in page_obj.object_list %}
+            <tr>
+                <td><i class="far fa-calendar-alt me-1"></i> {{ entry.work_date|date:"M d, Y" }}</td>
+                <td>{{ entry.project.name }}</td>
+                <td class="fw-bold text-primary">{{ entry.hours }}h</td>
+                <td>
+                    {% if entry.task_type == 'Delivery' %}
+                        <span class="badge bg-primary">{{ entry.task_type }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ entry.task_type }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ entry.task_description|truncatechars:50 }}</td>
+                <td>
+                    {% if entry.status == 'APPROVED' %}
+                        <span class="badge bg-success">Approved</span>
+                    {% elif entry.status == 'REJECTED' %}
+                        <span class="badge bg-danger">Rejected</span>
+                    {% elif entry.status == 'Inprogress' or entry.status == 'PENDING' %}
+                        <span class="badge bg-warning text-dark">Pending</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ entry.status|title }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {# You would typically link to an edit/view modal or detail page here #}
+                    <button type="button" class="btn btn-sm btn-outline-info" 
+                            onclick="console.log('View entry detail for {{ entry.pk }}')">
+                            <i class="fas fa-eye"></i> View
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">You have not logged any tasks yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% comment %} Pagination Controls (Reused logic) {% endcomment %}
+{% if page_obj.has_other_pages %}
+<nav aria-label="Timesheet Page Navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% with current_params=request.GET.urlencode|cut:"&page="|urlencode %}
+
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ current_params }}">&laquo; Previous</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">&laquo; Previous</span></li>
+        {% endif %}
+
+        {% for i in page_obj.paginator.page_range %}
+            {% if page_obj.number == i %}
+                <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+            {% else %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ i }}&{{ current_params }}">{{ i }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ current_params }}">Next &raquo;</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
+        {% endif %}
+        
+        {% endwith %}
+    </ul>
+</nav>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% comment %} 
+    NOTE: The logic for getting unique projects in the template (using dictsort and unique)
+    requires the 'unique' filter, which is not built-in to standard Django templates.
+    If you encounter a 'unique' filter error, you must either:
+    1. Write a custom template filter (recommended: see previous suggestion).
+    2. Use django-jinja or similar template engine.
+    For this example, we assume you have added a 'unique' filter or you will create one. 
+    If not, you can replace the project logic with simple iteration over all related tasks 
+    and manually prevent duplicates (less efficient).
+{% endcomment %}
+
+{% block title %}Timesheet Summary Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
+    <h1><i class="fas fa-clock me-2"></i> Timesheet Summary Dashboard</h1>
+    
+         <a href="{% url 'add_timesheet' %}" class="btn btn-primary btn-lg" >➕ Log New Entry</a>
+           
+</div>
+
+{% if messages %}
+<div class="messages mb-4">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show animate__animated animate__fadeIn" role="alert">
+        {{ message|safe }} 
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+📊 Timesheet Filters & Search
+
+<div class="card shadow-sm mb-5 animate__animated animate__fadeIn">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_employee" class="form-label fw-bold">Employee</label>
+                <select class="form-select" id="filter_employee" name="user_pk">
+                    <option value="">All Employees</option>
+                    {% comment %} Assuming 'all_users' is passed from the view {% endcomment %}
+                    {% for user in all_users %}
+                        <option value="{{ user.pk }}" {% if request.GET.user_pk|stringformat:"s" == user.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ user.full_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_team" class="form-label fw-bold">Team</label>
+                <select class="form-select" id="filter_team" name="team_pk">
+                    <option value="">All Teams</option>
+                    {% comment %} Assuming 'all_teams' is passed from the view {% endcomment %}
+                    {% for team in all_teams %}
+                        <option value="{{ team.pk }}" {% if request.GET.team_pk|stringformat:"s" == team.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ team.title }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_project" class="form-label fw-bold">Project</label>
+                <select class="form-select" id="filter_project" name="project_pk">
+                    <option value="">All Projects</option>
+                    {% comment %} Assuming 'all_projects' is passed from the view {% endcomment %}
+                    {% for project in all_projects %}
+                        <option value="{{ project.pk }}" {% if request.GET.project_pk|stringformat:"s" == project.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ project.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_status" class="form-label fw-bold">Status</label>
+                <select class="form-select" id="filter_status" name="status">
+                    <option value="">All Statuses (Entries)</option>
+                    {% comment %} TimesheetEntry.STATUS_CHOICES must be available in the context {% endcomment %}
+                    {% for key, display in status_choices %}
+                        <option value="{{ key }}" {% if request.GET.status == key %}selected{% endif %}>
+                            {{ display }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_month" class="form-label fw-bold">Month / Year</label>
+                <input type="month" class="form-control" id="filter_month" name="month_year" value="{{ request.GET.month_year }}">
+            </div>
+
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_date" class="form-label fw-bold">Specific Day</label>
+                <input type="date" class="form-control" id="filter_date" name="work_date" value="{{ request.GET.work_date }}">
+            </div>
+            
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_week" class="form-label fw-bold">Week Start Date</label>
+                <input type="date" class="form-control" id="filter_week" name="week_start_date" value="{{ request.GET.week_start_date }}">
+                <small class="text-muted">Filters the Timesheet date range.</small>
+            </div>
+
+            <div class="col-12 col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-info w-100 me-2"><i class="fas fa-search me-2"></i> Apply Filters</button>
+                <a href="." class="btn btn-secondary"><i class="fas fa-sync-alt"></i> Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+🧾 Timesheet Summaries (Total: {{ page_obj.paginator.count }})
+
+<div class="table-responsive animate__animated animate__fadeInUp">
+    <table class="table table-hover table-striped shadow-sm align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Work Date</th>
+                <th>Employee</th>
+                <th>Total Hours</th>
+                <th>Projects Involved</th>
+                <th>Status Snapshot</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {# Loop over Timesheet objects, not TimesheetEntry objects #}
+            {% for timesheet in page_obj.object_list %}
+            <tr>
+                <td class="fw-bold">
+                    {# Use Timesheet PK for linking to a detail view (assuming 'timesheet_detail' URL exists) #}
+                    <a href="{%url 'my_timesheet_entries' timesheet.pk %}" class="text-decoration-none text-primary timesheet-link" 
+                        data-timesheet-id="{{ timesheet.pk }}"
+                        onclick="console.log('Navigate to Timesheet Detail: {{ timesheet.pk }}')">
+                        {{ timesheet.pk }}
+                    </a>
+                </td>
+                <td><i class="far fa-calendar-alt me-1"></i> {{ timesheet.date|date:"M d, Y" }}</td>
+                <td>{{ timesheet.user.full_name }}</td>
+                
+                {# Display the annotated Total Hours #}
+                <td class="fw-bold text-info">
+                    <i class="far fa-hourglass-half me-1"></i> {{ timesheet.total_hours|default:"0.00" }}h
+                </td>
+                
+                <td>
+                    {# Collect and display unique projects from related entries (tasks) #}
+                    {# NOTE: Requires a custom 'unique' filter or similar logic, or replace with custom filter #}
+                    {% comment %} Iterating over all related entries and getting unique project names {% endcomment %}
+                    
+                    {% for entry in timesheet.tasks.all %}
+                        {% if not entry.project.name in displayed_projects %}
+                            <span class="badge bg-secondary me-1 mb-1">{{ entry.project.name }}</span>
+                            {% comment %} Simulating a 'set' to track displayed projects (requires a context processor or a custom tag for true uniqueness) {% endcomment %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {% comment %} 
+                    -- Safest template logic (if you create a template tag/filter): --
+                    <small class="text-muted">{{ timesheet|get_project_names|default:"N/A" }}</small>
+                    {% endcomment %}
+                </td>
+                
+             <td>
+                    {# Display the simple summary_status calculated in the view #}
+                    {% if timesheet.summary_status == 'REJECTED' %}
+                        <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> Rejected</span>
+                    {% elif timesheet.summary_status == 'PENDING' %}
+                        <span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half me-1"></i> Pending Review</span>
+                    {% elif timesheet.summary_status == 'APPROVED' %}
+                        <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Fully Approved</span>
+                    {% else %}
+                        {# This catches 'MIXED' or any other default status #}
+                        <span class="badge bg-primary">Mixed/Completed</span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    {# Action to view all entries for this specific date/user timesheet #}
+                    <button type="button" class="btn btn-sm btn-outline-info" 
+                            onclick="console.log('View detail for timesheet {{ timesheet.pk }}')">
+                            <i class="fas fa-eye"></i> Entries
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center text-muted">No timesheet summaries found matching the current filters.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% comment %} START: PAGINATION CONTROLS {% endcomment %}
+{% if page_obj.has_other_pages %}
+<nav aria-label="Timesheet Page Navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% comment %} Helper to preserve all current GET parameters across pages {% endcomment %}
+        {% with current_params=request.GET.urlencode|cut:"&page="|urlencode %}
+
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ current_params }}">&laquo; Previous</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">&laquo; Previous</span></li>
+        {% endif %}
+
+        {% for i in page_obj.paginator.page_range %}
+            {% if page_obj.number == i %}
+                <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+            {% else %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ i }}&{{ current_params }}">{{ i }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ current_params }}">Next &raquo;</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
+        {% endif %}
+        
+        {% endwith %}
+    </ul>
+</nav>
+{% endif %}
+{% comment %} END: PAGINATION CONTROLS {% endcomment %}
+
+<div class="modal fade" id="createEntryModal" tabindex="-1" aria-labelledby="createEntryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <a href="{% url 'add_timesheet' %}" class="modal-title" >➕ Log New Timesheet Entry</a>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Form content for logging hours will go here (Date, Project, Hours, Description).</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Entry</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

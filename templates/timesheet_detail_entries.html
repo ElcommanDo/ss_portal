@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Timesheet Detail: {{ timesheet.pk }}{% endblock %}
+
+{% block content %}
+
+<!-- Header and Summary -->
+<div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
+    <h1><i class="fas fa-list-alt me-2 text-primary"></i> Entries for Timesheet #{{ timesheet.pk }}</h1>
+    <a href="{% url 'timesheet' %}" class="btn btn-secondary btn-lg">
+        <i class="fas fa-arrow-left me-2"></i> Back to Logs
+    </a>
+</div>
+
+{# --- OWNER CHECK AND WARNING --- #}
+{% if timesheet.user != request.user %}
+    <div class="alert alert-warning animate__animated animate__fadeIn mb-4 shadow-sm" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i> 
+        <strong>Warning:</strong> You are viewing a Timesheet created by 
+        <span class="fw-bold">{{ timesheet.user.full_name|default:timesheet.user.username }}</span>. 
+        You are not the owner of this log. Changes may require appropriate permissions.
+    </div>
+{% endif %}
+
+<div class="card shadow-sm mb-5 animate__animated animate__fadeIn">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Daily Log Summary</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <p class="mb-1"><strong>Employee:</strong> {{ timesheet.user.full_name|default:timesheet.user.username }}</p>
+                <p class="mb-0"><strong>Date:</strong> {{ timesheet.date|date:"M d, Y" }}</p>
+            </div>
+            <div class="col-md-4">
+                <p class="mb-1"><strong>Total Tasks:</strong> <span class="fw-bold text-primary">{{ entries|length }}</span></p>
+                <p class="mb-0"><strong>Total Hours:</strong> <span class="fw-bold text-success">{{ total_hours|default:"0.00" }}h</span></p>
+            </div>
+            <div class="col-md-4 text-end d-flex align-items-center justify-content-end">
+            
+            </div>
+        </div>
+    </div>
+</div>
+
+🧾 Individual Timesheet Entries (Tasks)
+
+<div class="table-responsive animate__animated animate__fadeInUp">
+    <table class="table table-hover table-striped shadow-sm align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Entry ID</th>
+                <th>Project</th>
+                <th>Task Type</th>
+                <th>Hours</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr>
+                <td class="fw-bold">{{ entry.pk }}</td>
+                <td>{{ entry.project.name }}</td>
+                <td>
+                    {% if entry.task_type == 'Delivery' %}
+                        <span class="badge bg-primary">{{ entry.task_type }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ entry.task_type }}</span>
+                    {% endif %}
+                </td>
+                <td><i class="far fa-hourglass-half me-1"></i> {{ entry.hours }}h</td>
+                <td>{{ entry.task_description|truncatechars:70 }}</td>
+                <td>
+                    {% if entry.status == 'APPROVED' %}
+                        <span class="badge bg-success">Approved</span>
+                    {% elif entry.status == 'REJECTED' %}
+                        <span class="badge bg-danger">Rejected</span>
+                    {% elif entry.status == 'Inprogress' or entry.status == 'PENDING' %}
+                        <span class="badge bg-warning text-dark">Pending</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ entry.status|title }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ entry.created_at|date:"M d, H:i" }}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-info" 
+                            onclick="console.log('View full entry detail for {{ entry.pk }}')">
+                            <i class="fas fa-eye"></i> View
+                    </button>
+                    {# Add Edit/Delete buttons here if appropriate for the user's role #}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">No individual tasks found for this daily log.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

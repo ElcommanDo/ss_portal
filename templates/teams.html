@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+
+{% block title %}Team Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
+    <h1>👤 Team Management</h1>
+    {%if request.user.role != "leader" %}
+    <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#createteamModal">
+        <i class="fas fa-users-cog me-2"></i> Create New Team
+    </button>
+    {%endif%}
+    
+</div>
+
+{% if messages %}
+<div class="messages mb-4">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show animate__animated animate__fadeIn" role="alert">
+        {{ message|safe }} 
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+
+<div class="table-responsive animate__animated animate__fadeInUp">
+    <table class="table table-hover table-striped shadow-sm">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Team Lead</th>
+                
+                <th>Employees</th>
+                <th>Actions</th>
+                
+              </tr>
+        </thead>
+        <tbody>
+            {% for team in page_obj.object_list %}
+            <tr id="team-row-{{ team.pk }}" 
+                data-team-id="{{ team.pk }}"
+                data-title="{{ team.title }}"
+               > 
+                <td class="fw-bold">
+                <a href="{%url 'team_members' team.pk %}">
+                    {{ team.pk }}
+                </a>
+                </td>
+                <td>{{ team.title }}</td>
+                <td>{{ team.team_lead }}</td>
+                
+                <td>
+                    {{team.employees.all|length}}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-info me-2" 
+                            onclick="openEditTeamModal(
+                                '{{ team.pk }}', 
+                                '{{ team.title|escapejs }}',
+                                '{{ team.team_lead|escapejs }}'
+                            )"
+                            data-bs-toggle="modal" data-bs-target="#editteamModal">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger"
+                            onclick="openDeactivateModal(
+                                '{{ team.pk }}', 
+                                '{{ team.title|escapejs }}'
+                            )">
+                    Delete   
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center text-muted">No teams found. Use the "Create New Team" button to start.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% comment %} START: PAGINATION CONTROLS {% endcomment %}
+{% if page_obj.has_other_pages %}
+<nav aria-label="team Page Navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo; Previous</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">&laquo; Previous</span></li>
+        {% endif %}
+
+        {% for i in page_obj.paginator.page_range %}
+            {% if page_obj.number == i %}
+                <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+            {% else %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next &raquo;</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% comment %} END: PAGINATION CONTROLS {% endcomment %}
+
+
+<div class="modal fade" id="createteamModal" tabindex="-1" aria-labelledby="createteamModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="createteamModalLabel">➕ Create New Team </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form method="post" action="{% url 'team_create' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="id_teamname" class="form-label fw-bold">Team Title</label>
+                        <input type="text" class="form-control" id="id_teamname" name="title" required placeholder="eg:Technical..">
+                    </div>
+                    <div class="mb-3">
+                        <label for="team_lead" class="form-label fw-bold">Team Lead</label>
+                        <select required class="form-select" name="team_lead">
+                                <option value="" disabled selected>----</option>    
+                            {%for user in users%}
+                                <option value="{{user.full_name}}">
+                                        {{user.full_name}}
+                                </option>
+                                {%endfor%}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Create team</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editteamModal" tabindex="-1" aria-labelledby="editteamModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="editteamModalLabel">✏️ Edit Team Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form method="post" id="editteamForm" action=""> 
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p class="text-muted">Changes here will overwrite current team data.</p>
+                    
+                    <div class="mb-3">
+                        <label for="edit_id_full_name" class="form-label fw-bold">Title</label>
+                        <input type="text" class="form-control" id="edit_id_full_name" name="title" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit_id_team_lead" class="form-label fw-bold">Team Lead</label>
+                        <select required class="form-select" name="team_lead" id="edit_id_team_lead">
+                            {% for user in users %}
+                                <option value="{{ user.full_name }}">
+                                    {{ user.full_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="confirmDeactivateModal" tabindex="-1" aria-labelledby="confirmDeactivateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="confirmDeactivateModalLabel">⚠️ Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form method="post" id="confirmDeactivateForm"> 
+                {% csrf_token %}
+                <div class="modal-body text-center">
+                    <p id="confirmMessage" class="fw-bold"></p>
+                    <p class="text-muted">This action can not be reversed later.</p>
+                    
+                    <input type="hidden" id="confirm_team_id" name="team_id">
+                    <input type="hidden" id="confirm_action" name="new_status_action">
+                </div>
+
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="confirmActionButton" class="btn btn-danger">Confirm Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const editTeamModal = document.getElementById('editteamModal');
+        const editTeamForm = document.getElementById('editteamForm');
+        const teamLeadSelect = document.getElementById('edit_id_team_lead');
+        
+        // **CORRECTED FUNCTION NAME and LOGIC FOR EDIT MODAL**
+        // Function to call when an 'Edit' button is clicked
+        window.openEditTeamModal = function(teamId, teamTitle, currentTeamLeadName) {
+            
+            // 1. Set the form action URL (assuming your URL is like /team/edit/1/)
+            // **NOTE:** Ensure your Django URL configuration matches this pattern.
+            editTeamForm.action = `/team/edit/${teamId}/`; 
+
+            // 2. Set the team title
+            document.getElementById('edit_id_full_name').value = teamTitle;
+
+            // 3. Set the current team lead in the select box
+            // This is crucial for pre-selecting the current leader.
+            for (let i = 0; i < teamLeadSelect.options.length; i++) {
+                // Remove the `|escapejs` from the option value for a clean comparison
+                if (teamLeadSelect.options[i].value.trim() === currentTeamLeadName.trim()) {
+                    teamLeadSelect.options[i].selected = true;
+                } else {
+                    teamLeadSelect.options[i].selected = false;
+                }
+            }
+        }
+    });
+</script>
+<script>
+    // **CLEANED UP and CORRECTED LOGIC FOR DELETE/DEACTIVATE MODAL**
+    
+    /**
+     * Opens the Delete Confirmation modal.
+     * The original code seems to be repurposed from Deactivate/Activate to a simple Delete.
+     * I've adjusted the text to reflect a simple 'Delete' action.
+     */
+    function openDeactivateModal(teamId, teamTitle) {
+        
+        const actionButton = document.getElementById('confirmActionButton');
+        actionButton.textContent = `Confirm Delete`;
+        actionButton.className = `btn btn-danger`;
+        
+        // Set the confirmation message
+        document.getElementById('confirmMessage').innerHTML = 
+            `Are you sure you want to **delete** the team: <strong>${teamTitle}</strong>?`;
+            
+        // Set the hidden input fields for the form submission
+        document.getElementById('confirm_team_id').value = teamId;
+        // The action value might be unused if the delete view only uses the PK from the URL
+        // but it's kept for completeness.
+        document.getElementById('confirm_action').value = 'Delete'; 
+        
+        const deactivateModal = new bootstrap.Modal(document.getElementById('confirmDeactivateModal'));
+        deactivateModal.show();
+    }
+
+    // Initialize logic on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. New team Modal Logic (Removed unused password generation functions)
+        const createteamModal = document.getElementById('createteamModal');
+        if (createteamModal) {
+            createteamModal.addEventListener('shown.bs.modal', function () {
+                document.getElementById('id_teamname').focus(); 
+            });
+        }
+        
+        // 2. Setup the confirmation form submission (Handles Delete)
+        document.getElementById('confirmDeactivateForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = this;
+            const teamId = document.getElementById('confirm_team_id').value;
+            
+            // Set the form action dynamically using the URL configuration path: /team/delete/<int:pk>/
+            // **NOTE:** Ensure your Django URL configuration matches this pattern.
+            form.action = `/team/delete/${teamId}/`; 
+
+            // Must use a direct submit to ensure all data is posted
+            form.submit();
+        });
+    });
+</script>
+{% endblock %}

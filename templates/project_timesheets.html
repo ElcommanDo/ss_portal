@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Project: {{ project.name }} - Timesheet Logs{% endblock %}
+
+{% block content %}
+
+<!-- Header and Project Details -->
+<div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
+    <h1><i class="fas fa-briefcase me-2 text-warning"></i> Timesheet Logs for: {{ project.name }}</h1>
+    <a href="{% url 'projects' %}" class="btn btn-secondary btn-lg">
+        <i class="fas fa-arrow-left me-2"></i> Back to Projects
+    </a>
+</div>
+
+<div class="card shadow-sm mb-5 animate__animated animate__fadeIn">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-0"><strong>Description:</strong> {{ project.description|truncatechars:100 }}</p>
+            </div>
+            <div class="col-md-6 text-end">
+                {# project_total_hours comes from the view, calculated only for this project's entries #}
+                <h4 class="text-primary mb-0">Total Logged Hours (Project): 
+                    <span class="fw-bold">{{ project_total_hours|default:"0.00" }}h</span>
+                </h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+📊 Project Time Filters
+
+<div class="card shadow-sm mb-5 animate__animated animate__fadeIn">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            
+            <!-- Filter by Employee -->
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_employee" class="form-label fw-bold">Employee</label>
+                <select class="form-select" id="filter_employee" name="user_pk">
+                    <option value="">All Employees</option>
+                    {# all_users_on_project passed from the view #}
+                    {% for user in all_users_on_project %}
+                        <option value="{{ user.pk }}" {% if request.GET.user_pk|stringformat:"s" == user.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ user.full_name|default:user.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Filter by Status (Applies to individual entries within the Timesheet) -->
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_status" class="form-label fw-bold">Entry Status</label>
+                <select class="form-select" id="filter_status" name="status">
+                    <option value="">All Entry Statuses</option>
+                    {# status_choices passed from the view #}
+                    {% for key, display in status_choices %}
+                        <option value="{{ key }}" {% if request.GET.status == key %}selected{% endif %}>
+                            {{ display }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Filter by Date Range (Start) -->
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_start_date" class="form-label fw-bold">Start Date</label>
+                <input type="date" class="form-control" id="filter_start_date" name="start_date" value="{{ request.GET.start_date }}">
+            </div>
+
+            <!-- Filter by Date Range (End) -->
+            <div class="col-md-4 col-sm-6">
+                <label for="filter_end_date" class="form-label fw-bold">End Date</label>
+                <input type="date" class="form-control" id="filter_end_date" name="end_date" value="{{ request.GET.end_date }}">
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="col-12 col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-info w-100 me-2"><i class="fas fa-filter me-2"></i> Apply Filters</button>
+                <a href="." class="btn btn-secondary w-50"><i class="fas fa-sync-alt"></i> Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+🧾 Daily Timesheets Logged Against {{ project.name }} (Total: {{ page_obj.paginator.count }})
+
+<div class="table-responsive animate__animated animate__fadeInUp">
+    <table class="table table-hover table-striped shadow-sm align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Timesheet ID</th>
+                <th>Work Date</th>
+                <th>Employee</th>
+                <th>Total Hours (Daily Log)</th>
+                <th>Projects Involved (Daily Log)</th>
+                <th>Summary Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {# Loop over aggregated Timesheet objects (page_obj contains Timesheet records) #}
+            {% for timesheet in page_obj.object_list %}
+            <tr>
+                <td class="fw-bold">
+                    {# Link to the page showing all TimesheetEntry records for this daily Timesheet #}
+                    <a href="{% url 'timesheet_detail_entries' pk=timesheet.pk %}" class="text-decoration-none text-primary timesheet-link">
+                        {{ timesheet.pk }}
+                    </a>
+                </td>
+                <td><i class="far fa-calendar-alt me-1"></i> {{ timesheet.date|date:"M d, Y" }}</td>
+                <td>{{ timesheet.user.full_name|default:timesheet.user.username }}</td>
+                
+                {# total_hours is the aggregated total for all tasks in this daily log (from the view's annotation) #}
+                <td class="fw-bold text-info">
+                    <i class="far fa-hourglass-half me-1"></i> {{ timesheet.total_hours|default:"0.00" }}h
+                </td>
+                
+                <td>
+                    {# Collect and display unique project names from ALL entries in this timesheet #}
+                    {% with current_project_id=project.pk %}
+                        {% for entry in timesheet.tasks.all %}
+                            {# This template logic is an attempt to list unique projects within a standard loop #}
+                            {% if entry.project.name != entry.project_previous_name %}
+                                <span class="badge 
+                                    {% if entry.project.pk == current_project_id %} bg-warning text-dark 
+                                    {% else %} bg-secondary 
+                                    {% endif %} 
+                                    me-1 mb-1">
+                                    {{ entry.project.name }}
+                                </span>
+                            {% endif %}
+                            {% with entry.project.name as entry.project_previous_name %}{% endwith %}
+                        {% endfor %}
+                    {% endwith %}
+                    <small class="text-muted d-block mt-1">
+                        (Highlighted: Current Project)
+                    </small>
+                </td>
+                
+                <td>
+                    {# summary_status is the calculated status from the view (REJECTED, PENDING, APPROVED, MIXED) #}
+                    {% if timesheet.summary_status == 'REJECTED' %}
+                        <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> Rejected</span>
+                    {% elif timesheet.summary_status == 'PENDING' %}
+                        <span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half me-1"></i> Pending Review</span>
+                    {% elif timesheet.summary_status == 'APPROVED' %}
+                        <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Fully Approved</span>
+                    {% else %}
+                        <span class="badge bg-primary">Mixed/Other</span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    {# Link to the page showing all TimesheetEntry records for this daily Timesheet #}
+                    <a href="{% url 'timesheet_detail_entries' pk=timesheet.pk %}" class="btn btn-sm btn-outline-info">
+                        <i class="fas fa-list-alt"></i> View Entries
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">No daily timesheet logs found that include entries for this project.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% comment %} START: PAGINATION CONTROLS {% endcomment %}
+{% if page_obj.has_other_pages %}
+<nav aria-label="Timesheet Page Navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% with current_params=request.GET.urlencode|cut:"&page="|urlencode %}
+
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ current_params }}">&laquo; Previous</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">&laquo; Previous</span></li>
+        {% endif %}
+
+        {% for i in page_obj.paginator.page_range %}
+            {% if page_obj.number == i %}
+                <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+            {% else %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ i }}&{{ current_params }}">{{ i }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ current_params }}">Next &raquo;</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
+        {% endif %}
+        
+        {% endwith %}
+    </ul>
+</nav>
+{% endif %}
+{% comment %} END: PAGINATION CONTROLS {% endcomment %}
+
+<!-- Placeholder Modal for new entry -->
+<div class="modal fade" id="createEntryModal" tabindex="-1" aria-labelledby="createEntryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="createEntryModalLabel">➕ Log New Timesheet Entry</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Form content for logging hours will go here (Date, Project, Hours, Description).</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Entry</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

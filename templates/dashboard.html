@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<h1 class="mb-4 animate__animated animate__fadeInDown">
+    {% if request.user.is_staff %}
+        <i class="fas fa-crown me-2 text-warning"></i> Admin Control Panel
+    {% else %}
+        <i class="fas fa-user-clock me-2 text-primary"></i> My Timesheet Overview
+    {% endif %}
+</h1>
+
+{% if messages %}
+<div class="messages mb-4">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show animate__animated animate__fadeIn" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+
+<!-- ============================================== -->
+<!--           REGULAR USER DASHBOARD VIEW          -->
+<!-- ============================================== -->
+{% if not request.user.is_staff %}
+    
+    <!-- Quick Log Button placed ABOVE the summary cards -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📈 My Summary & Navigation</h2>
+        <a href="{% url 'add_timesheet' %}" class="btn btn-success btn-lg rounded-pill px-4 py-2 shadow animate__animated animate__pulse animate__slow">
+            <i class="fas fa-plus me-2"></i> Log New Time Entry
+        </a>
+    </div>
+
+    <div class="row g-4 mt-2">
+        
+        <!-- Card 1: Total Hours This Week (Metric) -->
+        <div class="col-md-4 animate__animated animate__fadeInRight">
+            <div class="card text-white bg-primary shadow rounded-3">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-clock me-2"></i> Total Hours This Week</h5>
+                    {# Assuming 'weekly_hours' is passed from the view #}
+                    <p class="card-text fs-2">{{ weekly_hours|default:"0.0" }}h</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Card 2: Review My Timesheets (LINK CARD) -->
+        <div class="col-md-4 animate__animated animate__fadeInRight animate__delay-0_2s">
+            <a href="{%url 'user_timesheets'  %}" class="card text-decoration-none shadow-lg border-0 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-calendar-check fa-3x text-info mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">Review My Timesheets</h5>
+                </div>
+            </a>
+        </div>
+        
+        <!-- Card 3: Your Role (Metric) -->
+        <div class="col-md-4 animate__animated animate__fadeInRight animate__delay-0_4s">
+            <div class="card text-white bg-secondary shadow rounded-3">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-user-tag me-2"></i> Your Role</h5>
+                    <p class="card-text fs-2">{{ request.user.get_role_display|default:"Employee" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<!-- ============================================== -->
+<!--              ADMIN DASHBOARD VIEW              -->
+<!-- ============================================== -->
+{% else %}
+    
+    <h2>Admin Quick Links</h2>
+
+    <div class="row g-4 mt-2">
+        
+        <div class="col-md-6 col-lg-3 animate__animated animate__fadeInUp">
+            <a href="{% url 'users' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">Manage Users</h5>
+                    <p class="card-text text-muted small">View & manage all system users.</p>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-6 col-lg-3 animate__animated animate__fadeInUp animate__delay-0_1s">
+            <a href="{% url 'teams' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-people-group fa-3x text-info mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">Manage Teams</h5>
+                    <p class="card-text text-muted small">View & manage all system teams.</p>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-6 col-lg-3 animate__animated animate__fadeInUp animate__delay-0_2s">
+            {# Admin link to the Global Timesheet Review Page #}
+            <a href="{% url 'timesheet' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-calendar-check fa-3x text-success mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">Review Timesheets</h5>
+                    <p class="card-text text-muted small">Approve, reject, and filter global entries.</p>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-6 col-lg-3 animate__animated animate__fadeInUp animate__delay-0_3s">
+            <a href="{% url 'projects' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-briefcase fa-3x text-warning mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">Manage Projects</h5>
+                    <p class="card-text text-muted small">Create and edit project details.</p>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-6 col-lg-3 animate__animated animate__fadeInUp animate__delay-0_4s">
+            <a href="{%url 'reports_dashboard' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-chart-bar fa-3x text-info mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">View Reports</h5>
+                    <p class="card-text text-muted small">Access analytics and exports.</p>
+                </div>
+            </a>
+        </div>
+        {%if request.user.role != 'leader' %}
+        <div class="col-md-6 col-lg-3 animate__animated animate__fadeInUp animate__delay-0_4s">
+            <a href="{%url 'download_sqlite' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-database fa-3x text-danger mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">Database Backup</h5>
+                    <p class="card-text text-muted small">Securely back up system data.</p>
+
+                </div>
+            </a>
+        </div>
+        {%endif%}
+    </div>
+        
+    <hr>
+    
+    <h2>📊 Timesheet Stats Overview</h2>
+    <div class="row mt-3">
+     
+        <div class="col-md-6 mb-4">
+            <div class="card bg-light shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-muted"><i class="fas fa-calendar-day me-2"></i> Entries Today</h5>
+                    <p class="card-text fs-3 fw-bold text-primary">{{ entries_today_count|default:"0" }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card bg-light shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-muted"><i class="fas fa-user-check me-2"></i> Active Users</h5>
+                    <p class="card-text fs-3 fw-bold text-success">{{ active_users_count|default:"0" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endif %}
+
+<style>
+    /* Ensures hover effect is applied to the link container */
+    .admin-card-link {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .admin-card-link:hover {
+        transform: translateY(-5px) !important;
+        box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important;
+    }
+    
+    /* Ensure the non-link cards in the user view look consistent too */
+    .row.g-4 .card:not(.admin-card-link) {
+        height: 100%; /* Keeps all cards in the row the same height */
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Report: Employee Activity Log{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
+    <h1><i class="fas fa-user-chart me-2 text-info"></i> Employee Activity Log Report</h1>
+    <a href="{% url 'reports_dashboard' %}" class="btn btn-secondary btn-lg">
+        <i class="fas fa-arrow-left me-2"></i> Back to Reports
+    </a>
+</div>
+
+<p class="text-muted mb-4">Detailed breakdown of hours logged by employees across different projects.</p>
+
+<!-- --- Filters --- -->
+<div class="card shadow-sm mb-5 animate__animated animate__fadeIn">
+    <div class="card-body">
+        <h5 class="card-title fw-bold">Filter Activity</h5>
+        <form method="GET" class="row g-3">
+            
+            <!-- Time Period Filter -->
+            <div class="col-md-3 col-sm-6">
+                <label for="filter_period" class="form-label">Time Period</label>
+                <select class="form-select" id="filter_period" name="period">
+                    <option value="month" {% if request.GET.period == 'month' %}selected{% endif %}>Current Month</option>
+                    <option value="quarter" {% if request.GET.period == 'quarter' %}selected{% endif %}>Last Quarter</option>
+                </select>
+            </div>
+
+            <!-- Employee Filter (Required) -->
+            <div class="col-md-3 col-sm-6">
+                <label for="filter_employee" class="form-label">Select Employee</label>
+                <select class="form-select" id="filter_employee" name="user_pk" required>
+                    <option value="" disabled selected>-- Choose Employee --</option>
+                    {% for user in all_users %}
+                        <option value="{{ user.pk }}" {% if request.GET.user_pk|stringformat:"s" == user.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ user.full_name|default:user.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Project Filter -->
+            <div class="col-md-3 col-sm-6">
+                <label for="filter_project" class="form-label">Project</label>
+                <select class="form-select" id="filter_project" name="project_pk">
+                    <option value="">All Projects</option>
+                    {% for project in all_projects %}
+                        <option value="{{ project.pk }}" {% if request.GET.project_pk|stringformat:"s" == project.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ project.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="col-12 col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-info w-100 me-2"><i class="fas fa-binoculars me-2"></i> View Log</button>
+                <a href="." class="btn btn-secondary"><i class="fas fa-sync-alt"></i> Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- --- Key Metrics (Displayed after employee selection) --- -->
+{% if selected_employee %}
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="card text-white bg-dark shadow h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Total Hours Logged</h6>
+                <p class="fs-4 fw-bold">{{ total_logged_hours|default:"0.00" }}h</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-primary shadow h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Entries Approved (%)</h6>
+                <p class="fs-4 fw-bold">{{ approved_percent|default:"0.00" }}%</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success shadow h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Projects Contributed To</h6>
+                <p class="fs-4 fw-bold">{{ distinct_project_count|default:"0" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- --- Visualization and Detail Table --- -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <h2>Hours Distribution by Project</h2>
+        <div class="card shadow">
+            <div class="card-body text-center" style="min-height: 300px;">
+                <p class="text-muted pt-5">
+                    [Placeholder for Chart: Pie Chart showing percentage of time spent on each Project]
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <h2>Detailed Activity Table</h2>
+        <div class="table-responsive">
+            <table class="table table-hover table-striped shadow-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Work Date</th>
+                        <th>Project</th>
+                        <th>Task Type</th>
+                        <th>Hours</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {# Loop through activity_data from context #}
+                    {% for entry in activity_data %}
+                    <tr>
+                        <td>{{ entry.work_date|date:"M d, Y" }}</td>
+                        <td>{{ entry.project_name }}</td>
+                        <td>{{ entry.task_type }}</td>
+                        <td class="fw-bold text-info">{{ entry.hours|default:"0.00" }}h</td>
+                        <td>
+                            {% if entry.status == 'APPROVED' %}
+                                <span class="badge bg-success">{{ entry.status }}</span>
+                            {% elif entry.status == 'REJECTED' %}
+                                <span class="badge bg-danger">{{ entry.status }}</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">{{ entry.status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No activities found for the selected employee and filters.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+    <div class="alert alert-info text-center animate__animated animate__fadeIn">
+        Please select an **Employee** from the filter options above to generate the activity log.
+    </div>
+{% endif %}
+
+{% endblock %}
