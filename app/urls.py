@@ -38,4 +38,6 @@ urlpatterns = [
     path('reports/employee-activity/', views.reports_employee_activity, name='reports_employee_activity'),
     path('reports/public-health/', views.reports_public_project_health, name='reports_public_project_health'),
     path('download_sqlite/', views.download_sqlite, name='download_sqlite'),
+    path('bulk-uplaod-tiemsheets/', views.timesheet_bulk_upload, name="timesheet_bulk_upload"),
+    
 ]

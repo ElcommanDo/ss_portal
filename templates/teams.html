@@ -50,7 +50,13 @@
                 </a>
                 </td>
                 <td>{{ team.title }}</td>
-                <td>{{ team.team_lead }}</td>
+                <td>
+                    {%if team.team_lead%}
+                    {{ team.team_lead }}
+                    {%else%}
+                    ــــــــــ
+                    {%endif%}
+                </td>
                 
                 <td>
                     {{team.employees.all|length}}
@@ -135,7 +141,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="team_lead" class="form-label fw-bold">Team Lead</label>
-                        <select required class="form-select" name="team_lead">
+                        <select  class="form-select" name="team_lead">
                                 <option value="" disabled selected>----</option>    
                             {%for user in users%}
                                 <option value="{{user.full_name}}">

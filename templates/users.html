@@ -180,7 +180,7 @@
 
                     <div class="mb-3">
                         <label for="id_team" class="form-label fw-bold">Assigned Team</label>
-                        <select class="form-select" id="id_team" name="team_pk" required>
+                        <select class="form-select" id="id_team" name="team_pk">
                             <option value="" disabled selected>Select a Team</option>
                             {% for team in teams %}
                                 <option value="{{ team.pk }}">{{ team.title }}</option>

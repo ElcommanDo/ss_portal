@@ -374,9 +374,10 @@ def user_create(request):
         user = models.CustomUser.objects.create(
             username = data.get("username"),
             full_name = data.get('full_name'),
-            role = data.get('role'),
-            team = models.Team.objects.get(pk = data.get("team_pk"))          
+            role = data.get('role')
         ) 
+        if data.get("team_pk"):
+            user.team = models.Team.objects.get(pk = data.get("team_pk")) 
         user.set_password(data.get('generated_password'))
         if user.role not in ['admin','ceo', 'project-manager']:
             user.is_staff = False
@@ -1573,3 +1574,182 @@ def download_sqlite(request):
     response = FileResponse(open(db_path, 'rb'))
     response['Content-Disposition'] = f'attachment; filename="{os.path.basename(db_path)}"'
     return response
+
+
+
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
+from django.db import transaction # Important for bulk operations
+import openpyxl # Library to read .xlsx files
+from datetime import datetime
+import io # To handle file in memory
+
+@login_required
+def timesheet_bulk_upload(request):
+    # Ensure this endpoint is only accessible via POST
+    if request.method != 'POST':
+        messages.error(request, "Invalid request method.")
+        return redirect('home') 
+
+    if 'bulk_file' not in request.FILES:
+        messages.error(request, "No file was uploaded.")
+        return redirect('home')
+
+    excel_or_csv_file = request.FILES['bulk_file']
+    file_name = excel_or_csv_file.name.lower()
+
+    # 1. Updated File Validation
+    if not file_name.endswith(('.xlsx', '.xls', '.csv')):
+        messages.error(request, "Invalid file format. Please upload an Excel (.xlsx/.xls) or CSV (.csv) file.")
+        return redirect('home')
+
+    is_csv = file_name.endswith('.csv')
+    
+    # Define allowed projects for the user (same logic as create view)
+    user_projects_query = Q(created_by=request.user)
+    public_projects_query = Q(is_public=True)
+    allowed_projects = models.Project.objects.filter(
+        Q(is_active=True), user_projects_query | public_projects_query
+    ).distinct().in_bulk(field_name='name') # Use project name as key for quick lookup
+    
+    # Track results
+    success_count = 0
+    error_count = 0
+    error_messages = []
+    
+    # --- Define expected column names for mapping (Case-insensitive matching) ---
+    col_map = {
+        'date': -1,
+        'project_name': -1,
+        'hours': -1,
+        'task_description': -1,
+        'task_type': -1, 
+    }
+    required_cols = ['date', 'project_name', 'hours']
+
+    try:
+        data_rows = []
+        
+        # --- File Parsing Logic (CSV vs. Excel) ---
+        if is_csv:
+            # Read CSV file
+            # Decode the file to a string, necessary for the csv reader
+            file_data = excel_or_csv_file.read().decode('utf-8').splitlines()
+            csv_reader = csv.reader(file_data)
+            
+            # Get header and map columns
+            header = [h.strip() for h in next(csv_reader)]
+            
+            for i, col_name in enumerate(header):
+                if col_name and col_name.lower().replace(' ', '_') in col_map: # Handle spaces in CSV headers
+                    col_map[col_name.lower().replace(' ', '_')] = i
+            
+            # Store data rows
+            data_rows = list(csv_reader)
+
+        else: # Excel (.xlsx or .xls)
+            # Load the workbook from the file data in memory
+            workbook = openpyxl.load_workbook(io.BytesIO(excel_or_csv_file.read()))
+            sheet = workbook.active
+            
+            # Get header and map columns
+            header = [cell.value for cell in sheet[1]]
+            for i, col_name in enumerate(header):
+                if col_name and col_name.lower() in col_map:
+                    col_map[col_name.lower()] = i
+            
+            # Store data rows (skipping header)
+            data_rows = list(sheet.iter_rows(min_row=2, values_only=True))
+        
+        # --- End File Parsing Logic ---
+
+        # Check if all critical columns are found regardless of file type
+        if any(col_map[c] == -1 for c in required_cols):
+             missing = [c for c in required_cols if col_map[c] == -1]
+             messages.error(request, f"Missing required columns in the file: {', '.join(missing)}. Please check your template.")
+             return redirect('home')
+
+        # Use a transaction to ensure atomicity (all or nothing for the batch)
+        with transaction.atomic():
+            
+            # Iterate through the standardized list of data rows
+            for row_index, row in enumerate(data_rows, start=2): # Start index at 2 for user row visibility
+                
+                # Skip entirely empty rows
+                if not any(row):
+                    continue
+
+                try:
+                    # Extract data using the mapped indices
+                    date_val = row[col_map['date']]
+                    project_name = str(row[col_map['project_name']]).strip()
+                    hours_val = row[col_map['hours']]
+                    description = row[col_map['task_description']]
+                    task_type = row[col_map['task_type']] or 'Other'
+                    
+                    # 2. Convert Data Types
+                    work_date = None
+                    if isinstance(date_val, datetime):
+                        work_date = date_val.date()
+                    elif isinstance(date_val, str):
+                        # Handle potential different string date formats (e.g., from CSV)
+                        try:
+                            # Try YYYY-MM-DD
+                            work_date = datetime.strptime(date_val, '%Y-%m-%d').date()
+                        except ValueError:
+                            # Try common US format (e.g., 12/08/2025)
+                            work_date = datetime.strptime(date_val, '%m/%d/%Y').date()
+                    
+                    if not work_date:
+                        raise ValueError(f"Invalid or empty date format: '{date_val}'")
+                        
+                    hours = float(hours_val)
+                    
+                    # 3. Validation Logic
+                    if hours <= 0:
+                        raise ValueError("Hours must be greater than zero.")
+                    
+                    # Check Project existence and permission using the bulk map
+                    project = allowed_projects.get(project_name)
+                    if not project:
+                        raise models.Project.DoesNotExist(f"Project '{project_name}' not found or you lack permission.")
+                        
+                    # 4. Create or Get Timesheet (Daily Grouping)
+                    timesheet, _ = models.Timesheet.objects.get_or_create(
+                        user=request.user, 
+                        date=work_date
+                    )
+                    
+                    # 5. Create Timesheet Entry
+                    models.TimesheetEntry.objects.create(
+                        user=request.user,
+                        project=project,
+                        work_date=work_date,
+                        task_description=description or f"Bulk uploaded task for {project_name}",
+                        hours=hours,
+                        task_type=task_type,
+                        status='Inprogress',
+                        time_sheet=timesheet
+                    )
+                    success_count += 1
+                    
+                except Exception as e:
+                    error_count += 1
+                    error_messages.append(f"Row {row_index}: Error processing entry: {e}")
+                    
+        # 6. Final Messages
+        if success_count > 0:
+            messages.success(request, f"Bulk upload completed! {success_count} entries were saved successfully.")
+        
+        if error_count > 0:
+            error_summary = "\n".join(error_messages[:5])
+            messages.warning(request, f"{error_count} entries failed to process during bulk upload. Showing first 5 errors:\n{error_summary}")
+            
+        return redirect('home')
+
+    except Exception as e:
+        messages.error(request, f"A critical error occurred while reading the file structure: {e}")
+        return redirect('home')

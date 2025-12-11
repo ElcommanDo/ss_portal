@@ -18,8 +18,14 @@
 <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
     <h1><i class="fas fa-clock me-2"></i> Timesheet Summary Dashboard</h1>
     
-         <a href="{% url 'add_timesheet' %}" class="btn btn-primary btn-lg" >➕ Log New Entry</a>
-           
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-info btn-lg" data-bs-toggle="modal" data-bs-target="#uploadModal">
+            <i class="fas fa-file-upload me-2"></i> Upload File
+        </button>
+        <a href="{% url 'add_timesheet' %}" class="btn btn-primary btn-lg" >
+            <i class="fas fa-plus-circle me-2"></i> Log New Entry
+        </a>
+    </div>
 </div>
 
 {% if messages %}
@@ -33,7 +39,7 @@
 </div>
 {% endif %}
 
-📊 Timesheet Filters & Search
+<h2>📊 Timesheet Filters & Search</h2>
 
 <div class="card shadow-sm mb-5 animate__animated animate__fadeIn">
     <div class="card-body">
@@ -115,7 +121,7 @@
     </div>
 </div>
 
-🧾 Timesheet Summaries (Total: {{ page_obj.paginator.count }})
+<h2>🧾 Timesheet Summaries (Total: {{ page_obj.paginator.count }})</h2>
 
 <div class="table-responsive animate__animated animate__fadeInUp">
     <table class="table table-hover table-striped shadow-sm align-middle">
@@ -156,10 +162,8 @@
                     {% comment %} Iterating over all related entries and getting unique project names {% endcomment %}
                     
                     {% for entry in timesheet.tasks.all %}
-                        {% if not entry.project.name in displayed_projects %}
-                            <span class="badge bg-secondary me-1 mb-1">{{ entry.project.name }}</span>
-                            {% comment %} Simulating a 'set' to track displayed projects (requires a context processor or a custom tag for true uniqueness) {% endcomment %}
-                        {% endif %}
+                        {% comment %} Simple iteration. For true uniqueness, use a custom filter or view logic. {% endcomment %}
+                        <span class="badge bg-secondary me-1 mb-1">{{ entry.project.name }}</span>
                     {% endfor %}
 
                     {% comment %} 
@@ -255,5 +259,110 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" enctype="multipart/form-data" action="{% url 'timesheet_bulk_upload' %}" id="bulkUploadForm">
+                {% csrf_token %}
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="uploadModalLabel"><i class="fas fa-file-upload me-2"></i> Upload Timesheet File</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Please select the timesheet file you wish to upload (e.g., CSV, Excel).</p>
+                    
+                    <div class="mb-3">
+                        <label for="fileInput" class="form-label">Select File</label>
+                        <input class="form-control" type="file" id="fileInput" name="bulk_file" required accept=".csv, .xlsx, .xls">
+                        <div id="fileHelp" class="form-text">Supported formats: CSV, XLSX, XLS. Max file size: 5MB.</div>
+                    </div>
 
+                    <div id="fileContentPreview" class="border p-2 mt-3" style="max-height: 150px; overflow-y: auto; display: none;">
+                        <h6 class="text-secondary" id="previewHeader">File Preview:</h6>
+                        <pre id="previewData" class="small text-danger"></pre>
+                    </div>
+                    <p id="fileNameDisplay" class="text-muted mt-2"></p>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" id="processFileBtn" disabled>Process and Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const previewData = document.getElementById('previewData');
+        const fileContentPreview = document.getElementById('fileContentPreview');
+        const processFileBtn = document.getElementById('processFileBtn');
+        const previewHeader = document.getElementById('previewHeader');
+
+        // Function to read and display file info/preview
+        const readFileData = (file) => {
+            if (!file) {
+                fileNameDisplay.textContent = 'No file selected.';
+                fileContentPreview.style.display = 'none';
+                processFileBtn.disabled = true;
+                return;
+            }
+
+            const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+            fileNameDisplay.textContent = `File: ${file.name} (${fileSizeMB} MB)`;
+            processFileBtn.disabled = true;
+
+            const filename = file.name.toLowerCase();
+            const isBinaryExcel = filename.endsWith('.xlsx') || filename.endsWith('.xls');
+
+            if (isBinaryExcel) {
+                // *** FIX: Handle Binary Files (Excel) ***
+                previewHeader.textContent = 'File Preview:';
+                previewData.textContent = "✅ File selected. Cannot display binary Excel content in browser. Proceed with upload to process on server.";
+                previewData.classList.remove('text-danger');
+                previewData.classList.add('text-success');
+                fileContentPreview.style.display = 'block';
+                processFileBtn.disabled = false; // Allow submission
+            } else {
+                // Handle Text Files (e.g., CSV) - This is for visual preview only
+                previewHeader.textContent = 'File Preview (First 5 lines):';
+                previewData.classList.remove('text-success');
+                previewData.classList.remove('text-danger'); // Clear previous styling
+
+                const reader = new FileReader();
+
+                reader.onload = (e) => {
+                    const fileData = e.target.result;
+                    // Get the first 5 lines for a text/CSV preview
+                    const previewText = fileData.split('\n').slice(0, 5).join('\n');
+
+                    previewData.textContent = previewText;
+                    fileContentPreview.style.display = 'block';
+                    processFileBtn.disabled = false;
+                };
+
+                reader.onerror = (e) => {
+                    previewData.textContent = 'Error reading file!';
+                    previewData.classList.add('text-danger');
+                    fileContentPreview.style.display = 'block';
+                    processFileBtn.disabled = true;
+                };
+
+                // Read as text, only for non-binary formats
+                reader.readAsText(file); 
+            }
+        };
+
+        // Event listener for when a file is selected
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0]; 
+            readFileData(file);
+        });
+
+        // The button click event is now unnecessary as the button submits the form.
+        // We ensure the button is enabled via the readFileData function.
+    });
+</script>
 {% endblock %}
