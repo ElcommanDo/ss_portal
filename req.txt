@@ -182,12 +182,6 @@ traceback2
 typer
 typing_extensions
 tzdata
-unittest2
-uritemplate
-urllib3
-
-vboxapi
-virtualenv
 waitress
 weasyprint
 webencodings
