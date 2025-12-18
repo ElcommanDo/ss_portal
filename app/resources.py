@@ -30,11 +30,13 @@ class CustomUserResource(resources.ModelResource):
         )
         import_id_fields = ('username',)
 
-    def before_save_instance(self, instance, using_transactions, dry_run):
-        """
-        Force password for every imported user
-        """
-        instance.set_password("Smart@123")
+    def before_save_instance(self, instance, row, **kwargs):
+        # set default password
+        if not instance.pk:
+            instance.set_password("Smart@123")
+
+    class Meta:
+        model = CustomUser
 
         
 class ProjectResource(resources.ModelResource):
