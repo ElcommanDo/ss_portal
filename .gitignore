@@ -22,7 +22,7 @@ venv.bak/
 local_settings.py
 db.sqlite3
 media/
-
+db_test.sqlite3
 
 # VS Code
 .vscode/
