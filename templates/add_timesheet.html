@@ -3,74 +3,159 @@
 {% block title %}Add Timesheet Task{% endblock %}
 
 {% block content %}
+<style>
+    /* Makes the Bootstrap switch larger and more modern */
+    .form-check-input:checked {
+        background-color: #198754; 
+        border-color: #198754;
+    }
+    .custom-switch-lg .form-check-input {
+        width: 3.5rem;
+        height: 1.75rem;
+        cursor: pointer;
+    }
+    .custom-switch-lg .form-check-label {
+        margin-left: 12px;
+        padding-top: 4px;
+        cursor: pointer;
+        font-weight: 500;
+    }
+    /* container for smooth height transitions */
+    .mode-container {
+        overflow: hidden;
+    }
+</style>
+
 <h1 class="mb-4 animate__animated animate__fadeInDown">📝 Add New Timesheet Task Entry</h1>
 
-<!-- 
-    START: Django Messages Section 
-    This block displays system messages (errors, success, warnings) 
--->
 {% if messages %}
 <div class="messages mb-4">
     {% for message in messages %}
-    <!-- 
-        The message.tags variable automatically provides the context (success, error, warning).
-        We use f"{message.tags}" to dynamically set the Bootstrap alert class. 
-    -->
     <div class="alert alert-{{ message.tags }} alert-dismissible fade show animate__animated animate__fadeIn" role="alert">
         {{ message }}
-        <!-- Close button for dismissible alert -->
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     {% endfor %}
 </div>
 {% endif %}
-<!-- END: Django Messages Section -->
-
 
 <div class="card shadow-sm animate__animated animate__fadeInUp">
     <div class="card-body">
-        <form method="post">
+        <form method="post" id="timesheetForm">
             {% csrf_token %}
             
             <div class="mb-3">
                 <label for="id_project" class="form-label fw-bold">Project</label>
                 <select class="form-select" id="id_project" name="project" required>
                     <option selected disabled>Select a Project</option>
-                    {%for project in projects%}
-                    <option value="{{project.pk}}">{{project.name}}</option>
-                    {%endfor%}
+                    {% for project in projects %}
+                    <option value="{{ project.pk }}">{{ project.name }}</option>
+                    {% endfor %}
                 </select>
             </div>
             
             <div class="mb-3">
                 <label for="id_task_description" class="form-label fw-bold">Task Description</label>
-                <textarea class="form-control" id="id_task_description" name="task_description" rows="3" placeholder="A brief description of the work completed..." required></textarea>
+                <textarea class="form-control" id="id_task_description" name="task_description" rows="3" placeholder="Description..." required></textarea>
             </div>
+
             <div class="mb-3">
                 <label for="id_task_type" class="form-label fw-bold">Task Type</label>
                 <select class="form-select mb-3" name="task_type">
                     <option value="Delivery">Delivery</option>
                     <option value="Pre-Sale">Pre-Sale</option>
+                    <option value="study">Study / Training</option>
                 </select>
             </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="id_hours" class="form-label fw-bold">Hours Spent</label>
-                    <input type="number" step="0.5" min="0.5" max="24" class="form-control" id="id_hours" name="hours" required>
+
+            <hr class="my-4">
+
+            <div class="mb-4">
+                <label class="form-label fw-bold d-block text-secondary">Is this a future schedule?</label>
+                <div class="form-check form-switch custom-switch-lg">
+                    <input class="form-check-input" type="checkbox" id="is_scheduled_toggle" name="is_scheduled">
+                    <label class="form-check-label text-muted" for="is_scheduled_toggle" id="toggle_label">
+                        No, logging work done today
+                    </label>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <!-- FIX: Ensure 'for' attribute matches 'id' attribute, and both match 'work_date' -->
-                    <label for="id_work_date" class="form-label fw-bold">Date of Task</label>
-                    <!-- CRUCIAL: The name is correct (work_date), and we ensure the ID is the same -->
-                    <input type="date" class="form-control" id="id_work_date" name="work_date" value="{{ today|date:'Y-m-d' }}" required>
+            </div>
+            
+            <div class="mode-container">
+                <div id="time_fields_container" class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="start_time" class="form-label fw-bold">Start Time</label>
+                        <input type="time" class="form-control" id="start_time" name="start_time" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="end_time" class="form-label fw-bold">End Time</label>
+                        <input type="time" class="form-control" id="end_time" name="end_time" required>
+                    </div>
                 </div>
-                
+
+                <div id="date_field_container" style="display: none;">
+                    <div class="mb-3">
+                        <label for="id_work_date" class="form-label fw-bold text-primary">
+                            <i class="fas fa-calendar-alt me-1"></i> Choose Scheduled Date
+                        </label>
+                        <input type="date" class="form-control border-primary shadow-sm" id="id_work_date" name="work_date" value="{{ today|date:'Y-m-d' }}">
+                    </div>
+                </div>
             </div>
 
-            <button type="submit" class="btn btn-success btn-lg mt-3 w-100">
-                <i class="fas fa-save me-2"></i> Save Timesheet Task
+            <button type="submit" class="btn btn-success btn-lg mt-4 w-100 shadow-sm">
+                <i class="fas fa-save me-2"></i> Save Entry
             </button>
         </form>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const toggle = document.getElementById('is_scheduled_toggle');
+        const timeContainer = document.getElementById('time_fields_container');
+        const dateContainer = document.getElementById('date_field_container');
+        const toggleLabel = document.getElementById('toggle_label');
+        
+        const startInput = document.getElementById('start_time');
+        const endInput = document.getElementById('end_time');
+        const dateInput = document.getElementById('id_work_date');
+
+        const todayDate = dateInput.value;
+
+        toggle.addEventListener('change', function () {
+            if (this.checked) {
+                // 1. Hide Times
+                timeContainer.style.display = 'none';
+                
+                // 2. Show Date with Slide from Right
+                dateContainer.style.display = 'block';
+                dateContainer.className = 'animate__animated animate__fadeInRight'; // Slide from right
+                
+                toggleLabel.innerText = "Yes, scheduling for future";
+                toggleLabel.classList.replace('text-muted', 'text-success');
+
+                // 3. Logic: Dates required, times not
+                startInput.removeAttribute('required');
+                endInput.removeAttribute('required');
+                dateInput.setAttribute('required', 'required');
+            } else {
+                // 1. Hide Date
+                dateContainer.style.display = 'none';
+                
+                // 2. Show Times with Slide from Left (or default fade)
+                timeContainer.style.display = 'flex';
+                timeContainer.className = 'row animate__animated animate__fadeInLeft';
+                
+                toggleLabel.innerText = "No, logging work done today";
+                toggleLabel.classList.replace('text-success', 'text-muted');
+
+                // 3. Logic: Times required, date defaults to today
+                startInput.setAttribute('required', 'required');
+                endInput.setAttribute('required', 'required');
+                dateInput.removeAttribute('required');
+                dateInput.value = todayDate;
+            }
+        });
+    });
+</script>
 {% endblock %}

@@ -142,7 +142,7 @@
             <tr>
                 <td class="fw-bold">
                     {# Use Timesheet PK for linking to a detail view (assuming 'timesheet_detail' URL exists) #}
-                    <a href="{%url 'my_timesheet_entries' timesheet.pk %}" class="text-decoration-none text-primary timesheet-link" 
+                    <a href="{%url 'timesheet_entries' timesheet.pk %}" class="text-decoration-none text-primary timesheet-link" 
                         data-timesheet-id="{{ timesheet.pk }}"
                         onclick="console.log('Navigate to Timesheet Detail: {{ timesheet.pk }}')">
                         {{ timesheet.pk }}

@@ -19,6 +19,14 @@ import os
 from django.db.models.functions import Coalesce
 from django.contrib.auth.decorators import user_passes_test
 import csv
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
+from django.db import transaction 
+import openpyxl 
+import io 
 
 PAGE_SIZE = 15
 CustomUser = get_user_model()
@@ -71,47 +79,104 @@ def timesheet_create(request):
 
     if request.method == 'POST':
         try:
-            task_date = request.POST.get('work_date')
-            timesheet, created = models.Timesheet.objects.get_or_create(
-                    user=request.user, 
-                    date=task_date,
+            if request.POST.get("is_scheduled"):
+                task_date = request.POST.get('work_date')
+                timesheet, created = models.Timesheet.objects.get_or_create(
+                        user=request.user, 
+                        date=task_date,
+                    
+                    )
+
+                project_id = request.POST.get('project')
+                work_date_str = str(request.POST.get('work_date'))
+                task_description = request.POST.get('task_description')
+                task_type = request.POST.get('task_type')
+                hours = 0.00 
                 
+                if not work_date_str or work_date_str.strip() == '':
+                    messages.error(request, "Error: The Date of the Task is required. Please select a date.")
+                    return redirect('add_timesheet')
+                
+                
+                project = get_object_or_404(models.Project, pk=project_id)
+                
+                if not models.Project.objects.filter(Q(pk=project_id) & (user_projects | public_projects)).exists():
+                    messages.error(request, "Invalid project selection or insufficient permissions.")
+                    return redirect('add_timesheet')
+
+                models.TimesheetEntry.objects.create(
+                    user=request.user,
+                    project=project,
+                    work_date=work_date_str, # Date string is now guaranteed to be non-empty
+                    task_description=task_description,
+                    hours=hours,
+                    task_type= task_type,
+                    status='Inprogress',
+                    time_sheet = timesheet,
+                    is_scheduled = True
                 )
+                
+                messages.success(request, "Timesheet entry saved successfully!")
+                return redirect('home') 
+            
+            else:
+                timesheet, created = models.Timesheet.objects.get_or_create(
+                        user=request.user, 
+                        date=date.today(),
+                    
+                    )
 
-            project_id = request.POST.get('project')
-            work_date_str = request.POST.get('work_date')
-            task_description = request.POST.get('task_description')
-            task_type = request.POST.get('task_type')
-            
-            hours = float(request.POST.get('hours')) 
-            
-            if not work_date_str or work_date_str.strip() == '':
-                messages.error(request, "Error: The Date of the Task is required. Please select a date.")
-                return redirect('add_timesheet')
-            
-            if hours <= 0:
-                messages.error(request, "Hours spent must be greater than zero.")
-                return redirect('add_timesheet')
-            
-            project = get_object_or_404(models.Project, pk=project_id)
-            
-            if not models.Project.objects.filter(Q(pk=project_id) & (user_projects | public_projects)).exists():
-                messages.error(request, "Invalid project selection or insufficient permissions.")
-                return redirect('add_timesheet')
+                project_id = request.POST.get('project')
+                work_date_str = str(date.today())
+                task_description = request.POST.get('task_description')
+                task_type = request.POST.get('task_type')
+                start_time = request.POST.get('start_time')
+                end_time = request.POST.get('end_time')
+                
+                if start_time and end_time:
+                    fmt = '%H:%M'
+                    t1 = datetime.strptime(start_time, fmt)
+                    t2 = datetime.strptime(end_time, fmt)
 
-            models.TimesheetEntry.objects.create(
-                user=request.user,
-                project=project,
-                work_date=work_date_str, # Date string is now guaranteed to be non-empty
-                task_description=task_description,
-                hours=hours,
-                task_type= task_type,
-                status='Inprogress',
-                time_sheet = timesheet
-            )
+                    # Calculate difference
+                    # Using absolute value to ensure it's positive regardless of order
+                    delta = abs(t2 - t1)
+                    
+                    # Convert total seconds to hours (float)
+                    hours = delta.total_seconds() / 3600.0
+                else:
+                    hours = 0
+                
+                if not work_date_str or work_date_str.strip() == '':
+                    messages.error(request, "Error: The Date of the Task is required. Please select a date.")
+                    return redirect('add_timesheet')
+                
+                if hours <= 0:
+                    messages.error(request, "Hours spent must be greater than zero.")
+                    return redirect('add_timesheet')
+                
+                project = get_object_or_404(models.Project, pk=project_id)
+                
+                if not models.Project.objects.filter(Q(pk=project_id) & (user_projects | public_projects)).exists():
+                    messages.error(request, "Invalid project selection or insufficient permissions.")
+                    return redirect('add_timesheet')
+
+                models.TimesheetEntry.objects.create(
+                    user=request.user,
+                    project=project,
+                    work_date=work_date_str, # Date string is now guaranteed to be non-empty
+                    task_description=task_description,
+                    hours=hours,
+                    task_type= task_type,
+                    status='Inprogress',
+                    time_sheet = timesheet,
+                    time_start = request.POST.get('start_time'),
+                    time_end = request.POST.get('end_time'),
             
-            messages.success(request, "Timesheet entry saved successfully!")
-            return redirect('home') 
+                )
+                
+                messages.success(request, "Timesheet entry saved successfully!")
+                return redirect('home') 
             
         except ValueError:
             # Catches errors if 'hours' is not a valid number or if other conversions fail
@@ -633,32 +698,25 @@ def change_password(request):
 
 
 @user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
-def timesheet(request):
+def timesheet(request, scheduled=None):
 
-    queryset = Timesheet.objects.select_related(
-        'user', 
-        'user__team'
-    ).all()
+    if scheduled:
+        queryset = Timesheet.objects.select_related(
+            'user', 
+            'user__team'
+        ).filter(tasks__is_scheduled=True)
+    else:
+        queryset = Timesheet.objects.select_related(
+            'user', 
+            'user__team'
+        ).filter(tasks__is_scheduled=False)
 
-    # ----------------------------------------------------
-    # 🔥 Restrict leaders to ONLY their own team
-    # ----------------------------------------------------
     if request.user.role == 'leader':
-        # If Team has team_lead field:
-        # queryset = queryset.filter(user__team__team_lead=request.user)
-
-        # If User has FK team directly:
         queryset = queryset.filter(user__team=request.user.team)
-    # ----------------------------------------------------
-
-    # Annotate total hours
     queryset = queryset.annotate(
         total_hours=Sum('tasks__hours'),
     )
 
-    # ----------------------------------------------------
-    # Apply dynamic filters
-    # ----------------------------------------------------
     filters = Q()
 
     user_pk = request.GET.get('user_pk')
@@ -703,14 +761,8 @@ def timesheet(request):
         except ValueError:
             pass
 
-    # ----------------------------------------------------
-    # Apply filters + ordering
-    # ----------------------------------------------------
     queryset = queryset.filter(filters).distinct().order_by('-date', 'user__full_name')
 
-    # ----------------------------------------------------
-    # Pagination
-    # ----------------------------------------------------
     paginator = Paginator(queryset, 20)
     page = request.GET.get('page', 1)
 
@@ -865,7 +917,7 @@ def timesheet_detail_entries(request, pk):
 
 
 @login_required
-def user_timesheets(request):
+def user_timesheets(request, scheduled=None):
     """
     Displays the aggregated Timesheets (daily logs) for the current logged-in user.
     Uses the timesheet_list.html template.
@@ -873,7 +925,10 @@ def user_timesheets(request):
     current_user = request.user
     
     # 1. Start with Timesheet objects filtered by the current user
-    queryset = models.Timesheet.objects.filter(user=current_user).select_related('user')
+    if scheduled:
+        queryset = models.Timesheet.objects.filter(user=current_user, tasks__is_scheduled=True).select_related('user')
+    else: 
+        queryset = models.Timesheet.objects.filter(user=current_user, tasks__is_scheduled=False).select_related('user')
     
     # 2. Aggregation (Calculate total hours and summary status for each daily log)
     queryset = queryset.annotate(
@@ -946,6 +1001,56 @@ def my_timesheet_entries(request, pk):
     current_user = request.user
     timesheet = models.Timesheet.objects.get(pk=pk)
     queryset = timesheet.tasks.filter(user=current_user).select_related('project')
+    
+    filters = Q()
+
+    project_pk = request.GET.get('project_pk')
+    if project_pk:
+        filters &= Q(project__pk=project_pk)
+    
+    status = request.GET.get('status')
+    if status:
+        filters &= Q(status=status)
+    
+    work_date_str = request.GET.get('work_date')
+    if work_date_str:
+        try:
+            work_date = datetime.strptime(work_date_str, '%Y-%m-%d').date()
+            filters &= Q(work_date=work_date)
+        except ValueError:
+            pass
+            
+    queryset = queryset.filter(filters).order_by('-work_date', '-created_at')
+
+    user_projects = models.Project.objects.filter(
+        entries__user=current_user
+    ).distinct().order_by('name')
+
+    paginator = Paginator(queryset, 20)
+    page_number = request.GET.get('page', 1)
+
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    context = {
+        'page_obj': page_obj,
+        'user_projects': user_projects,
+        'status_choices': models.TimesheetEntry.STATUS_CHOICES,
+    }
+
+    return render(request, 'mytime_sheets.html', context)
+
+
+@login_required
+def timesheet_entries(request, pk):
+    timesheet = models.Timesheet.objects.get(pk=pk)
+    current_user = timesheet.user
+    
+    queryset = timesheet.tasks.filter(is_scheduled=False).select_related('project')
     
     filters = Q()
 
@@ -1067,76 +1172,178 @@ def reports_dashboard(request):
     return render(request, 'reports_dashboard.html', {})
 
 
+# @login_required
+# def reports_man_days(request):
+#     """Report 1: Man-Days & Utilization"""
+    
+#     period = request.GET.get('period', 'month')
+#     user_pk = request.GET.get('user_pk')
+#     start_date_str = request.GET.get('start_date')
+#     end_date_str = request.GET.get('end_date')
+#     start_date, end_date = get_date_range(period, start_date_str, end_date_str)
+    
+#     # Start with all TimesheetEntry objects
+#     queryset = TimesheetEntry.objects.all()
+    
+#     if user_pk:
+#         queryset = queryset.filter(user__pk=user_pk)
+    
+#     # Filter entries by date range
+#     queryset = apply_date_filters(queryset, start_date, end_date)
+    
+#     # --- Global Metrics Calculation ---
+    
+#     total_logged_hours = queryset.aggregate(Sum('hours'))['hours__sum'] or 0
+    
+#     # Identify unique active employees who logged time in the period
+#     active_employees_pks = queryset.values_list('user__pk', flat=True).distinct()
+#     active_employees_count = len(active_employees_pks)
+    
+#     # Calculate duration of the period in days
+#     if start_date and end_date:
+#         period_days = (end_date - start_date).days + 1
+#     else:
+#         # Fallback for approximate defaults if custom range not selected
+#         period_days = 30 
+        
+#     # Total available hours calculation based on *all* users if no filter is set, 
+#     # but we use active employees count for better accuracy within the logged data set.
+#     total_available_hours = active_employees_count * period_days * HOURS_PER_DAY
+    
+#     # Utilization Rate
+#     utilization_rate = (total_logged_hours / total_available_hours) * 100 if total_available_hours > 0 else 0
+    
+#     # Man-Days are just total available hours divided by HOURS_PER_DAY
+#     total_man_days = total_available_hours / HOURS_PER_DAY
+#     total_overtime = 0 # Complex calculation, simplified to 0 for now
+    
+#     # --- Employee Breakdown Data ---
+#     # We annotate CustomUser objects with their totals from the filtered queryset
+#     employee_data = CustomUser.objects.filter(pk__in=active_employees_pks).annotate(
+#         # FIX: Changed 'timesheetentry__in=queryset' to 'timesheets__in=queryset'
+#         total_hours=Sum('timesheets__hours', filter=Q(timesheets__in=queryset)),
+#         total_days_logged=Count('timesheets__work_date', distinct=True, filter=Q(timesheets__in=queryset)),
+#         last_log_date=Max('timesheets__work_date', filter=Q(timesheets__in=queryset)),
+#     ).filter(total_hours__isnull=False).annotate(
+#         # New calculation: total_hours divided by 8 (hours per day) for the unit
+#         work_unit_days=F('total_hours') / HOURS_PER_DAY,
+#         # Utilization: total_hours divided by (total_days_logged * 8)
+#         utilization_percent=Case(
+#             When(total_days_logged__gt=0, then=(F('total_hours') / (F('total_days_logged') * HOURS_PER_DAY)) * 100),
+#             default=Value(0.0),
+#             output_field=DecimalField()
+#         )
+#     ).order_by('-total_hours')
+    
+#     context = {
+#         'total_logged_hours': round(total_logged_hours, 2),
+#         'total_man_days': round(total_man_days, 2),
+#         'utilization_rate': round(utilization_rate, 2),
+#         'total_overtime': round(total_overtime, 2),
+#         'employee_data': employee_data,
+#         'all_users': CustomUser.objects.order_by('full_name').all(),
+#     }
+#     return render(request, 'man_days_utilization_report.html', context)
+
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.db.models import Sum, Count, Q
+from django.core.paginator import Paginator
+from datetime import time, datetime
+
+def get_post_5pm_overtime(entries):
+    """Calculates hours worked after 17:00 (5:00 PM)"""
+    ot_hours = 0.0
+    cutoff = time(17, 0)
+    for entry in entries:
+        if entry.time_start and entry.time_end and entry.time_end > cutoff:
+            # OT starts at 5 PM or the actual start time if they started after 5 PM
+            actual_ot_start = max(entry.time_start, cutoff)
+            
+            # Use dummy date for subtraction math
+            dummy = datetime.today()
+            start_dt = datetime.combine(dummy, actual_ot_start)
+            end_dt = datetime.combine(dummy, entry.time_end)
+            
+            duration = (end_dt - start_dt).total_seconds() / 3600
+            ot_hours += max(0, duration)
+    return ot_hours
+
 @login_required
 def reports_man_days(request):
-    """Report 1: Man-Days & Utilization"""
-    
-    period = request.GET.get('period', 'month')
-    user_pk = request.GET.get('user_pk')
-    start_date_str = request.GET.get('start_date')
-    end_date_str = request.GET.get('end_date')
-    start_date, end_date = get_date_range(period, start_date_str, end_date_str)
-    
-    # Start with all TimesheetEntry objects
+    # 1. Base Setup
+    STANDARD_HOURS = 8.0
     queryset = TimesheetEntry.objects.all()
-    
+
+    # 2. Apply Filters (matching your HTML form names)
+    user_pk = request.GET.get('user_pk')
+    project_pk = request.GET.get('project_pk')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
     if user_pk:
         queryset = queryset.filter(user__pk=user_pk)
-    
-    # Filter entries by date range
-    queryset = apply_date_filters(queryset, start_date, end_date)
-    
-    # --- Global Metrics Calculation ---
-    
-    total_logged_hours = queryset.aggregate(Sum('hours'))['hours__sum'] or 0
-    
-    # Identify unique active employees who logged time in the period
-    active_employees_pks = queryset.values_list('user__pk', flat=True).distinct()
-    active_employees_count = len(active_employees_pks)
-    
-    # Calculate duration of the period in days
-    if start_date and end_date:
-        period_days = (end_date - start_date).days + 1
-    else:
-        # Fallback for approximate defaults if custom range not selected
-        period_days = 30 
-        
-    # Total available hours calculation based on *all* users if no filter is set, 
-    # but we use active employees count for better accuracy within the logged data set.
-    total_available_hours = active_employees_count * period_days * HOURS_PER_DAY
-    
-    # Utilization Rate
-    utilization_rate = (total_logged_hours / total_available_hours) * 100 if total_available_hours > 0 else 0
-    
-    # Man-Days are just total available hours divided by HOURS_PER_DAY
-    total_man_days = total_available_hours / HOURS_PER_DAY
-    total_overtime = 0 # Complex calculation, simplified to 0 for now
-    
-    # --- Employee Breakdown Data ---
-    # We annotate CustomUser objects with their totals from the filtered queryset
-    employee_data = CustomUser.objects.filter(pk__in=active_employees_pks).annotate(
-        # FIX: Changed 'timesheetentry__in=queryset' to 'timesheets__in=queryset'
-        total_hours=Sum('timesheets__hours', filter=Q(timesheets__in=queryset)),
-        total_days_logged=Count('timesheets__work_date', distinct=True, filter=Q(timesheets__in=queryset)),
-        last_log_date=Max('timesheets__work_date', filter=Q(timesheets__in=queryset)),
-    ).filter(total_hours__isnull=False).annotate(
-        # New calculation: total_hours divided by 8 (hours per day) for the unit
-        work_unit_days=F('total_hours') / HOURS_PER_DAY,
-        # Utilization: total_hours divided by (total_days_logged * 8)
-        utilization_percent=Case(
-            When(total_days_logged__gt=0, then=(F('total_hours') / (F('total_days_logged') * HOURS_PER_DAY)) * 100),
-            default=Value(0.0),
-            output_field=DecimalField()
+    if project_pk:
+        queryset = queryset.filter(project__pk=project_pk)
+    if start_date:
+        queryset = queryset.filter(work_date__gte=start_date)
+    if end_date:
+        queryset = queryset.filter(work_date__lte=end_date)
+
+    # 3. Aggregate Daily Data (Grouping by User and Date)
+    daily_stats = queryset.values(
+        'work_date', 'user__full_name', 'user__username', 'user__pk'
+    ).annotate(
+        total_daily_hours=Sum('hours'),
+        project_count=Count('project', distinct=True)
+    ).order_by('-work_date')
+
+    # 4. Refine Data for Overtime Logic
+    refined_entries = []
+    total_hours_sum = 0.0
+    total_overtime_sum = 0.0
+
+    for day in daily_stats:
+        # Get individual tasks to calculate clock-based overtime
+        day_entries = queryset.filter(
+            work_date=day['work_date'], 
+            user__pk=day['user__pk']
         )
-    ).order_by('-total_hours')
-    
+        
+        # Calculate Overtime (Post-5PM)
+        post_5_ot = get_post_5pm_overtime(day_entries)
+        
+        # Calculate Capacity difference (for your Under/Over badge)
+        logged = float(day['total_daily_hours'] or 0)
+        
+        # We use 'overtime_hours' as the key because your HTML uses 'entry.overtime_hours'
+        day_row = {
+            'work_date': day['work_date'],
+            'user__full_name': day['user__full_name'],
+            'user__username': day['user__username'],
+            'project_count': day['project_count'],
+            'total_daily_hours': logged,
+            'overtime_hours': post_5_ot if logged >= STANDARD_HOURS else (logged - STANDARD_HOURS),
+        }
+        
+        # Update Global Totals
+        total_hours_sum += logged
+        total_overtime_sum += post_5_ot
+        refined_entries.append(day_row)
+
+    # 5. Pagination
+    paginator = Paginator(refined_entries, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     context = {
-        'total_logged_hours': round(total_logged_hours, 2),
-        'total_man_days': round(total_man_days, 2),
-        'utilization_rate': round(utilization_rate, 2),
-        'total_overtime': round(total_overtime, 2),
-        'employee_data': employee_data,
+        'page_obj': page_obj,
+        'total_hours_sum': total_hours_sum,
+        'total_overtime_sum': total_overtime_sum,
+        'total_standard_sum': len(refined_entries) * STANDARD_HOURS,
+        'standard_day_hours': STANDARD_HOURS,
         'all_users': CustomUser.objects.order_by('full_name').all(),
+        'all_projects': Project.objects.filter(is_active=True),
+        'project_pk': project_pk,
     }
     return render(request, 'man_days_utilization_report.html', context)
 
@@ -1576,16 +1783,35 @@ def download_sqlite(request):
     return response
 
 
+from datetime import datetime, time
 
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.db.models import Q
-from django.shortcuts import get_object_or_404
-from django.db import transaction # Important for bulk operations
-import openpyxl # Library to read .xlsx files
-from datetime import datetime
-import io # To handle file in memory
+def parse_time(value):
+    """
+    Accepts:
+    - datetime
+    - time
+    - string like: 10:00 AM, 2:30 PM, 14:00
+    """
+    if not value:
+        return None
+
+    if isinstance(value, time):
+        return value
+
+    if isinstance(value, datetime):
+        return value.time()
+
+    if isinstance(value, str):
+        value = value.strip()
+        for fmt in ("%I:%M %p", "%H:%M"):
+            try:
+                return datetime.strptime(value, fmt).time()
+            except ValueError:
+                continue
+
+    raise ValueError(f"Invalid time format: '{value}'")
+
+
 
 @login_required
 def timesheet_bulk_upload(request):
@@ -1626,7 +1852,9 @@ def timesheet_bulk_upload(request):
         'project_name': -1,
         'hours': -1,
         'task_description': -1,
-        'task_type': -1, 
+        'task_type': -1,
+        'time_start': -1,
+        'time_end': -1 
     }
     required_cols = ['date', 'project_name', 'hours']
 
@@ -1689,7 +1917,13 @@ def timesheet_bulk_upload(request):
                     hours_val = row[col_map['hours']]
                     description = row[col_map['task_description']]
                     task_type = row[col_map['task_type']] or 'Other'
-                    
+                    time_start_val = row[col_map['time_start']] if col_map['time_start'] != -1 else None
+                    time_end_val = row[col_map['time_end']] if col_map['time_end'] != -1 else None
+
+                    time_start = parse_time(time_start_val)
+                    time_end = parse_time(time_end_val)
+                    if time_start and time_end and time_end <= time_start:
+                        raise ValueError("time_end must be after time_start")  
                     # 2. Convert Data Types
                     work_date = None
                     if isinstance(date_val, datetime):
@@ -1725,15 +1959,17 @@ def timesheet_bulk_upload(request):
                     
                     # 5. Create Timesheet Entry
                     models.TimesheetEntry.objects.create(
-                        user=request.user,
-                        project=project,
-                        work_date=work_date,
-                        task_description=description or f"Bulk uploaded task for {project_name}",
-                        hours=hours,
-                        task_type=task_type,
-                        status='Inprogress',
-                        time_sheet=timesheet
-                    )
+                            user=request.user,
+                            project=project,
+                            work_date=work_date,
+                            task_description=description or f"Bulk uploaded task for {project_name}",
+                            hours=hours,
+                            task_type=task_type,
+                            status='Inprogress',
+                            time_sheet=timesheet,
+                            time_start=time_start,
+                            time_end=time_end
+                        )
                     success_count += 1
                     
                 except Exception as e:
@@ -1753,3 +1989,61 @@ def timesheet_bulk_upload(request):
     except Exception as e:
         messages.error(request, f"A critical error occurred while reading the file structure: {e}")
         return redirect('home')
+    
+
+
+from django.db.models import Sum, Count, Case, When, Value, CharField
+from django.template.loader import render_to_string
+from weasyprint import HTML
+from datetime import date
+
+def export_man_days_pdf(request):
+    queryset = TimesheetEntry.objects.all().select_related('project')
+    # ... (apply your filters for user_pk, project_pk, start_date, end_date) ...
+
+    # Grouping data by date and user
+    daily_stats = queryset.values(
+        'work_date', 'user__full_name', 'user__username', 'user__pk'
+    ).annotate(total_hours=Sum('hours')).order_by('-work_date')
+
+    refined_entries = []
+    total_h = 0
+    total_ot = 0
+    STANDARD = 8.0
+
+    for day in daily_stats:
+        # Get all entries for this user on this day to extract project names
+        day_tasks = queryset.filter(work_date=day['work_date'], user__pk=day['user__pk'])
+        
+        # Extract unique project names for this record
+        project_names = list(day_tasks.values_list('project__name', flat=True).distinct())
+        
+        ot_val = get_post_5pm_overtime(day_tasks)
+        logged = float(day['total_hours'] or 0)
+        
+        refined_entries.append({
+            'date': day['work_date'],
+            'employee_name': day['user__full_name'] or day['user__username'],
+            'logged_hours': logged,
+            'projects': project_names, # List of projects passed to HTML
+            'ot_hours': ot_val,
+            'is_under': logged < STANDARD,
+            'difference': logged - STANDARD,
+        })
+        total_h += logged
+        total_ot += ot_val
+
+    context = {
+        'entries': refined_entries,
+        'total_hours_sum': total_h,
+        'total_overtime_sum': total_ot,
+        'today': date.today(),
+    }
+
+    html_string = render_to_string('man_days_pdf_template.html', context)
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="Man_Days_Report.pdf"'
+    response.write(html.write_pdf())
+    return response

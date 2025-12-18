@@ -40,7 +40,7 @@
     <div class="row g-4 mt-2">
         
         <!-- Card 1: Total Hours This Week (Metric) -->
-        <div class="col-md-4 animate__animated animate__fadeInRight">
+        <div class="col-md-3 animate__animated animate__fadeInRight">
             <div class="card text-white bg-primary shadow rounded-3">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-clock me-2"></i> Total Hours This Week</h5>
@@ -51,7 +51,7 @@
         </div>
         
         <!-- Card 2: Review My Timesheets (LINK CARD) -->
-        <div class="col-md-4 animate__animated animate__fadeInRight animate__delay-0_2s">
+        <div class="col-md-3 animate__animated animate__fadeInRight animate__delay-0_2s">
             <a href="{%url 'user_timesheets'  %}" class="card text-decoration-none shadow-lg border-0 admin-card-link">
                 <div class="card-body text-center p-4">
                     <i class="fas fa-calendar-check fa-3x text-info mb-3"></i>
@@ -59,9 +59,16 @@
                 </div>
             </a>
         </div>
-        
+         <div class="col-md-3 animate__animated animate__fadeInRight animate__delay-0_2s">
+            <a href="{% url 'scheduled_user_timesheets' 'scheduled' %}" class="card text-decoration-none shadow-lg border-0 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-calendar-check fa-3x text-info mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">Scheduled timesheet Tasks</h5>
+                </div>
+            </a>
+        </div>
         <!-- Card 3: Your Role (Metric) -->
-        <div class="col-md-4 animate__animated animate__fadeInRight animate__delay-0_4s">
+        <div class="col-md-3 animate__animated animate__fadeInRight animate__delay-0_4s">
             <div class="card text-white bg-secondary shadow rounded-3">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-user-tag me-2"></i> Your Role</h5>
@@ -69,6 +76,8 @@
                 </div>
             </div>
         </div>
+
+       
     </div>
 
 
@@ -121,7 +130,15 @@
                 </div>
             </a>
         </div>
-
+    <div class="col-md-6 col-lg-3 animate__animated animate__fadeInUp animate__delay-0_3s">
+            <a href="{% url 'scheduled_timesheet' 'scheduled' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+                <div class="card-body text-center p-4">
+                   <i class="fas fa-calendar-check fa-3x text-warning mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">Scheduled Tasks</h5>
+                    <p class="card-text text-muted small">Create and edit Scheduled tasks .</p>
+                </div>
+            </a>
+        </div>
         <div class="col-md-6 col-lg-3 animate__animated animate__fadeInUp animate__delay-0_4s">
             <a href="{%url 'reports_dashboard' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
                 <div class="card-body text-center p-4">

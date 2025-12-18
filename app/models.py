@@ -52,7 +52,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
                               null=True, blank=True, related_name="employees")
     objects = CustomUserManager()
     date_joined = models.DateTimeField(auto_now_add=True)
-
+    email = models.EmailField(null=True, blank=True)
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['role']
 
@@ -113,7 +113,7 @@ class TimesheetEntry(models.Model):
     ]
 
     task_type = models.CharField(max_length=20,
-        choices=(("Delivery","Delivery"), ("Pre-Sale", "Pre-Sale")), default="Delivery")
+        choices=(("Delivery","Delivery"), ("Pre-Sale", "Pre-Sale"), ("study", "Study / Training")), default="Delivery")
 
     user = models.ForeignKey(
         CustomUser, 
@@ -147,6 +147,9 @@ class TimesheetEntry(models.Model):
                                     null=True, related_name='tasks') 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_scheduled = models.BooleanField(default=False)
+    time_start = models.TimeField(null=True, blank=True)
+    time_end = models.TimeField(null=True, blank=True)
     
     def __str__(self):
         return f"{self.user.username} - {self.project.name} on {self.work_date}"
@@ -166,4 +169,3 @@ class ProjectCost(models.Model):
     currency = models.CharField(max_length=5)
 
     
-

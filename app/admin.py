@@ -1,12 +1,19 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, TimesheetEntry, Project, Timesheet, ProjectCost
-admin.site.register([ TimesheetEntry, Project, Timesheet, ProjectCost])
-class CustomUserAdmin(UserAdmin):
+from .models import CustomUser, TimesheetEntry, Project, Timesheet, ProjectCost, Team
+admin.site.register([ TimesheetEntry, Timesheet, ProjectCost])
+from import_export.admin import ImportExportModelAdmin
+from .resources import (
+    TeamResource,
+    CustomUserResource,
+    ProjectResource
+)
+class CustomUserAdmin(UserAdmin, ImportExportModelAdmin):
     # Fields shown in list view
     list_display = ('username', 'full_name', 'role', 'is_active', 'is_staff')
     list_filter = ('role', 'is_active', 'is_staff')
     search_fields = ('username', 'full_name')
+    resource_class = CustomUserResource
 
     # Fieldsets for editing users
     fieldsets = (
@@ -26,3 +33,13 @@ class CustomUserAdmin(UserAdmin):
     ordering = ('username',)
 
 admin.site.register(CustomUser, CustomUserAdmin)
+
+@admin.register(Team)
+class TeamAdmin(ImportExportModelAdmin):
+    resource_class = TeamResource
+
+
+
+@admin.register(Project)
+class ProjectAdmin(ImportExportModelAdmin):
+    resource_class = ProjectResource

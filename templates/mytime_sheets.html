@@ -79,6 +79,9 @@
             <tr>
                 <th>Date</th>
                 <th>Project</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                
                 <th>Hours</th>
                 <th>Task Type</th>
                 <th>Description</th>
@@ -92,7 +95,11 @@
             <tr>
                 <td><i class="far fa-calendar-alt me-1"></i> {{ entry.work_date|date:"M d, Y" }}</td>
                 <td>{{ entry.project.name }}</td>
+                 <td class="fw-bold text-primary">{{ entry.time_start }}</td>
+                <td class="fw-bold text-primary">{{ entry.time_end }}</td>
+              
                 <td class="fw-bold text-primary">{{ entry.hours }}h</td>
+                
                 <td>
                     {% if entry.task_type == 'Delivery' %}
                         <span class="badge bg-primary">{{ entry.task_type }}</span>

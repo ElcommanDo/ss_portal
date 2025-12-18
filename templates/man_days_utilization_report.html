@@ -58,19 +58,30 @@
                 <input type="date" class="form-control" id="filter_end_date" name="end_date" value="{{ request.GET.end_date }}">
             </div>
 
-            <!-- Action Buttons -->
-            <div class="col-12 col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-info w-100 me-2"><i class="fas fa-search me-2"></i> Search</button>
-                <a href="." class="btn btn-secondary"><i class="fas fa-sync-alt"></i> Reset</a>
-            </div>
+<div class="col-12 col-md-3 d-flex align-items-end">
+    <button type="submit" class="btn btn-info me-2 flex-grow-1">
+        <i class="fas fa-search me-2"></i> Search
+    </button>
+    
+    <a href="{% url 'export_man_days_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-danger me-2 flex-grow-1">
+        <i class="fas fa-file-pdf me-2"></i> PDF
+    </a>
+
+    <a href="." class="btn btn-secondary">
+        <i class="fas fa-sync-alt"></i>
+    </a>
+</div>
         </form>
     </div>
+    
 </div>
 
 <!-- --- Key Metrics --- -->
 <div class="row g-4 mb-5">
+    
     <div class="col-md-6">
         <div class="card bg-primary text-white shadow h-100">
+
             <div class="card-body">
                 <h6 class="card-title text-light">Total Filtered Hours Logged</h6>
                 <p class="fs-4 fw-bold">{{ total_hours_sum|default:"0.00"|floatformat:2 }}h</p>
@@ -99,6 +110,7 @@
     <div class="card-header bg-dark text-white fw-bold">
         Daily Entries (Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }})
     </div>
+    
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover table-striped mb-0">
@@ -115,33 +127,33 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {# Loop through the paginated entries #}
-                    {% for entry in page_obj %}
-                    <tr>
-                        <td>{{ entry.work_date|date:"M d, Y (D)" }}</td>
-                        <td>{{ entry.user__full_name|default:entry.user__username }}</td>
-                        {% if not project_pk %}
-                            <td>{{ entry.project_count }}</td>
-                        {% endif %}
-                        <td class="text-end fw-bold text-primary">{{ entry.total_daily_hours|floatformat:2 }}h</td>
-                        <td class="text-end text-muted">{{ standard_day_hours|floatformat:2 }}h</td>
-                        <td class="text-end">
-                            {% with diff=entry.overtime_hours %}
-                                {% if diff > 0 %}
-                                    <span class="badge bg-success fw-bold">{{ diff|floatformat:2 }}h Over</span>
-                                {% elif diff < 0 %}
-                                    <span class="badge bg-danger fw-bold">{{ diff|floatformat:2 }}h Under</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">0.00h</span>
-                                {% endif %}
-                            {% endwith %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center text-muted">No daily aggregated data found matching the current filters.</td>
-                    </tr>
-                    {% endfor %}
+                   {% for entry in page_obj %}
+<tr>
+    <td>{{ entry.work_date|date:"M d, Y (D)" }}</td>
+    <td>{{ entry.user__full_name|default:entry.user__username }}</td>
+    {% if not project_pk %}
+        <td>{{ entry.project_count }}</td>
+    {% endif %}
+    <td class="text-end fw-bold text-primary">{{ entry.total_daily_hours|floatformat:2 }}h</td>
+    <td class="text-end text-muted">{{ standard_day_hours|floatformat:2 }}h</td>
+    <td class="text-end">
+        {% if entry.total_daily_hours < standard_day_hours %}
+            <span class="badge bg-danger fw-bold">
+                {{ entry.total_daily_hours|add:"-8"|floatformat:2 }}h Under
+            </span>
+        {% else %}
+            <span class="badge bg-success fw-bold">Full Capacity</span>
+            
+            {% if entry.overtime_hours > 0 %}
+                <div class="mt-1 small fw-bold text-info">
+                    <i class="fas fa-moon"></i> +{{ entry.overtime_hours|floatformat:2 }}h Post-5PM
+                </div>
+            {% endif %}
+        {% endif %}
+    </td>
+</tr>
+{% empty %}
+{% endfor %}
                 </tbody>
                 <tfoot>
                     <tr class="table-info fw-bold">

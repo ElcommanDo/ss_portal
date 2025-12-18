@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 2.5cm 1cm 1cm 1cm;
+            @top-left { content: "Smart System | Performance Report"; color: #0d6efd; font-weight: bold; }
+            @top-right { content: "Created: {{ today|date:'M d, Y' }}"; color: #666; }
+        }
+        body { font-family: Arial, sans-serif; color: #333; }
+        
+        /* Watermark */
+        .watermark {
+            position: fixed;
+            top: 25%;
+            left: 25%;
+            transform: rotate(-30deg);
+            font-size: 90pt;
+            font-weight: bold;
+            color: rgba(7, 124, 233, 0.075);
+            z-index: -1000;
+        }
+
+        /* Stats Section */
+        .stats-wrapper { width: 100%; margin-bottom: 25px; border-collapse: collapse; }
+        .stat-card { background-color: #f8f9fa; border-left: 5px solid #0d6efd; padding: 15px; width: 48%; }
+
+        /* Project Badge Styles */
+        .project-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            margin: 2px;
+            border-radius: 4px;
+            font-size: 8pt;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        /* Amazing Colors for Projects */
+        .p-color-1 { background-color: #6610f2; } /* Purple */
+        .p-color-2 { background-color: #fd7e14; } /* Orange */
+        .p-color-3 { background-color: #20c997; } /* Teal */
+        .p-color-4 { background-color: #d63384; } /* Pink */
+        .p-color-5 { background-color: #0d6efd; } /* Blue */
+
+        .report-table { width: 100%; border-collapse: collapse; }
+        .report-table th { background-color: #212529; color: white; padding: 10px; text-align: left; }
+        .report-table td { padding: 8px; border-bottom: 1px solid #ddd; font-size: 9.5pt; vertical-align: middle; }
+        
+        .text-right { text-align: right; }
+        .red { color: #dc3545; font-weight: bold; }
+        .green { color: #198754; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="watermark">SMART SYSTEM</div>
+
+    <table class="stats-wrapper">
+        <tr>
+            <td class="stat-card">
+                <div style="font-size: 8pt; color: #666;">TOTAL HOURS LOGGED</div>
+                <div style="font-size: 16pt; font-weight: bold;">{{ total_hours_sum|floatformat:2 }}h</div>
+            </td>
+            <td style="width: 4%;"></td>
+            <td class="stat-card" style="border-left-color: #ffc107;">
+                <div style="font-size: 8pt; color: #666;">TOTAL OVERTIME (POST-5PM)</div>
+                <div style="font-size: 16pt; font-weight: bold;">{{ total_overtime_sum|floatformat:2 }}h</div>
+            </td>
+        </tr>
+    </table>
+
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Employee</th>
+                <th>Projects Worked</th>
+                <th class="text-right">Hours</th>
+                <th class="text-right">Status / OT</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr>
+                <td>{{ entry.date|date:"M d, Y" }}</td>
+                <td style="font-weight: bold;">{{ entry.employee_name }}</td>
+                <td>
+                    {% for project in entry.projects %}
+                        <span class="project-badge p-color-{{ forloop.counter0|add:1|stringformat:'s'|slice:':1' }}">
+                            {{ project }}
+                        </span>
+                    {% endfor %}
+                </td>
+                <td class="text-right">{{ entry.logged_hours|floatformat:2 }}h</td>
+                <td class="text-right">
+                    {% if entry.is_under %}
+                        <span class="red">UNDER ({{ entry.difference|floatformat:2 }}h)</span>
+                    {% else %}
+                        <span class="green">CAPACITY MET</span>
+                    {% endif %}
+                    {% if entry.ot_hours > 0 %}
+                        <br><span style="color:#0dcaf0; font-size:8pt;">+{{ entry.ot_hours|floatformat:2 }}h Post-5PM</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
