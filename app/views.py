@@ -38,7 +38,7 @@ def is_admin(user):
     return user.is_superuser or user.role == "admin"
 
 def is_manager(user):
-    return user.role == "project-manager"
+    return user.role in ["project-manager", "delivery-manager", "top-manager", "ceo"] 
 
 def is_engineer(user):
     return user.role == "engineer" or user.role == "developer" 
