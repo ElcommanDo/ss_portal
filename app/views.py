@@ -68,6 +68,59 @@ def home(request):
 
 
 @login_required
+def timesheet_update(request, pk):
+   
+    if request.method =="POST":
+        print("Work")
+        data = request.POST
+        ts = TimesheetEntry.objects.get(pk=pk)
+        ts.task_description = data.get("task_description", ts.task_description)
+        ts.time_start = data.get("time_start", ts.time_start)
+        ts.time_end = data.get("time_end", ts.time_end)
+        ts.task_type = data.get("task_type", ts.task_type)
+        if ts.project.name != data.get("project_name"):
+            print("im in")
+            project = get_object_or_404(Project, name=data.get("project_name"))
+            ts.project = project
+        
+        if ts.time_start and  ts.time_end:
+            fmt = '%H:%M'
+            t1 = datetime.strptime(ts.time_start, fmt)
+            t2 = datetime.strptime(ts.time_end, fmt)
+
+            # Calculate difference
+            # Using absolute value to ensure it's positive regardless of order
+            delta = abs(t2 - t1)
+            
+            # Convert total seconds to hours (float)
+            hours = delta.total_seconds() / 3600.0
+        else:
+            hours = 0
+
+        ts.hours = hours
+        ts.save()
+        next_url = request.POST.get('next')
+        if hours <= 0:
+
+            messages.error(request, "Hours spent must be greater than zero.")
+            return redirect(next_url)
+        messages.success(request, 'Time Sheet Entry Updated Successffully')
+        return redirect(next_url)
+        
+@login_required
+def time_sheet_delete(request, pk):
+    if request.method == "POST":
+        next_url = request.POST.get('next')
+        ts = TimesheetEntry.objects.get(pk=pk)
+        if request.user != ts.user:
+            messages.warning(request, 'You Can not delete other user TimeSheet Entry')
+            return redirect(next_url) 
+        ts = TimesheetEntry.objects.get(pk=pk)
+        ts.delete()
+        messages.success(request, 'Time Sheet Entry Deleted Successffully')
+        return redirect(next_url)
+
+@login_required
 def timesheet_create(request):
     user_projects = Q(created_by=request.user)
     public_projects = Q(is_public=True)
@@ -91,6 +144,7 @@ def timesheet_create(request):
                 work_date_str = str(request.POST.get('work_date'))
                 task_description = request.POST.get('task_description')
                 task_type = request.POST.get('task_type')
+
                 hours = 0.00 
                 
                 if not work_date_str or work_date_str.strip() == '':
@@ -104,7 +158,7 @@ def timesheet_create(request):
                     messages.error(request, "Invalid project selection or insufficient permissions.")
                     return redirect('add_timesheet')
 
-                models.TimesheetEntry.objects.create(
+                obj = models.TimesheetEntry.objects.create(
                     user=request.user,
                     project=project,
                     work_date=work_date_str, # Date string is now guaranteed to be non-empty
@@ -115,7 +169,11 @@ def timesheet_create(request):
                     time_sheet = timesheet,
                     is_scheduled = True
                 )
-                
+                if request.POST.get("location") == "abroad":
+                    obj.onsite_abroad = True
+                elif request.POST.get("location") == "egypt":
+                    obj.onsite_Egypt = True
+                obj.save()
                 messages.success(request, "Timesheet entry saved successfully!")
                 return redirect('home') 
             
@@ -161,7 +219,7 @@ def timesheet_create(request):
                     messages.error(request, "Invalid project selection or insufficient permissions.")
                     return redirect('add_timesheet')
 
-                models.TimesheetEntry.objects.create(
+                obj = models.TimesheetEntry.objects.create(
                     user=request.user,
                     project=project,
                     work_date=work_date_str, # Date string is now guaranteed to be non-empty
@@ -174,6 +232,11 @@ def timesheet_create(request):
                     time_end = request.POST.get('end_time'),
             
                 )
+                if request.POST.get("location") == "abroad":
+                    obj.onsite_abroad = True
+                elif request.POST.get("location") == "egypt":
+                    obj.onsite_Egypt = True
+                obj.save()
                 
                 messages.success(request, "Timesheet entry saved successfully!")
                 return redirect('home') 
@@ -188,18 +251,18 @@ def timesheet_create(request):
     context = {'projects': projects, 'today': date.today()}
     return render(request, 'add_timesheet.html', context)
 
-@login_required
-def timesheet_update(request, pk):
-    if request.method == "POST":
-        data = request.POST
-        obj = get_object_or_404(models.TimesheetEntry, pk=pk)
-        obj.work_date = data.get("work_date")
-        obj.task_description = data.get("task_description")
-        obj.hours = data.get("hours")
-        obj.status = data.get("status")
-        obj.save()
-        messages.success(request, "The Time Sheet updated successfully...")
-        return redirect('home')
+# @login_required
+# def timesheet_update(request, pk):
+#     if request.method == "POST":
+#         data = request.POST
+#         obj = get_object_or_404(models.TimesheetEntry, pk=pk)
+#         obj.work_date = data.get("work_date")
+#         obj.task_description = data.get("task_description")
+#         obj.hours = data.get("hours")
+#         obj.status = data.get("status")
+#         obj.save()
+#         messages.success(request, "The Time Sheet updated successfully...")
+#         return redirect('home')
 
 
 @user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
@@ -346,7 +409,7 @@ def timesheet_dashboard(request):
         ).aggregate(Sum('hours'))
         
         weekly_hours = weekly_hours_aggregation.get('hours__sum', 0) or 0
-        context['weekly_hours'] = weekly_hours
+        context['weekly_hours'] = round(weekly_hours, 2)
         template = 'dashboard.html'
     
     
@@ -918,10 +981,7 @@ def timesheet_detail_entries(request, pk):
 
 @login_required
 def user_timesheets(request, scheduled=None):
-    """
-    Displays the aggregated Timesheets (daily logs) for the current logged-in user.
-    Uses the timesheet_list.html template.
-    """
+    
     current_user = request.user
     
     # 1. Start with Timesheet objects filtered by the current user
@@ -987,9 +1047,10 @@ def user_timesheets(request, scheduled=None):
         # Context required by timesheet_list.html (passed empty for simplicity):
         'all_users': models.CustomUser.objects.none(),
         'all_teams': models.Team.objects.none(),
-        'all_projects': models.Project.objects.none(),
+        'all_projects': models.Project.objects.filter(is_public=True, is_active=True),
         'status_choices': models.TimesheetEntry.STATUS_CHOICES,
         'current_params': request.GET.urlencode(),
+        
     }
 
     return render(request, 'time_sheets.html', context)
@@ -1040,8 +1101,9 @@ def my_timesheet_entries(request, pk):
         'page_obj': page_obj,
         'user_projects': user_projects,
         'status_choices': models.TimesheetEntry.STATUS_CHOICES,
+        'projects': Project.objects.all()
     }
-
+    print(context['projects'])
     return render(request, 'mytime_sheets.html', context)
 
 
@@ -1090,6 +1152,7 @@ def timesheet_entries(request, pk):
         'page_obj': page_obj,
         'user_projects': user_projects,
         'status_choices': models.TimesheetEntry.STATUS_CHOICES,
+        'projects': Project.objects.filter(is_public=True, is_active=True)
     }
 
     return render(request, 'mytime_sheets.html', context)
@@ -1273,7 +1336,7 @@ def get_post_5pm_overtime(entries):
 def reports_man_days(request):
     # 1. Base Setup
     STANDARD_HOURS = 8.0
-    queryset = TimesheetEntry.objects.all()
+    queryset = TimesheetEntry.objects.filter(is_scheduled=False)
 
     # 2. Apply Filters (matching your HTML form names)
     user_pk = request.GET.get('user_pk')
@@ -1409,7 +1472,7 @@ def reports_project_cost_summary(request):
     start_date, end_date = get_date_range(period, request.GET.get('start_date'), request.GET.get('end_date'))
 
     # Filter Timesheet Entries (for Man-Hours)
-    entry_queryset = TimesheetEntry.objects.all()
+    entry_queryset = TimesheetEntry.objects.filter(is_scheduled=False)
     # Filter Project Costs (External Expenses)
     cost_queryset = ProjectCost.objects.all()
     
@@ -1492,7 +1555,7 @@ def reports_status_compliance(request):
     user_pk = request.GET.get('user_pk')
     start_date, end_date = get_date_range(period, request.GET.get('start_date'), request.GET.get('end_date'))
 
-    queryset = TimesheetEntry.objects.all()
+    queryset = TimesheetEntry.objects.filter(is_scheduled=False)
     
     if user_pk:
         queryset = queryset.filter(user__pk=user_pk)
@@ -1711,7 +1774,7 @@ def reports_daily_man_days(request):
     end_date = get_valid_date(end_date_str)
 
     # 2. Base Queryset (TimesheetEntry)
-    queryset = TimesheetEntry.objects.all()
+    queryset = TimesheetEntry.objects.filter(is_scheduled=False)
     
     # 3. Apply Filters
     if user_pk:
@@ -2001,10 +2064,8 @@ from django.db import transaction
 
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
-
 @login_required
 def timesheet_bulk_upload(request):
-    # Ensure this endpoint is only accessible via POST
     if request.method != 'POST':
         messages.error(request, "Invalid request method.")
         return redirect('home') 
@@ -2016,21 +2077,19 @@ def timesheet_bulk_upload(request):
     excel_or_csv_file = request.FILES['bulk_file']
     file_name = excel_or_csv_file.name.lower()
 
-    # 1. File Format Validation
     if not file_name.endswith(('.xlsx', '.xls', '.csv')):
         messages.error(request, "Invalid file format. Please upload an Excel (.xlsx/.xls) or CSV (.csv) file.")
         return redirect('home')
 
     is_csv = file_name.endswith('.csv')
     
-    # Define allowed projects for the user
     user_projects_query = Q(created_by=request.user)
     public_projects_query = Q(is_public=True)
     allowed_projects = models.Project.objects.filter(
         Q(is_active=True), user_projects_query | public_projects_query
     ).distinct().in_bulk(field_name='name') 
     
-    # Configuration for mapping
+    # 1. Updated mapping to include new fields
     col_map = {
         'date': -1,
         'project_name': -1,
@@ -2038,69 +2097,73 @@ def timesheet_bulk_upload(request):
         'task_description': -1,
         'task_type': -1,
         'time_start': -1,
-        'time_end': -1 
+        'time_end': -1,
+        'onsite_abroad': -1,  # New Field
+        'onsite_egypt': -1    # New Field
     }
     required_cols = ['date', 'project_name', 'hours']
 
     try:
         data_rows = []
-        
-        # --- File Parsing Logic ---
         if is_csv:
             file_data = excel_or_csv_file.read().decode('utf-8').splitlines()
             csv_reader = csv.reader(file_data)
-            header = [h.strip() for h in next(csv_reader)]
+            header = [h.strip().lower().replace(' ', '_') for h in next(csv_reader)]
             
             for i, col_name in enumerate(header):
-                key = col_name.lower().replace(' ', '_')
-                if key in col_map:
-                    col_map[key] = i
+                if col_name in col_map:
+                    col_map[col_name] = i
             data_rows = list(csv_reader)
         else:
             workbook = openpyxl.load_workbook(io.BytesIO(excel_or_csv_file.read()))
             sheet = workbook.active
-            header = [cell.value for cell in sheet[1]]
+            header = [str(cell.value).strip().lower().replace(' ', '_') if cell.value else "" for cell in sheet[1]]
             
             for i, col_name in enumerate(header):
-                if col_name and col_name.lower() in col_map:
-                    col_map[col_name.lower()] = i
+                if col_name in col_map:
+                    col_map[col_name] = i
             data_rows = list(sheet.iter_rows(min_row=2, values_only=True))
 
-        # Check for missing required columns
         if any(col_map[c] == -1 for c in required_cols):
             missing = [c for c in required_cols if col_map[c] == -1]
             messages.error(request, f"Missing required columns: {', '.join(missing)}")
             return redirect('home')
 
-        # --- Atomic Transaction Block ---
-        # If any error occurs inside this block, the database rolls back to its state before the 'with' statement.
+        # Helper function to convert spreadsheet values to Boolean
+        def clean_bool(val):
+            if val is None: return False
+            str_val = str(val).strip().lower()
+            return str_val in ['true', '1', 'yes', 'y', 'checked']
+
         with transaction.atomic():
             success_count = 0
-            
             for row_index, row in enumerate(data_rows, start=2):
-                # Skip entirely empty rows
-                if not any(row):
-                    continue
+                if not any(row): continue
 
-                # 1. Extract Data
+                # Extraction
                 date_val = row[col_map['date']]
-                project_name = str(row[col_map['project_name'] or ""]).strip()
+                project_name = str(row[col_map['project_name']] or "").strip()
                 hours_val = row[col_map['hours']]
-                description = row[col_map['task_description']]
-                task_type = row[col_map['task_type']] or 'Other'
+                description = row[col_map['task_description']] if col_map['task_description'] != -1 else ""
+                task_type = row[col_map['task_type']] if col_map['task_type'] != -1 else 'Other'
                 
-                # 2. Parse Times
+                # 2. Extract and clean the new boolean fields
+                abroad_val = row[col_map['onsite_abroad']] if col_map['onsite_abroad'] != -1 else False
+                egypt_val = row[col_map['onsite_egypt']] if col_map['onsite_egypt'] != -1 else False
+                
+                onsite_abroad = clean_bool(abroad_val)
+                onsite_egypt = clean_bool(egypt_val)
+
+                # Time Parsing
                 time_start_val = row[col_map['time_start']] if col_map['time_start'] != -1 else None
                 time_end_val = row[col_map['time_end']] if col_map['time_end'] != -1 else None
-                
-                # Assuming parse_time is a utility function you have defined
                 time_start = parse_time(time_start_val)
                 time_end = parse_time(time_end_val)
 
                 if time_start and time_end and time_end <= time_start:
                     raise ValueError(f"Row {row_index}: End time must be after start time.")
 
-                # 3. Parse Date
+                # Date Parsing
                 work_date = None
                 if isinstance(date_val, datetime):
                     work_date = date_val.date()
@@ -2109,31 +2172,29 @@ def timesheet_bulk_upload(request):
                         try:
                             work_date = datetime.strptime(date_val.strip(), fmt).date()
                             break
-                        except ValueError:
-                            continue
+                        except ValueError: continue
                 
                 if not work_date:
                     raise ValueError(f"Row {row_index}: Invalid date format '{date_val}'.")
 
-                # 4. Validate Hours
+                # Validation
                 try:
                     hours = float(hours_val)
-                    if hours <= 0:
-                        raise ValueError
+                    if hours <= 0: raise ValueError
                 except (TypeError, ValueError):
                     raise ValueError(f"Row {row_index}: Hours must be a positive number.")
 
-                # 5. Project Permission Check
                 project = allowed_projects.get(project_name)
                 if not project:
                     raise ValueError(f"Row {row_index}: Project '{project_name}' not found or restricted.")
 
-                # 6. Database Operations
+                # Database Operations
                 timesheet, _ = models.Timesheet.objects.get_or_create(
                     user=request.user, 
                     date=work_date
                 )
 
+                # 3. Create entry with new fields
                 models.TimesheetEntry.objects.create(
                     user=request.user,
                     project=project,
@@ -2144,16 +2205,16 @@ def timesheet_bulk_upload(request):
                     status='Inprogress',
                     time_sheet=timesheet,
                     time_start=time_start,
-                    time_end=time_end
+                    time_end=time_end,
+                    onsite_abroad=onsite_abroad, # Added
+                    onsite_Egypt=onsite_egypt    # Added
                 )
                 success_count += 1
 
-        # If the code reaches here, the transaction is committed
         messages.success(request, f"Successfully uploaded {success_count} entries.")
 
     except Exception as e:
-        # If any exception was raised, the transaction was rolled back automatically.
-        messages.error(request, f"Upload Failed: No data was saved. Error at {e}")
+        messages.error(request, f"Upload Failed: No data was saved. Error: {e}")
     
     return redirect('home')
 
@@ -2161,12 +2222,12 @@ from django.db.models import Sum, Count, Case, When, Value, CharField
 from django.template.loader import render_to_string
 from weasyprint import HTML
 from datetime import date
-
 def export_man_days_pdf(request):
-    queryset = TimesheetEntry.objects.all().select_related('project')
-    # ... (apply your filters for user_pk, project_pk, start_date, end_date) ...
+    # Base Query
+    queryset = models.TimesheetEntry.objects.filter(is_scheduled=False).select_related('project', 'user')
+    
+    # ... (Add your filtering logic here, e.g., queryset = queryset.filter(...)) ...
 
-    # Grouping data by date and user
     daily_stats = queryset.values(
         'work_date', 'user__full_name', 'user__username', 'user__pk'
     ).annotate(total_hours=Sum('hours')).order_by('-work_date')
@@ -2177,12 +2238,13 @@ def export_man_days_pdf(request):
     STANDARD = 8.0
 
     for day in daily_stats:
-        # Get all entries for this user on this day to extract project names
         day_tasks = queryset.filter(work_date=day['work_date'], user__pk=day['user__pk'])
         
-        # Extract unique project names for this record
-        project_names = list(day_tasks.values_list('project__name', flat=True).distinct())
+        # Check if ANY entry for this user on this day is onsite
+        is_abroad = day_tasks.filter(onsite_abroad=True).exists()
+        is_egypt = day_tasks.filter(onsite_Egypt=True).exists()
         
+        project_names = list(day_tasks.values_list('project__name', flat=True).distinct())
         ot_val = get_post_5pm_overtime(day_tasks)
         logged = float(day['total_hours'] or 0)
         
@@ -2190,8 +2252,10 @@ def export_man_days_pdf(request):
             'date': day['work_date'],
             'employee_name': day['user__full_name'] or day['user__username'],
             'logged_hours': logged,
-            'projects': project_names, # List of projects passed to HTML
+            'projects': project_names,
             'ot_hours': ot_val,
+            'onsite_abroad': is_abroad,
+            'onsite_egypt': is_egypt,
             'is_under': logged < STANDARD,
             'difference': logged - STANDARD,
         })
@@ -2202,10 +2266,12 @@ def export_man_days_pdf(request):
         'entries': refined_entries,
         'total_hours_sum': total_h,
         'total_overtime_sum': total_ot,
-        'today': date.today(),
+        'today': datetime.now().date(),
     }
 
     html_string = render_to_string('man_days_pdf_template.html', context)
+    # Using WeasyPrint or similar
+    from weasyprint import HTML 
     html = HTML(string=html_string, base_url=request.build_absolute_uri())
     
     response = HttpResponse(content_type='application/pdf')

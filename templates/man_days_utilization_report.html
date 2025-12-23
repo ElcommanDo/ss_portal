@@ -14,13 +14,10 @@
 
 <p class="text-muted mb-4">View daily aggregated hours, comparing actual work against the standard 8-hour capacity.</p>
 
-<!-- --- Filters --- -->
 <div class="card shadow-sm mb-5 animate__animated animate__fadeIn">
     <div class="card-body">
         <h5 class="card-title fw-bold">Filter Daily Entries</h5>
         <form method="GET" class="row g-3">
-            
-            <!-- Employee Filter -->
             <div class="col-md-3 col-sm-6">
                 <label for="filter_employee" class="form-label">Employee</label>
                 <select class="form-select" id="filter_employee" name="user_pk">
@@ -32,8 +29,6 @@
                     {% endfor %}
                 </select>
             </div>
-
-            <!-- Project Filter -->
             <div class="col-md-3 col-sm-6">
                 <label for="filter_project" class="form-label">Project</label>
                 <select class="form-select" id="filter_project" name="project_pk">
@@ -45,124 +40,128 @@
                     {% endfor %}
                 </select>
             </div>
-
-            <!-- Start Date Filter -->
             <div class="col-md-2 col-sm-6">
                 <label for="filter_start_date" class="form-label">Start Date</label>
                 <input type="date" class="form-control" id="filter_start_date" name="start_date" value="{{ request.GET.start_date }}">
             </div>
-            
-            <!-- End Date Filter -->
             <div class="col-md-2 col-sm-6">
                 <label for="filter_end_date" class="form-label">End Date</label>
                 <input type="date" class="form-control" id="filter_end_date" name="end_date" value="{{ request.GET.end_date }}">
             </div>
-
-<div class="col-12 col-md-3 d-flex align-items-end">
-    <button type="submit" class="btn btn-info me-2 flex-grow-1">
-        <i class="fas fa-search me-2"></i> Search
-    </button>
-    
-    <a href="{% url 'export_man_days_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-danger me-2 flex-grow-1">
-        <i class="fas fa-file-pdf me-2"></i> PDF
-    </a>
-
-    <a href="." class="btn btn-secondary">
-        <i class="fas fa-sync-alt"></i>
-    </a>
-</div>
+            <div class="col-12 col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-info me-2 flex-grow-1"><i class="fas fa-search"></i></button>
+                <a href="{% url 'export_man_days_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-danger me-2 flex-grow-1"><i class="fas fa-file-pdf"></i></a>
+                <a href="." class="btn btn-secondary"><i class="fas fa-sync-alt"></i></a>
+            </div>
         </form>
     </div>
-    
 </div>
 
-<!-- --- Key Metrics --- -->
-<div class="row g-4 mb-5">
-    
+<div class="row g-4 mb-5 text-center">
     <div class="col-md-6">
         <div class="card bg-primary text-white shadow h-100">
-
             <div class="card-body">
-                <h6 class="card-title text-light">Total Filtered Hours Logged</h6>
-                <p class="fs-4 fw-bold">{{ total_hours_sum|default:"0.00"|floatformat:2 }}h</p>
+                <h6 class="card-title text-light opacity-75">Total Filtered Hours Logged</h6>
+                <p class="fs-3 fw-bold mb-0">{{ total_hours_sum|default:"0.00"|floatformat:2 }}h</p>
             </div>
         </div>
     </div>
     <div class="col-md-6">
         <div class="card bg-warning text-dark shadow h-100">
             <div class="card-body">
-                <h6 class="card-title text-secondary">Net Overtime / Under-time</h6>
-                <p class="fs-4 fw-bold">
+                <h6 class="card-title text-muted opacity-75">Net Overtime / Under-time</h6>
+                <p class="fs-3 fw-bold mb-0">
                     {% if total_overtime_sum < 0 %}
-                        <i class="fas fa-arrow-down text-danger me-2"></i> 
+                        <i class="fas fa-arrow-down text-danger me-1"></i> 
                     {% elif total_overtime_sum > 0 %}
-                        <i class="fas fa-arrow-up text-success me-2"></i> 
+                        <i class="fas fa-arrow-up text-success me-1"></i> 
                     {% endif %}
-                    {{ total_overtime_sum|default:"0.00"|floatformat:2|safe }}h
+                    {{ total_overtime_sum|default:"0.00"|floatformat:2 }}h
                 </p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- --- Daily Breakdown Table --- -->
 <div class="card shadow">
-    <div class="card-header bg-dark text-white fw-bold">
-        Daily Entries (Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }})
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3 fw-bold">
+        <span>Daily Breakdown Summary</span>
+        <span class="badge bg-secondary">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
     </div>
-    
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover table-striped mb-0">
+            <table class="table table-hover table-striped mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Date</th>
-                        <th>Employee</th>
-                        {% if not project_pk %}
-                            <th>Total Projects Logged</th>
-                        {% endif %}
-                        <th class="text-end">Total Hours Logged</th>
-                        <th class="text-end">Standard ({{ standard_day_hours }}h)</th>
-                        <th class="text-end">Overtime / Under-time</th>
+                        <th style="width: 15%">Date</th>
+                        <th style="width: 20%">Employee</th>
+                        {% if not project_pk %}<th class="text-center">Projects</th>{% endif %}
+                        <th class="text-center" style="width: 8%">Abroad</th>
+                        <th class="text-center" style="width: 8%">Egypt</th>
+                        <th class="text-end">Actual Hrs</th>
+                        <th class="text-end">Standard</th>
+                        <th class="text-end">Status / OT</th>
                     </tr>
                 </thead>
                 <tbody>
-                   {% for entry in page_obj %}
-<tr>
-    <td>{{ entry.work_date|date:"M d, Y (D)" }}</td>
-    <td>{{ entry.user__full_name|default:entry.user__username }}</td>
-    {% if not project_pk %}
-        <td>{{ entry.project_count }}</td>
-    {% endif %}
-    <td class="text-end fw-bold text-primary">{{ entry.total_daily_hours|floatformat:2 }}h</td>
-    <td class="text-end text-muted">{{ standard_day_hours|floatformat:2 }}h</td>
-    <td class="text-end">
-        {% if entry.total_daily_hours < standard_day_hours %}
-            <span class="badge bg-danger fw-bold">
-                {{ entry.total_daily_hours|add:"-8"|floatformat:2 }}h Under
-            </span>
-        {% else %}
-            <span class="badge bg-success fw-bold">Full Capacity</span>
-            
-            {% if entry.overtime_hours > 0 %}
-                <div class="mt-1 small fw-bold text-info">
-                    <i class="fas fa-moon"></i> +{{ entry.overtime_hours|floatformat:2 }}h Post-5PM
-                </div>
-            {% endif %}
-        {% endif %}
-    </td>
-</tr>
-{% empty %}
-{% endfor %}
-                </tbody>
-                <tfoot>
-                    <tr class="table-info fw-bold">
-                        <td colspan="{% if not project_pk %}4{% else %}3{% endif %}" class="text-end">Total Summary:</td>
-                        <td class="text-end">{{ total_hours_sum|default:"0.00"|floatformat:2 }}h</td>
-                        <td class="text-end">{{ total_standard_sum|default:"0.00"|floatformat:2 }}h</td>
+                    {% for entry in page_obj %}
+                    <tr>
+                        <td class="text-nowrap">{{ entry.work_date|date:"M d, Y (D)" }}</td>
+                        <td class="fw-bold">{{ entry.user__full_name|default:entry.user__username }}</td>
+                        
+                        {% if not project_pk %}
+                            <td class="text-center">
+                                <span class="badge rounded-pill bg-light text-dark border">{{ entry.project_count }}</span>
+                            </td>
+                        {% endif %}
+
+                        <td class="text-center">
+                            {% if entry.onsite_abroad %}
+                                <i class="fas fa-check-circle text-success fs-5" title="Onsite Abroad"></i>
+                            {% else %}
+                                <i class="fas fa-times text-muted" style="opacity: 0.2;"></i>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center">
+                            {% if entry.onsite_Egypt %}
+                                <i class="fas fa-check-circle text-primary fs-5" title="Onsite Egypt"></i>
+                            {% else %}
+                                <i class="fas fa-times text-muted" style="opacity: 0.2;"></i>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-end fw-bold text-primary">{{ entry.total_daily_hours|floatformat:2 }}h</td>
+                        <td class="text-end text-muted">{{ standard_day_hours|floatformat:2 }}h</td>
                         <td class="text-end">
-                            <span class="{% if total_overtime_sum > 0 %}text-success{% elif total_overtime_sum < 0 %}text-danger{% else %}text-dark{% endif %}">
-                                {{ total_overtime_sum|default:"0.00"|floatformat:2 }}h
+                            {% if entry.total_daily_hours < standard_day_hours %}
+                                <span class="badge bg-danger">
+                                    {{ entry.total_daily_hours|add:"-8"|floatformat:2 }}h Under
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success">Capacity Met</span>
+                                {% if entry.overtime_hours > 0 %}
+                                    <div class="mt-1 small fw-bold text-info">
+                                        <i class="fas fa-moon"></i> +{{ entry.overtime_hours|floatformat:2 }}h OT
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">No records found matching filters.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-info fw-bold">
+                    <tr>
+                        <td colspan="{% if not project_pk %}5{% else %}4{% endif %}" class="text-end text-dark">Filtered Totals:</td>
+                        <td class="text-end text-primary">{{ total_hours_sum|default:"0"|floatformat:2 }}h</td>
+                        <td class="text-end text-muted">{{ total_standard_sum|default:"0"|floatformat:2 }}h</td>
+                        <td class="text-end">
+                            <span class="{% if total_overtime_sum > 0 %}text-success{% elif total_overtime_sum < 0 %}text-danger{% endif %}">
+                                {{ total_overtime_sum|default:"0"|floatformat:2 }}h
                             </span>
                         </td>
                     </tr>
@@ -171,46 +170,26 @@
         </div>
     </div>
     
-    <!-- --- Pagination Controls (Reused from previous response, ensures query params are maintained) --- -->
     {% if page_obj.has_other_pages %}
-    <div class="card-footer">
+    <div class="card-footer bg-white py-3">
         <nav aria-label="Page navigation">
             <ul class="pagination justify-content-center mb-0">
                 {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                            Previous
-                        </a>
-                    </li>
-                {% else %}
-                    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{k}}={{v}}{% endif %}{% endfor %}">Previous</a></li>
                 {% endif %}
-
-                {# Loop through page numbers (simplified to show current, prev, next) #}
                 {% for i in page_obj.paginator.page_range %}
                     {% if page_obj.number == i %}
                         <li class="page-item active"><span class="page-link">{{ i }}</span></li>
                     {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
-                        </li>
+                        <li class="page-item"><a class="page-link" href="?page={{ i }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{k}}={{v}}{% endif %}{% endfor %}">{{ i }}</a></li>
                     {% endif %}
                 {% endfor %}
-
                 {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                            Next
-                        </a>
-                    </li>
-                {% else %}
-                    <li class="page-item disabled"><span class="page-link">Next</span></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{k}}={{v}}{% endif %}{% endfor %}">Next</a></li>
                 {% endif %}
             </ul>
         </nav>
     </div>
     {% endif %}
-
 </div>
-
 {% endblock %}

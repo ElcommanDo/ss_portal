@@ -150,6 +150,8 @@ class TimesheetEntry(models.Model):
     is_scheduled = models.BooleanField(default=False)
     time_start = models.TimeField(null=True, blank=True)
     time_end = models.TimeField(null=True, blank=True)
+    onsite_abroad = models.BooleanField(default=False)
+    onsite_Egypt = models.BooleanField(default=False)
     
     def __str__(self):
         return f"{self.user.username} - {self.project.name} on {self.work_date}"

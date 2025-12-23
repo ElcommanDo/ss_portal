@@ -1,10 +1,11 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Add Timesheet Task{% endblock %}
 
 {% block content %}
 <style>
-    /* Makes the Bootstrap switch larger and more modern */
+    /* Large modern toggle switch */
     .form-check-input:checked {
         background-color: #198754; 
         border-color: #198754;
@@ -20,7 +21,42 @@
         cursor: pointer;
         font-weight: 500;
     }
-    /* container for smooth height transitions */
+
+    /* Work Location Tile Styling */
+    .location-card {
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        border: 2px solid #e9ecef;
+        cursor: pointer;
+        position: relative;
+        background-color: white;
+    }
+    
+    /* Radio logic: When checked, the sibling label (the card) changes color */
+    .btn-check:checked + .location-card.abroad {
+        background-color: #0d6efd !important;
+        color: white !important;
+        border-color: #0a58ca;
+        transform: translateY(-4px);
+        box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+    }
+
+    .btn-check:checked + .location-card.egypt {
+        background-color: #0dcaf0 !important;
+        color: white !important;
+        border-color: #0bacbe;
+        transform: translateY(-4px);
+        box-shadow: 0 4px 15px rgba(13, 202, 240, 0.3);
+    }
+
+    .location-card:hover {
+        border-color: #ced4da;
+        background-color: #f8f9fa;
+    }
+
+    .btn-check:checked + .location-card .text-muted {
+        color: rgba(255,255,255,0.8) !important;
+    }
+
     .mode-container {
         overflow: hidden;
     }
@@ -39,33 +75,64 @@
 </div>
 {% endif %}
 
-<div class="card shadow-sm animate__animated animate__fadeInUp">
-    <div class="card-body">
+<div class="card shadow-sm animate__animated animate__fadeInUp border-0">
+    <div class="card-body p-4">
         <form method="post" id="timesheetForm">
             {% csrf_token %}
             
-            <div class="mb-3">
-                <label for="id_project" class="form-label fw-bold">Project</label>
-                <select class="form-select" id="id_project" name="project" required>
-                    <option selected disabled>Select a Project</option>
-                    {% for project in projects %}
-                    <option value="{{ project.pk }}">{{ project.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="mb-3">
-                <label for="id_task_description" class="form-label fw-bold">Task Description</label>
-                <textarea class="form-control" id="id_task_description" name="task_description" rows="3" placeholder="Description..." required></textarea>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="id_project" class="form-label fw-bold">Project</label>
+                    <select class="form-select" id="id_project" name="project" required>
+                        <option selected disabled value="">Select a Project</option>
+                        {% for project in projects %}
+                        <option value="{{ project.pk }}">{{ project.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="id_task_type" class="form-label fw-bold">Task Type</label>
+                    <select class="form-select" name="task_type">
+                        <option value="Delivery">Delivery</option>
+                        <option value="Pre-Sale">Pre-Sale</option>
+                        <option value="study">Study / Training</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="mb-3">
-                <label for="id_task_type" class="form-label fw-bold">Task Type</label>
-                <select class="form-select mb-3" name="task_type">
-                    <option value="Delivery">Delivery</option>
-                    <option value="Pre-Sale">Pre-Sale</option>
-                    <option value="study">Study / Training</option>
-                </select>
+            <div class="mb-4">
+                <label for="id_task_description" class="form-label fw-bold">Task Description</label>
+                <textarea class="form-control" id="id_task_description" name="task_description" rows="3" placeholder="What did you work on?" required></textarea>
+            </div>
+
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <label class="form-label fw-bold mb-0 text-secondary"><i class="fas fa-map-marker-alt me-2"></i>Work Location</label>
+                    <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" onclick="document.querySelectorAll('.btn-check-location').forEach(el => el.checked = false);">Clear Selection</button>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <input type="radio" class="btn-check btn-check-location" id="location_abroad" name="location" value="abroad" autocomplete="off">
+                        <label class="location-card abroad btn w-100 py-3 d-flex align-items-center justify-content-center text-start" for="location_abroad">
+                            <i class="fas fa-plane-departure fa-2x me-3"></i>
+                            <div>
+                                <span class="d-block fw-bold h5 mb-0">Onsite Abroad</span>
+                                <small class="text-muted">International Travel</small>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <input type="radio" class="btn-check btn-check-location" id="location_egypt" name="location" value="egypt" autocomplete="off">
+                        <label class="location-card egypt btn w-100 py-3 d-flex align-items-center justify-content-center text-start" for="location_egypt">
+                            <i class="fas fa-building fa-2x me-3"></i>
+                            <div>
+                                <span class="d-block fw-bold h5 mb-0">Onsite Egypt</span>
+                                <small class="text-muted">Local Office / HQ</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
             </div>
 
             <hr class="my-4">
@@ -102,7 +169,7 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-success btn-lg mt-4 w-100 shadow-sm">
+            <button type="submit" class="btn btn-success btn-lg mt-4 w-100 shadow">
                 <i class="fas fa-save me-2"></i> Save Entry
             </button>
         </form>
@@ -124,32 +191,20 @@
 
         toggle.addEventListener('change', function () {
             if (this.checked) {
-                // 1. Hide Times
                 timeContainer.style.display = 'none';
-                
-                // 2. Show Date with Slide from Right
                 dateContainer.style.display = 'block';
-                dateContainer.className = 'animate__animated animate__fadeInRight'; // Slide from right
-                
+                dateContainer.className = 'animate__animated animate__fadeInRight';
                 toggleLabel.innerText = "Yes, scheduling for future";
                 toggleLabel.classList.replace('text-muted', 'text-success');
-
-                // 3. Logic: Dates required, times not
                 startInput.removeAttribute('required');
                 endInput.removeAttribute('required');
                 dateInput.setAttribute('required', 'required');
             } else {
-                // 1. Hide Date
                 dateContainer.style.display = 'none';
-                
-                // 2. Show Times with Slide from Left (or default fade)
                 timeContainer.style.display = 'flex';
                 timeContainer.className = 'row animate__animated animate__fadeInLeft';
-                
                 toggleLabel.innerText = "No, logging work done today";
                 toggleLabel.classList.replace('text-success', 'text-muted');
-
-                // 3. Logic: Times required, date defaults to today
                 startInput.setAttribute('required', 'required');
                 endInput.setAttribute('required', 'required');
                 dateInput.removeAttribute('required');

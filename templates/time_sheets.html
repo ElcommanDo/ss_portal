@@ -84,18 +84,7 @@
                 </select>
             </div>
             
-            <div class="col-md-4 col-sm-6">
-                <label for="filter_status" class="form-label fw-bold">Status</label>
-                <select class="form-select" id="filter_status" name="status">
-                    <option value="">All Statuses (Entries)</option>
-                    {% comment %} TimesheetEntry.STATUS_CHOICES must be available in the context {% endcomment %}
-                    {% for key, display in status_choices %}
-                        <option value="{{ key }}" {% if request.GET.status == key %}selected{% endif %}>
-                            {{ display }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
+          
 
             <div class="col-md-4 col-sm-6">
                 <label for="filter_month" class="form-label fw-bold">Month / Year</label>
@@ -129,15 +118,15 @@
             <tr>
                 <th>ID</th>
                 <th>Work Date</th>
+                
                 <th>Employee</th>
                 <th>Total Hours</th>
                 <th>Projects Involved</th>
-                <th>Status Snapshot</th>
                 <th>Actions</th>
+
             </tr>
         </thead>
         <tbody>
-            {# Loop over Timesheet objects, not TimesheetEntry objects #}
             {% for timesheet in page_obj.object_list %}
             <tr>
                 <td class="fw-bold">
@@ -149,11 +138,12 @@
                     </a>
                 </td>
                 <td><i class="far fa-calendar-alt me-1"></i> {{ timesheet.date|date:"M d, Y" }}</td>
+                
                 <td>{{ timesheet.user.full_name }}</td>
                 
                 {# Display the annotated Total Hours #}
                 <td class="fw-bold text-info">
-                    <i class="far fa-hourglass-half me-1"></i> {{ timesheet.total_hours|default:"0.00" }}h
+                    <i class="far fa-hourglass-half me-1"></i> {{ timesheet.total_hours|default:"0.00"| floatformat:2}}h
                 </td>
                 
                 <td>
@@ -172,20 +162,7 @@
                     {% endcomment %}
                 </td>
                 
-             <td>
-                    {# Display the simple summary_status calculated in the view #}
-                    {% if timesheet.summary_status == 'REJECTED' %}
-                        <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> Rejected</span>
-                    {% elif timesheet.summary_status == 'PENDING' %}
-                        <span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half me-1"></i> Pending Review</span>
-                    {% elif timesheet.summary_status == 'APPROVED' %}
-                        <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Fully Approved</span>
-                    {% else %}
-                        {# This catches 'MIXED' or any other default status #}
-                        <span class="badge bg-primary">Mixed/Completed</span>
-                    {% endif %}
-                </td>
-
+             
                 <td>
                     {# Action to view all entries for this specific date/user timesheet #}
                     <button type="button" class="btn btn-sm btn-outline-info" 

@@ -21,13 +21,14 @@ urlpatterns = [
     path('team/delete/<int:pk>/', views.team_delete, name='team_delete'), 
     
     path('users/status/<int:pk>/', views.toggle_user_status, name='user_toggle_status'),
-    path('timesheet/status/<int:pk>/', views.timesheet_update, name='timesheet_update'),
     path('export_csv/', views.export_csv, name="export_csv"),
     path('Change-password/', views.change_password, name='change_password'),
     path('team-members/<int:pk>/', views.team_members, name='team_members'),
     path('timesheets/', views.timesheet, name='timesheet'),
     path('scheduled-timesheets/<str:scheduled>/', views.timesheet, name='scheduled_timesheet'),
-
+    path('timesheet-update/<int:pk>/', views.timesheet_update, name='timesheet_update'),
+    path('timesheet-delete/<int:pk>/', views.time_sheet_delete, name='timesheet_delete'),
+    
     path('project-timesheets/<int:pk>/', views.project_timesheets, name='project_timesheets'),
     path('timesheets/entry-detail/<int:pk>/', views.timesheet_detail_entries, name='timesheet_detail_entries'),
     path('my-timesheets/', views.user_timesheets, name='user_timesheets'),
