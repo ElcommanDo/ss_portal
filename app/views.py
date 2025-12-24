@@ -302,26 +302,117 @@ def projects(request):
 
 
 
+# @login_required
+# def timesheet_dashboard(request):
+#     user = request.user
+#     context = {}
+    
+#     # 1. Determine Initial Queryset (Admin vs. Regular User)
+#     if is_admin(user):
+#         # Admin: Start with all entries
+#         entries = models.TimesheetEntry.objects.select_related('user', 'project')
+        
+#         # Get filter parameters
+#         status_filter = request.GET.get('status_filter', 'ALL')
+#         search_term = request.GET.get('search_term', '').strip()
+        
+#         # --- Apply Filters ---
+#         if status_filter != 'ALL':
+#             entries = entries.filter(status=status_filter)
+
+#         if search_term:
+#             # Q object for filtering across user, project, and description
+#             search_query = (
+#                 Q(user__username__icontains=search_term) |
+#                 Q(user__full_name__icontains=search_term) |
+#                 Q(project__name__icontains=search_term) |
+#                 Q(task_description__icontains=search_term)
+#             )
+#             entries = entries.filter(search_query)
+
+#         # Admin context data
+#         try:
+#             context['users'] = models.CustomUser.objects.filter(is_active=True)
+#             context['projects'] = models.Project.objects.filter(is_active=True)
+#         except NameError:
+#             context['users'] = []
+#             context['projects'] = []
+            
+#         # Pass filter state back to the template
+#         context['status_filter_selected'] = status_filter
+#         context['search_term_entered'] = search_term
+
+#         # Admin template name (or unified dashboard.html)
+#         template = 'dashboard.html' 
+
+#     else:
+#         # Regular User: Filter by current user only
+#         entries = models.TimesheetEntry.objects.filter(user=user).select_related('project')
+        
+#         # Calculate Weekly Hours for summary card
+#         today = date.today()
+#         start_of_week = today - timedelta(days=today.weekday())
+#         end_of_week = start_of_week + timedelta(days=6)
+        
+#         weekly_hours_aggregation = entries.filter(
+#             work_date__gte=start_of_week,
+#             work_date__lte=end_of_week
+#         ).aggregate(Sum('hours'))
+        
+#         weekly_hours = weekly_hours_aggregation.get('hours__sum', 0) or 0
+#         context['weekly_hours'] = round(weekly_hours, 2)
+#         template = 'dashboard.html'
+    
+    
+#     # Final queryset ordering
+#     entries = entries.order_by('-work_date')
+    
+#     # --- Apply Pagination to Final Queryset ---
+#     paginator = Paginator(entries, PAGE_SIZE)
+#     page_number = request.GET.get('page')
+    
+#     # USE get_page for robust pagination handling
+#     page_obj = paginator.get_page(page_number)
+    
+#     # The template must now iterate over page_obj.object_list
+#     context['timesheet_entries'] = page_obj.object_list
+#     context['page_obj'] = page_obj 
+#     today_start = datetime.combine(datetime.today(), time.min)
+
+#     # Get the end of today (e.g., 2025-11-19 23:59:59.999999)
+#     today_end = datetime.combine(datetime.today(), time.max)
+
+#     # ... inside your view function ...
+
+#     context['entries_today_count'] = str(models.TimesheetEntry.objects.filter(
+#         created_at__gte=today_start, 
+#         created_at__lte=today_end
+#     ).count())
+#     context['active_users_count'] = str(models.CustomUser.objects.filter(is_active=True).count())
+#     return render(request, template, context)
+
+from django.utils import timezone
+from datetime import timedelta, datetime, time
+
 @login_required
 def timesheet_dashboard(request):
     user = request.user
     context = {}
     
+    # Use timezone-aware "today"
+    today_dt = timezone.now()
+    today_date = today_dt.date()
+
     # 1. Determine Initial Queryset (Admin vs. Regular User)
     if is_admin(user):
-        # Admin: Start with all entries
         entries = models.TimesheetEntry.objects.select_related('user', 'project')
-        
-        # Get filter parameters
         status_filter = request.GET.get('status_filter', 'ALL')
         search_term = request.GET.get('search_term', '').strip()
         
-        # --- Apply Filters ---
         if status_filter != 'ALL':
             entries = entries.filter(status=status_filter)
 
         if search_term:
-            # Q object for filtering across user, project, and description
             search_query = (
                 Q(user__username__icontains=search_term) |
                 Q(user__full_name__icontains=search_term) |
@@ -330,28 +421,22 @@ def timesheet_dashboard(request):
             )
             entries = entries.filter(search_query)
 
-        # Admin context data
-        try:
-            context['users'] = models.CustomUser.objects.filter(is_active=True)
-            context['projects'] = models.Project.objects.filter(is_active=True)
-        except NameError:
-            context['users'] = []
-            context['projects'] = []
-            
-        # Pass filter state back to the template
+        context['users'] = models.CustomUser.objects.filter(is_active=True)
+        context['projects'] = models.Project.objects.filter(is_active=True)
         context['status_filter_selected'] = status_filter
         context['search_term_entered'] = search_term
-
-        # Admin template name (or unified dashboard.html)
         template = 'dashboard.html' 
 
     else:
         # Regular User: Filter by current user only
         entries = models.TimesheetEntry.objects.filter(user=user).select_related('project')
         
-        # Calculate Weekly Hours for summary card
-        today = date.today()
-        start_of_week = today - timedelta(days=today.weekday())
+        # --- START OF WEEK (SUNDAY) CALCULATION ---
+        # .weekday(): Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
+        # We want: Sun=0, Mon=1, Tue=2, Wed=3, Thu=4, Fri=5, Sat=6
+        # Formula: (weekday + 1) % 7 calculates how many days since last Sunday
+        days_since_sunday = (today_date.weekday() + 1) % 7
+        start_of_week = today_date - timedelta(days=days_since_sunday)
         end_of_week = start_of_week + timedelta(days=6)
         
         weekly_hours_aggregation = entries.filter(
@@ -363,34 +448,28 @@ def timesheet_dashboard(request):
         context['weekly_hours'] = round(weekly_hours, 2)
         template = 'dashboard.html'
     
-    
     # Final queryset ordering
     entries = entries.order_by('-work_date')
     
-    # --- Apply Pagination to Final Queryset ---
+    # Pagination
     paginator = Paginator(entries, PAGE_SIZE)
     page_number = request.GET.get('page')
-    
-    # USE get_page for robust pagination handling
     page_obj = paginator.get_page(page_number)
     
-    # The template must now iterate over page_obj.object_list
     context['timesheet_entries'] = page_obj.object_list
     context['page_obj'] = page_obj 
-    today_start = datetime.combine(datetime.today(), time.min)
 
-    # Get the end of today (e.g., 2025-11-19 23:59:59.999999)
-    today_end = datetime.combine(datetime.today(), time.max)
+    # --- TODAY COUNTS (Using Timezone Aware Range) ---
+    today_start = timezone.make_aware(datetime.combine(today_date, time.min))
+    today_end = timezone.make_aware(datetime.combine(today_date, time.max))
 
-    # ... inside your view function ...
-
-    context['entries_today_count'] = str(models.TimesheetEntry.objects.filter(
-        created_at__gte=today_start, 
-        created_at__lte=today_end
-    ).count())
-    context['active_users_count'] = str(models.CustomUser.objects.filter(is_active=True).count())
+    context['entries_today_count'] = models.TimesheetEntry.objects.filter(
+        created_at__range=(today_start, today_end)
+    ).count()
+    
+    context['active_users_count'] = models.CustomUser.objects.filter(is_active=True).count()
+    
     return render(request, template, context)
-
 
 @user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def user_edit(request, pk):
