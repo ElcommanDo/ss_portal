@@ -1,195 +1,280 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load humanize %}
 
-{% block title %}Report: Daily Man-Days Breakdown{% endblock %}
+{% block title %}Man-Days Utilization Report{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
-    <h1><i class="fas fa-calendar-alt me-2 text-info"></i> Daily Man-Days Breakdown</h1>
-    <a href="{% url 'reports_dashboard' %}" class="btn btn-secondary btn-lg">
-        <i class="fas fa-arrow-left me-2"></i> Back to Reports
-    </a>
-</div>
+<style>
+    /* Soft colors for total logged hours badge */
+    .bg-info-soft { 
+        background-color: #e0f7fa; 
+        color: #0dcaf0;
+    }
 
-<p class="text-muted mb-4">View daily aggregated hours, comparing actual work against the standard 8-hour capacity.</p>
+    /* Dashboard Header Styles */
+    .table thead th { 
+        font-weight: 600; 
+        text-transform: uppercase; 
+        font-size: 0.85rem; 
+        letter-spacing: 0.5px; 
+        vertical-align: middle;
+    }
 
-<div class="card shadow-sm mb-5 animate__animated animate__fadeIn">
-    <div class="card-body">
-        <h5 class="card-title fw-bold">Filter Daily Entries</h5>
-        <form method="GET" class="row g-3">
-            <div class="col-md-3 col-sm-6">
-                <label for="filter_employee" class="form-label">Employee</label>
-                <select class="form-select" id="filter_employee" name="user_pk">
-                    <option value="">All Employees</option>
-                    {% for user in all_users %}
-                        <option value="{{ user.pk }}" {% if request.GET.user_pk|stringformat:"s" == user.pk|stringformat:"s" %}selected{% endif %}>
-                            {{ user.full_name|default:user.username }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <label for="filter_project" class="form-label">Project</label>
-                <select class="form-select" id="filter_project" name="project_pk">
-                    <option value="">All Projects</option>
-                    {% for project in all_projects %}
-                        <option value="{{ project.pk }}" {% if request.GET.project_pk|stringformat:"s" == project.pk|stringformat:"s" %}selected{% endif %}>
-                            {{ project.name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2 col-sm-6">
-                <label for="filter_start_date" class="form-label">Start Date</label>
-                <input type="date" class="form-control" id="filter_start_date" name="start_date" value="{{ request.GET.start_date }}">
-            </div>
-            <div class="col-md-2 col-sm-6">
-                <label for="filter_end_date" class="form-label">End Date</label>
-                <input type="date" class="form-control" id="filter_end_date" name="end_date" value="{{ request.GET.end_date }}">
-            </div>
-            <div class="col-12 col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-info me-2 flex-grow-1"><i class="fas fa-search"></i></button>
-                <a href="{% url 'export_man_days_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-danger me-2 flex-grow-1"><i class="fas fa-file-pdf"></i></a>
-                <a href="." class="btn btn-secondary"><i class="fas fa-sync-alt"></i></a>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="row g-4 mb-5 text-center">
-    <div class="col-md-6">
-        <div class="card bg-primary text-white shadow h-100">
-            <div class="card-body">
-                <h6 class="card-title text-light opacity-75">Total Filtered Hours Logged</h6>
-                <p class="fs-3 fw-bold mb-0">{{ total_hours_sum|default:"0.00"|floatformat:2 }}h</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card bg-warning text-dark shadow h-100">
-            <div class="card-body">
-                <h6 class="card-title text-muted opacity-75">Net Overtime / Under-time</h6>
-                <p class="fs-3 fw-bold mb-0">
-                    {% if total_overtime_sum < 0 %}
-                        <i class="fas fa-arrow-down text-danger me-1"></i> 
-                    {% elif total_overtime_sum > 0 %}
-                        <i class="fas fa-arrow-up text-success me-1"></i> 
-                    {% endif %}
-                    {{ total_overtime_sum|default:"0.00"|floatformat:2 }}h
-                </p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="card shadow">
-    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3 fw-bold">
-        <span>Daily Breakdown Summary</span>
-        <span class="badge bg-secondary">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover table-striped mb-0 align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width: 15%">Date</th>
-                        <th style="width: 20%">Employee</th>
-                        {% if not project_pk %}<th class="text-center">Projects</th>{% endif %}
-                        <th class="text-center" style="width: 8%">Abroad</th>
-                        <th class="text-center" style="width: 8%">Egypt</th>
-                        <th class="text-end">Actual Hrs</th>
-                        <th class="text-end">Standard</th>
-                        <th class="text-end">Status / OT</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for entry in page_obj %}
-                    <tr>
-                        <td class="text-nowrap">{{ entry.work_date|date:"M d, Y (D)" }}</td>
-                        <td class="fw-bold">{{ entry.user__full_name|default:entry.user__username }}</td>
-                        
-                        {% if not project_pk %}
-                            <td class="text-center">
-                                <span class="badge rounded-pill bg-light text-dark border">{{ entry.project_count }}</span>
-                            </td>
-                        {% endif %}
-
-                        <td class="text-center">
-                            {% if entry.onsite_abroad %}
-                                <i class="fas fa-check-circle text-success fs-5" title="Onsite Abroad"></i>
-                            {% else %}
-                                <i class="fas fa-times text-muted" style="opacity: 0.2;"></i>
-                            {% endif %}
-                        </td>
-
-                        <td class="text-center">
-                            {% if entry.onsite_Egypt %}
-                                <i class="fas fa-check-circle text-primary fs-5" title="Onsite Egypt"></i>
-                            {% else %}
-                                <i class="fas fa-times text-muted" style="opacity: 0.2;"></i>
-                            {% endif %}
-                        </td>
-
-                        <td class="text-end fw-bold text-primary">{{ entry.total_daily_hours|floatformat:2 }}h</td>
-                        <td class="text-end text-muted">{{ standard_day_hours|floatformat:2 }}h</td>
-                        <td class="text-end">
-                            {% if entry.total_daily_hours < standard_day_hours %}
-                                <span class="badge bg-danger">
-                                    {{ entry.total_daily_hours|add:"-8"|floatformat:2 }}h Under
-                                </span>
-                            {% else %}
-                                <span class="badge bg-success">Capacity Met</span>
-                                {% if entry.overtime_hours > 0 %}
-                                    <div class="mt-1 small fw-bold text-info">
-                                        <i class="fas fa-moon"></i> +{{ entry.overtime_hours|floatformat:2 }}h OT
-                                    </div>
-                                {% endif %}
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="8" class="text-center py-5 text-muted">No records found matching filters.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot class="table-info fw-bold">
-                    <tr>
-                        <td colspan="{% if not project_pk %}5{% else %}4{% endif %}" class="text-end text-dark">Filtered Totals:</td>
-                        <td class="text-end text-primary">{{ total_hours_sum|default:"0"|floatformat:2 }}h</td>
-                        <td class="text-end text-muted">{{ total_standard_sum|default:"0"|floatformat:2 }}h</td>
-                        <td class="text-end">
-                            <span class="{% if total_overtime_sum > 0 %}text-success{% elif total_overtime_sum < 0 %}text-danger{% endif %}">
-                                {{ total_overtime_sum|default:"0"|floatformat:2 }}h
-                            </span>
-                        </td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
+    /* Summary Card Typography */
+    .card h3 { 
+        font-size: 1.8rem; 
+        font-weight: 700; 
+        margin-top: 5px;
+    }
     
-    {% if page_obj.has_other_pages %}
-    <div class="card-footer bg-white py-3">
-        <nav aria-label="Page navigation">
-            <ul class="pagination justify-content-center mb-0">
-                {% if page_obj.has_previous %}
-                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{k}}={{v}}{% endif %}{% endfor %}">Previous</a></li>
-                {% endif %}
-                {% for i in page_obj.paginator.page_range %}
-                    {% if page_obj.number == i %}
-                        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
-                    {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
-                        <li class="page-item"><a class="page-link" href="?page={{ i }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{k}}={{v}}{% endif %}{% endfor %}">{{ i }}</a></li>
-                    {% endif %}
-                {% endfor %}
-                {% if page_obj.has_next %}
-                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{k}}={{v}}{% endif %}{% endfor %}">Next</a></li>
-                {% endif %}
-            </ul>
-        </nav>
+    .card h6 {
+        letter-spacing: 1px;
+    }
+
+    /* Column Widths for the 3-cell Location Layout */
+    .location-cell {
+        width: 130px;
+        transition: all 0.3s ease;
+    }
+
+    /* Pagination Styling */
+    .page-link { 
+        color: #0d6efd; 
+        border: none; 
+        margin: 0 5px; 
+        border-radius: 5px;
+        font-weight: 500;
+    }
+    
+    .page-item.active .page-link {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    .page-item.disabled .page-link { 
+        background-color: #f8f9fa; 
+        color: #6c757d;
+    }
+
+    /* Animation for table rows on hover */
+    .table-hover tbody tr:hover {
+        background-color: #f1f8ff !important;
+        transition: background-color 0.2s ease;
+    }
+
+    /* Opacity for empty dashes */
+    .opacity-25 {
+        opacity: 0.25;
+    }
+</style>
+<div class="container-fluid py-4 animate__animated animate__fadeIn">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-primary fw-bold">
+            <i class="fas fa-chart-line me-2"></i> Man-Days Utilization Report
+        </h1>
+        <div class="d-flex gap-2">
+            <a href="{% url 'export_man_days_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-danger btn-lg shadow-sm">
+                <i class="fas fa-file-pdf me-2"></i> Export to PDF
+            </a>
+        </div>
     </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #0d6efd, #0dcaf0); color: white;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase opacity-75 small fw-bold">Total Hours</h6>
+                            <h3 class="mb-0">{{ totals.hours|floatformat:1 }} <small>h</small></h3>
+                        </div>
+                        <i class="fas fa-clock fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #ffc107, #fd7e14); color: white;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase opacity-75 small fw-bold">Total Overtime</h6>
+                            <h3 class="mb-0">{{ totals.ot|floatformat:1 }} <small>h</small></h3>
+                        </div>
+                        <i class="fas fa-bolt fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #0dcaf0, #20c997); color: white;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase opacity-75 small fw-bold">Onsite Egypt</h6>
+                            <h3 class="mb-0">{{ totals.egypt|floatformat:1 }} <small>h</small></h3>
+                        </div>
+                        <i class="fas fa-map-marker-alt fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #198754, #20c997); color: white;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase opacity-75 small fw-bold">Onsite Abroad</h6>
+                            <h3 class="mb-0">{{ totals.abroad|floatformat:1 }} <small>h</small></h3>
+                        </div>
+                        <i class="fas fa-plane fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-5 border-0 bg-light">
+        <div class="card-body p-4">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Project</label>
+                    <select class="form-select border-0 shadow-sm" name="project_pk">
+                        <option value="">All Projects</option>
+                        {% for project in all_projects %}
+                            <option value="{{ project.pk }}" {% if request.GET.project_pk == project.pk|stringformat:"s" %}selected{% endif %}>{{ project.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Employee</label>
+                    <select class="form-select border-0 shadow-sm" name="user_pk">
+                        <option value="">All Employees</option>
+                        {% for user in all_users %}
+                            <option value="{{ user.pk }}" {% if request.GET.user_pk == user.pk|stringformat:"s" %}selected{% endif %}>{{ user.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Start Date</label>
+                    <input type="date" class="form-control border-0 shadow-sm" name="start_date" value="{{ request.GET.start_date }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">End Date</label>
+                    <input type="date" class="form-control border-0 shadow-sm" name="end_date" value="{{ request.GET.end_date }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary w-100 shadow-sm"><i class="fas fa-filter me-2"></i>Apply</button>
+                    <a href="{% url 'reports_man_days' %}" class="btn btn-secondary shadow-sm"><i class="fas fa-sync-alt"></i></a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="table-responsive bg-white rounded shadow-sm">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark text-center">
+                <tr>
+                    <th class="ps-3 text-start">Date</th>
+                    <th class="text-start">Employee</th>
+                    <th>Filtered Projects</th>
+                    <th>Total Logged</th>
+                    <th colspan="3">Location Details</th>
+                    <th>Overtime</th>
+                </tr>
+            </thead>
+            <tbody class="text-center">
+                {% for entry in page_obj %}
+                <tr>
+                    <td class="ps-3 fw-bold text-muted text-start">{{ entry.work_date|date:"M d, Y" }}</td>
+                    <td class="fw-bold text-dark text-start">{{ entry.user_full_name }}</td>
+                    <td>
+                        {% for p in entry.projects %}
+                            <span class="badge bg-secondary rounded-pill me-1 mb-1" style="font-weight: 500;">
+                                {{ p.project__name }}: {{ p.p_hours|floatformat:1 }}h
+                            </span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <span class="badge bg-info-soft text-info border border-info px-3 py-2">
+                            <i class="far fa-clock me-1"></i> {{ entry.total_hours|floatformat:2 }}h
+                        </span>
+                    </td>
+                    
+                    <td style="width: 120px;">
+                        {% if entry.egypt_hours > 0 %}
+                            <span class="text-info small fw-bold">
+                                <i class="fas fa-map-marker-alt me-1"></i> Egypt: {{ entry.egypt_hours|floatformat:1 }}h
+                            </span>
+                        {% else %}
+                            <span class="text-muted opacity-25">--</span>
+                        {% endif %}
+                    </td>
+
+                    <td style="width: 120px;">
+                        {% if entry.abroad_hours > 0 %}
+                            <span class="text-success small fw-bold">
+                                <i class="fas fa-plane me-1"></i> Abroad: {{ entry.abroad_hours|floatformat:1 }}h
+                            </span>
+                        {% else %}
+                            <span class="text-muted opacity-25">--</span>
+                        {% endif %}
+                    </td>
+
+                    <td style="width: 100px;">
+                        {% if entry.egypt_hours == 0 and entry.abroad_hours == 0 %}
+                            <span class="text-muted small"><i class="fas fa-laptop me-1"></i> Office</span>
+                        {% else %}
+                             <span class="text-muted opacity-25">--</span>
+                        {% endif %}
+                    </td>
+                    
+                    <td>
+                        {% if entry.overtime > 0 %}
+                            <span class="text-warning fw-bold">
+                                <i class="fas fa-bolt me-1"></i> +{{ entry.overtime|floatformat:1 }}h
+                            </span>
+                        {% else %}
+                            <span class="text-muted small">--</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-5">
+                        <i class="fas fa-search-minus fa-3x text-light mb-3"></i>
+                        <p class="text-muted">No records found for the selected criteria.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link shadow-sm" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}">Previous</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link shadow-sm">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+            {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link shadow-sm" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}">Next</a></li>
+            {% endif %}
+        </ul>
+    </nav>
     {% endif %}
 </div>
+
+<style>
+    .bg-info-soft { background-color: #e0f7fa; }
+    .table thead th { font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; }
+    .card h3 { font-size: 1.8rem; font-weight: 700; }
+    .page-link { color: #0d6efd; border: none; margin: 0 5px; border-radius: 5px; }
+    .page-item.disabled .page-link { background-color: #f8f9fa; }
+</style>
 {% endblock %}

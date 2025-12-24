@@ -185,7 +185,7 @@ def timesheet_create(request):
                     )
 
                 project_id = request.POST.get('project')
-                work_date_str = str(date.today())
+                work_date_str = str(request.POST.get("work_date_logged"))
                 task_description = request.POST.get('task_description')
                 task_type = request.POST.get('task_type')
                 start_time = request.POST.get('start_time')
@@ -441,7 +441,7 @@ def timesheet_dashboard(request):
     return render(request, template, context)
 
 
-@user_passes_test(is_admin, login_url=reverse_lazy('home'))
+@user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def user_edit(request, pk):
     user_to_edit = get_object_or_404(models.CustomUser, pk=pk)
     
@@ -474,7 +474,7 @@ def user_edit(request, pk):
     return redirect('users')
 
 
-@user_passes_test(is_admin, login_url=reverse_lazy('home'))
+@user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def toggle_user_status(request, pk):
     user_to_toggle = get_object_or_404(models.CustomUser, pk=pk)
     
@@ -492,7 +492,7 @@ def toggle_user_status(request, pk):
     
     return redirect('users')
 
-@user_passes_test(is_admin, login_url=reverse_lazy('home'))
+@user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def user_create(request):
     if request.method == "POST":
         data= request.POST
@@ -515,7 +515,7 @@ def user_create(request):
         return redirect('users')
 
 
-@user_passes_test(is_admin, login_url=reverse_lazy('home'))
+@user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def team_create(request):
     if request.method == "POST":
         data= request.POST
@@ -533,7 +533,7 @@ def team_create(request):
 
 
 
-@user_passes_test(is_admin, login_url=reverse_lazy('home'))
+@user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def team_edit(request, pk):
     team_to_edit = get_object_or_404(models.Team, pk=pk)
     
@@ -602,7 +602,7 @@ def project_create(request):
         messages.success(request, 'The Project Created Successfully.')
         return redirect('projects')
 
-@user_passes_test(is_admin, login_url=reverse_lazy('home'))
+@user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def export_csv(request):
     response = HttpResponse(content_type='text/csv')
     filename = 'timesheet_export.csv'
@@ -760,98 +760,202 @@ def change_password(request):
 #     return render(request, 'time_sheets.html', context)
 
 
+# @user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
+# def timesheet(request, scheduled=None):
+
+#     if scheduled:
+#         queryset = Timesheet.objects.select_related(
+#             'user', 
+#             'user__team'
+#         ).filter(tasks__is_scheduled=True)
+#     else:
+#         queryset = Timesheet.objects.select_related(
+#             'user', 
+#             'user__team'
+#         ).filter(tasks__is_scheduled=False)
+
+#     if request.user.role == 'leader':
+#         queryset = queryset.filter(user__team=request.user.team)
+#     queryset = queryset.annotate(
+#         total_hours=Sum('tasks__hours'),
+#     )
+
+#     filters = Q()
+
+#     user_pk = request.GET.get('user_pk')
+#     if user_pk:
+#         filters &= Q(user__pk=user_pk)
+
+#     team_pk = request.GET.get('team_pk')
+#     if team_pk:
+#         filters &= Q(user__team__pk=team_pk)
+
+#     project_pk = request.GET.get('project_pk')
+#     if project_pk:
+#         filters &= Q(tasks__project__pk=project_pk)
+
+#     status = request.GET.get('status')
+#     if status:
+#         filters &= Q(tasks__status=status)
+
+#     work_date_str = request.GET.get('work_date')
+#     if work_date_str:
+#         try:
+#             work_date = datetime.strptime(work_date_str, '%Y-%m-%d').date()
+#             filters &= Q(date=work_date)
+#         except ValueError:
+#             pass
+
+#     month_year_str = request.GET.get('month_year')
+#     if month_year_str:
+#         try:
+#             month_start = datetime.strptime(month_year_str, '%Y-%m').date()
+#             month_end = month_start + relativedelta(months=1) - timedelta(days=1)
+#             filters &= Q(date__gte=month_start, date__lte=month_end)
+#         except ValueError:
+#             pass
+
+#     week_start_date_str = request.GET.get('week_start_date')
+#     if week_start_date_str:
+#         try:
+#             week_start = datetime.strptime(week_start_date_str, '%Y-%m-%d').date()
+#             week_end = week_start + timedelta(days=6)
+#             filters &= Q(date__gte=week_start, date__lte=week_end)
+#         except ValueError:
+#             pass
+
+#     queryset = queryset.filter(filters).distinct().order_by('-date', 'user__full_name')
+
+#     paginator = Paginator(queryset, 20)
+#     page = request.GET.get('page', 1)
+
+#     try:
+#         page_obj = paginator.page(page)
+#     except PageNotAnInteger:
+#         page_obj = paginator.page(1)
+#     except EmptyPage:
+#         page_obj = paginator.page(paginator.num_pages)
+
+#     status_choices = TimesheetEntry.STATUS_CHOICES
+
+#     context = {
+#         'page_obj': page_obj,
+#         'all_users': CustomUser.objects.order_by('full_name').all(),
+#         'all_teams': Team.objects.order_by('title').all(),
+#         'all_projects': Project.objects.order_by('name').all(),
+#         'status_choices': status_choices,
+#         'current_params': request.GET.urlencode(),
+#     }
+
+#     return render(request, 'time_sheets.html', context)
+
+from django.shortcuts import render
+from django.db.models import Sum, Q, Prefetch
+from django.contrib.auth.decorators import user_passes_test
+from django.urls import reverse_lazy
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+from .models import Timesheet, TimesheetEntry, CustomUser, Team, Project
+
 @user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def timesheet(request, scheduled=None):
-
-    if scheduled:
-        queryset = Timesheet.objects.select_related(
-            'user', 
-            'user__team'
-        ).filter(tasks__is_scheduled=True)
-    else:
-        queryset = Timesheet.objects.select_related(
-            'user', 
-            'user__team'
-        ).filter(tasks__is_scheduled=False)
-
-    if request.user.role == 'leader':
-        queryset = queryset.filter(user__team=request.user.team)
-    queryset = queryset.annotate(
-        total_hours=Sum('tasks__hours'),
-    )
-
-    filters = Q()
-
-    user_pk = request.GET.get('user_pk')
-    if user_pk:
-        filters &= Q(user__pk=user_pk)
-
-    team_pk = request.GET.get('team_pk')
-    if team_pk:
-        filters &= Q(user__team__pk=team_pk)
-
+    # 1. Capture Filter Parameters
     project_pk = request.GET.get('project_pk')
-    if project_pk:
-        filters &= Q(tasks__project__pk=project_pk)
-
-    status = request.GET.get('status')
-    if status:
-        filters &= Q(tasks__status=status)
-
+    user_pk = request.GET.get('user_pk')
+    team_pk = request.GET.get('team_pk')
     work_date_str = request.GET.get('work_date')
+    month_year_str = request.GET.get('month_year')
+    week_start_date_str = request.GET.get('week_start_date')
+
+    # 2. Build the Task Filter (used for Sum calculations and Main row filtering)
+    task_specific_filter = Q()
+    if project_pk:
+        task_specific_filter &= Q(tasks__project__pk=project_pk)
+    
+    if scheduled:
+        task_specific_filter &= Q(tasks__is_scheduled=True)
+    else:
+        task_specific_filter &= Q(tasks__is_scheduled=False)
+
+    # 3. Build General Filters (for User/Team/Date)
+    main_filters = Q()
+    if user_pk:
+        main_filters &= Q(user__pk=user_pk)
+    if team_pk:
+        main_filters &= Q(user__team__pk=team_pk)
+
+    # Date Logic
     if work_date_str:
         try:
-            work_date = datetime.strptime(work_date_str, '%Y-%m-%d').date()
-            filters &= Q(date=work_date)
-        except ValueError:
-            pass
-
-    month_year_str = request.GET.get('month_year')
-    if month_year_str:
+            main_filters &= Q(date=datetime.strptime(work_date_str, '%Y-%m-%d').date())
+        except ValueError: pass
+    elif month_year_str:
         try:
-            month_start = datetime.strptime(month_year_str, '%Y-%m').date()
-            month_end = month_start + relativedelta(months=1) - timedelta(days=1)
-            filters &= Q(date__gte=month_start, date__lte=month_end)
-        except ValueError:
-            pass
-
-    week_start_date_str = request.GET.get('week_start_date')
-    if week_start_date_str:
+            start = datetime.strptime(month_year_str, '%Y-%m').date()
+            end = start + relativedelta(months=1) - timedelta(days=1)
+            main_filters &= Q(date__gte=start, date__lte=end)
+        except ValueError: pass
+    elif week_start_date_str:
         try:
-            week_start = datetime.strptime(week_start_date_str, '%Y-%m-%d').date()
-            week_end = week_start + timedelta(days=6)
-            filters &= Q(date__gte=week_start, date__lte=week_end)
-        except ValueError:
-            pass
+            start = datetime.strptime(week_start_date_str, '%Y-%m-%d').date()
+            main_filters &= Q(date__gte=start, date__lte=start + timedelta(days=6))
+        except ValueError: pass
 
-    queryset = queryset.filter(filters).distinct().order_by('-date', 'user__full_name')
+    # 4. Define Prefetch logic (controls which task badges appear in the table)
+    inner_qs_filter = Q(project__pk=project_pk) if project_pk else Q()
+    if scheduled:
+        inner_qs_filter &= Q(is_scheduled=True)
+    else:
+        inner_qs_filter &= Q(is_scheduled=False)
 
+    prefetch_tasks = Prefetch(
+        'tasks',
+        queryset=TimesheetEntry.objects.filter(inner_qs_filter).select_related('project')
+    )
+
+    # 5. Build QuerySet with Annotations
+    queryset = Timesheet.objects.select_related('user', 'user__team').prefetch_related(prefetch_tasks)
+    
+    if request.user.role == 'leader':
+        queryset = queryset.filter(user__team=request.user.team)
+
+    # Apply filters and calculate conditional sums
+    queryset = queryset.filter(main_filters).filter(task_specific_filter).annotate(
+        total_hours=Sum('tasks__hours', filter=task_specific_filter),
+        onsite_abroad_hours=Sum(
+            'tasks__hours', 
+            filter=task_specific_filter & Q(tasks__onsite_abroad=True)
+        ),
+        onsite_egypt_hours=Sum(
+            'tasks__hours', 
+            filter=task_specific_filter & Q(tasks__onsite_Egypt=True)
+        ),
+    ).distinct().order_by('-date', 'user__full_name')
+
+    # 6. Pagination & Parameter Cleanup
     paginator = Paginator(queryset, 20)
     page = request.GET.get('page', 1)
-
     try:
         page_obj = paginator.page(page)
-    except PageNotAnInteger:
+    except (PageNotAnInteger, EmptyPage):
         page_obj = paginator.page(1)
-    except EmptyPage:
-        page_obj = paginator.page(paginator.num_pages)
 
-    status_choices = TimesheetEntry.STATUS_CHOICES
+    # Cleanup GET parameters to prevent 'page=1&page=2' in URL
+    query_params = request.GET.copy()
+    if 'page' in query_params:
+        query_params.pop('page')
 
     context = {
         'page_obj': page_obj,
         'all_users': CustomUser.objects.order_by('full_name').all(),
         'all_teams': Team.objects.order_by('title').all(),
         'all_projects': Project.objects.order_by('name').all(),
-        'status_choices': status_choices,
-        'current_params': request.GET.urlencode(),
+        'current_params': query_params.urlencode(),
     }
-
     return render(request, 'time_sheets.html', context)
 
-
-
-@user_passes_test(is_admin, login_url=reverse_lazy('home'))
+@user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def project_timesheets(request, pk):
     """
     Displays a list of aggregated Timesheet records (daily logs) for a specific project.
@@ -943,7 +1047,7 @@ def project_timesheets(request, pk):
 
 
 
-@user_passes_test(is_admin, login_url=reverse_lazy('home'))
+@user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def timesheet_detail_entries(request, pk):
     """
     Displays all individual TimesheetEntry records (tasks) belonging 
@@ -1159,7 +1263,7 @@ def timesheet_entries(request, pk):
 
 
 
-@user_passes_test(is_admin, login_url=reverse_lazy('home'))
+@user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def add_project_cost(request):
     if request.method == "POST":
         data = request.POST
@@ -1180,7 +1284,7 @@ def add_project_cost(request):
         return redirect('projects')
     
 
-@user_passes_test(is_admin, login_url=reverse_lazy('home'))
+@user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def reports(request):
     return render(request, 'reports.html', {})
 
@@ -1320,30 +1424,32 @@ def get_post_5pm_overtime(entries):
     cutoff = time(17, 0)
     for entry in entries:
         if entry.time_start and entry.time_end and entry.time_end > cutoff:
-            # OT starts at 5 PM or the actual start time if they started after 5 PM
             actual_ot_start = max(entry.time_start, cutoff)
-            
-            # Use dummy date for subtraction math
             dummy = datetime.today()
             start_dt = datetime.combine(dummy, actual_ot_start)
             end_dt = datetime.combine(dummy, entry.time_end)
-            
             duration = (end_dt - start_dt).total_seconds() / 3600
             ot_hours += max(0, duration)
     return ot_hours
 
-@login_required
-def reports_man_days(request):
-    # 1. Base Setup
-    STANDARD_HOURS = 8.0
-    queryset = TimesheetEntry.objects.filter(is_scheduled=False)
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+# If using xhtml2pdf: 
+# from xhtml2pdf import pisa 
 
-    # 2. Apply Filters (matching your HTML form names)
+@login_required
+def reports_daily_man_days(request):
+    STANDARD_HOURS = 8.0
     user_pk = request.GET.get('user_pk')
     project_pk = request.GET.get('project_pk')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
+    export_pdf = request.GET.get('export_pdf')
 
+    # 1. Base Query
+    queryset = TimesheetEntry.objects.filter(is_scheduled=False).select_related('project', 'user')
+
+    # 2. Apply Filters
     if user_pk:
         queryset = queryset.filter(user__pk=user_pk)
     if project_pk:
@@ -1353,46 +1459,54 @@ def reports_man_days(request):
     if end_date:
         queryset = queryset.filter(work_date__lte=end_date)
 
-    # 3. Aggregate Daily Data (Grouping by User and Date)
+    # 3. Aggregation
     daily_stats = queryset.values(
-        'work_date', 'user__full_name', 'user__username', 'user__pk'
+        'work_date', 'user__full_name', 'user__pk'
     ).annotate(
         total_daily_hours=Sum('hours'),
-        project_count=Count('project', distinct=True)
-    ).order_by('-work_date')
+        egypt_hours=Sum('hours', filter=Q(onsite_Egypt=True)),
+        abroad_hours=Sum('hours', filter=Q(onsite_abroad=True)),
+    ).order_by('-work_date', 'user__full_name')
 
-    # 4. Refine Data for Overtime Logic
     refined_entries = []
-    total_hours_sum = 0.0
-    total_overtime_sum = 0.0
+    totals = {'hours': 0.0, 'ot': 0.0, 'egypt': 0.0, 'abroad': 0.0}
 
     for day in daily_stats:
-        # Get individual tasks to calculate clock-based overtime
-        day_entries = queryset.filter(
-            work_date=day['work_date'], 
-            user__pk=day['user__pk']
-        )
+        # Get tasks for this user/day to calculate OT and list projects
+        day_entries = queryset.filter(work_date=day['work_date'], user__pk=day['user__pk'])
         
-        # Calculate Overtime (Post-5PM)
-        post_5_ot = get_post_5pm_overtime(day_entries)
+        # Calculate unique projects and their individual hours for this row
+        project_details = day_entries.values('project__name').annotate(p_hours=Sum('hours'))
         
-        # Calculate Capacity difference (for your Under/Over badge)
+        post_5_ot = float(get_post_5pm_overtime(day_entries))
         logged = float(day['total_daily_hours'] or 0)
+        work_hours_for_manday = max(0, logged - post_5_ot)
         
-        # We use 'overtime_hours' as the key because your HTML uses 'entry.overtime_hours'
-        day_row = {
+        entry_data = {
             'work_date': day['work_date'],
-            'user__full_name': day['user__full_name'],
-            'user__username': day['user__username'],
-            'project_count': day['project_count'],
-            'total_daily_hours': logged,
-            'overtime_hours': post_5_ot if logged >= STANDARD_HOURS else (logged - STANDARD_HOURS),
+            'user_full_name': day['user__full_name'],
+            'total_hours': logged,
+            'overtime': post_5_ot,
+            'egypt_hours': float(day['egypt_hours'] or 0),
+            'abroad_hours': float(day['abroad_hours'] or 0),
+            'man_day_display': f"{work_hours_for_manday:g}/{STANDARD_HOURS:g}",
+            'projects': project_details, # List of projects with their specific hours
         }
         
-        # Update Global Totals
-        total_hours_sum += logged
-        total_overtime_sum += post_5_ot
-        refined_entries.append(day_row)
+        totals['hours'] += logged
+        totals['ot'] += post_5_ot
+        totals['egypt'] += entry_data['egypt_hours']
+        totals['abroad'] += entry_data['abroad_hours']
+        refined_entries.append(entry_data)
+
+    # 4. Handle PDF Export
+    if export_pdf:
+        context = {'entries': refined_entries, 'totals': totals, 'is_pdf': True}
+        html = render_to_string('man_days_pdf_template.html', context)
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="man_days_report.pdf"'
+        # pisa.CreatePDF(html, dest=response) # Uncomment if using xhtml2pdf
+        return response
 
     # 5. Pagination
     paginator = Paginator(refined_entries, 20)
@@ -1400,15 +1514,89 @@ def reports_man_days(request):
 
     context = {
         'page_obj': page_obj,
-        'total_hours_sum': total_hours_sum,
-        'total_overtime_sum': total_overtime_sum,
-        'total_standard_sum': len(refined_entries) * STANDARD_HOURS,
-        'standard_day_hours': STANDARD_HOURS,
-        'all_users': CustomUser.objects.order_by('full_name').all(),
-        'all_projects': Project.objects.filter(is_active=True),
-        'project_pk': project_pk,
+        'totals': totals,
+        'all_users': CustomUser.objects.all().order_by('full_name'),
+        'all_projects': Project.objects.filter(is_active=True).order_by('name'),
     }
     return render(request, 'man_days_utilization_report.html', context)
+# @login_required
+# def reports_man_days(request):
+#     # 1. Base Setup
+#     STANDARD_HOURS = 8.0
+#     queryset = TimesheetEntry.objects.filter(is_scheduled=False)
+
+#     # 2. Apply Filters (matching your HTML form names)
+#     user_pk = request.GET.get('user_pk')
+#     project_pk = request.GET.get('project_pk')
+#     start_date = request.GET.get('start_date')
+#     end_date = request.GET.get('end_date')
+
+#     if user_pk:
+#         queryset = queryset.filter(user__pk=user_pk)
+#     if project_pk:
+#         queryset = queryset.filter(project__pk=project_pk)
+#     if start_date:
+#         queryset = queryset.filter(work_date__gte=start_date)
+#     if end_date:
+#         queryset = queryset.filter(work_date__lte=end_date)
+
+#     # 3. Aggregate Daily Data (Grouping by User and Date)
+#     daily_stats = queryset.values(
+#         'work_date', 'user__full_name', 'user__username', 'user__pk'
+#     ).annotate(
+#         total_daily_hours=Sum('hours'),
+#         project_count=Count('project', distinct=True)
+#     ).order_by('-work_date')
+
+#     # 4. Refine Data for Overtime Logic
+#     refined_entries = []
+#     total_hours_sum = 0.0
+#     total_overtime_sum = 0.0
+
+#     for day in daily_stats:
+#         # Get individual tasks to calculate clock-based overtime
+#         day_entries = queryset.filter(
+#             work_date=day['work_date'], 
+#             user__pk=day['user__pk']
+#         )
+        
+#         # Calculate Overtime (Post-5PM)
+#         post_5_ot = get_post_5pm_overtime(day_entries)
+        
+#         # Calculate Capacity difference (for your Under/Over badge)
+#         logged = float(day['total_daily_hours'] or 0)
+        
+#         # We use 'overtime_hours' as the key because your HTML uses 'entry.overtime_hours'
+#         day_row = {
+#             'work_date': day['work_date'],
+#             'user__full_name': day['user__full_name'],
+#             'user__username': day['user__username'],
+#             'project_count': day['project_count'],
+#             'total_daily_hours': logged,
+#             'overtime_hours': post_5_ot if logged >= STANDARD_HOURS else (logged - STANDARD_HOURS),
+#         }
+        
+#         # Update Global Totals
+#         total_hours_sum += logged
+#         total_overtime_sum += post_5_ot
+#         refined_entries.append(day_row)
+
+#     # 5. Pagination
+#     paginator = Paginator(refined_entries, 20)
+#     page_obj = paginator.get_page(request.GET.get('page'))
+
+#     context = {
+#         'page_obj': page_obj,
+#         'total_hours_sum': total_hours_sum,
+#         'total_overtime_sum': total_overtime_sum,
+#         'total_standard_sum': len(refined_entries) * STANDARD_HOURS,
+#         'standard_day_hours': STANDARD_HOURS,
+#         'all_users': CustomUser.objects.order_by('full_name').all(),
+#         'all_projects': Project.objects.filter(is_active=True),
+#         'project_pk': project_pk,
+#     }
+#     return render(request, 'man_days_utilization_report.html', context)
+
 
 PRIMARY_CURRENCY = 'EGP' # Example constant
 PAGINATE_BY = PAGE_SIZE
@@ -1758,83 +1946,83 @@ def get_valid_date(date_str):
 
 # --- Updated View Function ---
 
-@login_required
-def reports_daily_man_days(request):
-    """
-    Report: Daily Man-Days Breakdown, aggregating timesheet entries by user and day.
-    """
+# @login_required
+# def reports_daily_man_days(request):
+#     """
+#     Report: Daily Man-Days Breakdown, aggregating timesheet entries by user and day.
+#     """
     
-    # 1. Get filter parameters
-    user_pk = request.GET.get('user_pk')
-    project_pk = request.GET.get('project_pk')
-    start_date_str = request.GET.get('start_date')
-    end_date_str = request.GET.get('end_date')
+#     # 1. Get filter parameters
+#     user_pk = request.GET.get('user_pk')
+#     project_pk = request.GET.get('project_pk')
+#     start_date_str = request.GET.get('start_date')
+#     end_date_str = request.GET.get('end_date')
     
-    start_date = get_valid_date(start_date_str)
-    end_date = get_valid_date(end_date_str)
+#     start_date = get_valid_date(start_date_str)
+#     end_date = get_valid_date(end_date_str)
 
-    # 2. Base Queryset (TimesheetEntry)
-    queryset = TimesheetEntry.objects.filter(is_scheduled=False)
+#     # 2. Base Queryset (TimesheetEntry)
+#     queryset = TimesheetEntry.objects.filter(is_scheduled=False)
     
-    # 3. Apply Filters
-    if user_pk:
-        queryset = queryset.filter(user__pk=user_pk)
+#     # 3. Apply Filters
+#     if user_pk:
+#         queryset = queryset.filter(user__pk=user_pk)
     
-    if project_pk:
-        # Important: If filtering by project, the aggregation will only show hours
-        # related to that project on the specific day.
-        queryset = queryset.filter(project__pk=project_pk)
+#     if project_pk:
+#         # Important: If filtering by project, the aggregation will only show hours
+#         # related to that project on the specific day.
+#         queryset = queryset.filter(project__pk=project_pk)
         
-    if start_date:
-        queryset = queryset.filter(work_date__gte=start_date)
+#     if start_date:
+#         queryset = queryset.filter(work_date__gte=start_date)
     
-    if end_date:
-        queryset = queryset.filter(work_date__lte=end_date)
+#     if end_date:
+#         queryset = queryset.filter(work_date__lte=end_date)
         
-    # 4. Core Aggregation: Group by User and Day
-    # We select fields needed for display and then annotate the aggregated values
-    daily_breakdown_qs = queryset.values('user', 'work_date', 'user__full_name', 'user__username').annotate(
-        # Sum all hours for this user on this date (and for the filtered project, if applicable)
-        total_daily_hours=Coalesce(Sum('hours'), Decimal('0.00')),
-        # Calculate overtime/under-time (Total Hours - 8h Standard)
-        overtime_hours=F('total_daily_hours') - HOURS_PER_DAY,
-        # Count unique projects logged on this day by this user (if project filter is not applied)
-        project_count=Count('project', distinct=True)
-    ).order_by('-work_date', 'user__full_name')
+#     # 4. Core Aggregation: Group by User and Day
+#     # We select fields needed for display and then annotate the aggregated values
+#     daily_breakdown_qs = queryset.values('user', 'work_date', 'user__full_name', 'user__username').annotate(
+#         # Sum all hours for this user on this date (and for the filtered project, if applicable)
+#         total_daily_hours=Coalesce(Sum('hours'), Decimal('0.00')),
+#         # Calculate overtime/under-time (Total Hours - 8h Standard)
+#         overtime_hours=F('total_daily_hours') - HOURS_PER_DAY,
+#         # Count unique projects logged on this day by this user (if project filter is not applied)
+#         project_count=Count('project', distinct=True)
+#     ).order_by('-work_date', 'user__full_name')
 
-    # 5. Total Summaries for Filtered Data
-    total_hours_sum = daily_breakdown_qs.aggregate(Sum('total_daily_hours'))['total_daily_hours__sum'] or Decimal('0.00')
-    total_overtime_sum = daily_breakdown_qs.aggregate(Sum('overtime_hours'))['overtime_hours__sum'] or Decimal('0.00')
+#     # 5. Total Summaries for Filtered Data
+#     total_hours_sum = daily_breakdown_qs.aggregate(Sum('total_daily_hours'))['total_daily_hours__sum'] or Decimal('0.00')
+#     total_overtime_sum = daily_breakdown_qs.aggregate(Sum('overtime_hours'))['overtime_hours__sum'] or Decimal('0.00')
     
-    # Total standard capacity is simply the number of daily entries * HOURS_PER_DAY
-    total_daily_entries = daily_breakdown_qs.count()
-    total_standard_sum = total_daily_entries * HOURS_PER_DAY
+#     # Total standard capacity is simply the number of daily entries * HOURS_PER_DAY
+#     total_daily_entries = daily_breakdown_qs.count()
+#     total_standard_sum = total_daily_entries * HOURS_PER_DAY
     
-    # 6. Pagination
-    paginator = Paginator(daily_breakdown_qs, 20)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+#     # 6. Pagination
+#     paginator = Paginator(daily_breakdown_qs, 20)
+#     page_number = request.GET.get('page')
+#     page_obj = paginator.get_page(page_number)
     
-    # 7. Context Data
-    # Fetch all users/projects for the filter dropdowns
-    all_users = CustomUser.objects.order_by('full_name', 'username').all()
-    all_projects = Project.objects.order_by('name').all()
+#     # 7. Context Data
+#     # Fetch all users/projects for the filter dropdowns
+#     all_users = CustomUser.objects.order_by('full_name', 'username').all()
+#     all_projects = Project.objects.order_by('name').all()
     
-    context = {
-        'page_obj': page_obj,
-        'total_hours_sum': total_hours_sum,
-        'total_overtime_sum': total_overtime_sum,
-        'total_standard_sum': total_standard_sum,
-        'standard_day_hours': HOURS_PER_DAY,
-        'all_users': all_users,
-        'all_projects': all_projects,
-        'project_pk': project_pk, # Used to toggle the "Total Projects Logged" column
-    }
+#     context = {
+#         'page_obj': page_obj,
+#         'total_hours_sum': total_hours_sum,
+#         'total_overtime_sum': total_overtime_sum,
+#         'total_standard_sum': total_standard_sum,
+#         'standard_day_hours': HOURS_PER_DAY,
+#         'all_users': all_users,
+#         'all_projects': all_projects,
+#         'project_pk': project_pk, # Used to toggle the "Total Projects Logged" column
+#     }
     
-    return render(request, 'man_days_utilization_report.html', context)
+#     return render(request, 'man_days_utilization_report.html', context)
 
 
-@user_passes_test(is_admin, login_url=reverse_lazy('home'))
+@user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def download_sqlite(request):
     db_path = settings.DATABASES['default']['NAME']  
     
@@ -2218,63 +2406,151 @@ def timesheet_bulk_upload(request):
     
     return redirect('home')
 
+# def export_man_days_pdf(request):
+#     # Base Query
+#     queryset = models.TimesheetEntry.objects.filter(is_scheduled=False).select_related('project', 'user')
+    
+#     # ... (Add your filtering logic here, e.g., queryset = queryset.filter(...)) ...
+
+#     daily_stats = queryset.values(
+#         'work_date', 'user__full_name', 'user__username', 'user__pk'
+#     ).annotate(total_hours=Sum('hours')).order_by('-work_date')
+
+#     refined_entries = []
+#     total_h = 0
+#     total_ot = 0
+#     STANDARD = 8.0
+
+#     for day in daily_stats:
+#         day_tasks = queryset.filter(work_date=day['work_date'], user__pk=day['user__pk'])
+        
+#         # Check if ANY entry for this user on this day is onsite
+#         is_abroad = day_tasks.filter(onsite_abroad=True).exists()
+#         is_egypt = day_tasks.filter(onsite_Egypt=True).exists()
+        
+#         project_names = list(day_tasks.values_list('project__name', flat=True).distinct())
+#         ot_val = get_post_5pm_overtime(day_tasks)
+#         logged = float(day['total_hours'] or 0)
+        
+#         refined_entries.append({
+#             'date': day['work_date'],
+#             'employee_name': day['user__full_name'] or day['user__username'],
+#             'logged_hours': logged,
+#             'projects': project_names,
+#             'ot_hours': ot_val,
+#             'onsite_abroad': is_abroad,
+#             'onsite_egypt': is_egypt,
+#             'is_under': logged < STANDARD,
+#             'difference': logged - STANDARD,
+#         })
+#         total_h += logged
+#         total_ot += ot_val
+
+#     context = {
+#         'entries': refined_entries,
+#         'total_hours_sum': total_h,
+#         'total_overtime_sum': total_ot,
+#         'today': datetime.now().date(),
+#     }
+
+#     html_string = render_to_string('man_days_pdf_template.html', context)
+#     # Using WeasyPrint or similar
+#     from weasyprint import HTML 
+#     html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    
+#     response = HttpResponse(content_type='application/pdf')
+#     response['Content-Disposition'] = 'attachment; filename="Man_Days_Report.pdf"'
+#     response.write(html.write_pdf())
+#     return response
+
+
+
 from django.db.models import Sum, Count, Case, When, Value, CharField
 from django.template.loader import render_to_string
 from weasyprint import HTML
 from datetime import date
-def export_man_days_pdf(request):
-    # Base Query
-    queryset = models.TimesheetEntry.objects.filter(is_scheduled=False).select_related('project', 'user')
-    
-    # ... (Add your filtering logic here, e.g., queryset = queryset.filter(...)) ...
+import os
+from django.conf import settings
+import os
+from datetime import datetime
+from django.conf import settings
+from django.db.models import Sum, Q
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.contrib.auth.decorators import login_required
+from weasyprint import HTML
+from . import models  # Ensure this points to your models file
 
+@login_required
+def export_man_days_pdf(request):
+    # 1. Capture Filters
+    user_pk = request.GET.get('user_pk')
+    project_pk = request.GET.get('project_pk')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    # 2. Base Query
+    queryset = models.TimesheetEntry.objects.filter(is_scheduled=False).select_related('project', 'user')
+
+    if user_pk: queryset = queryset.filter(user__pk=user_pk)
+    if project_pk: queryset = queryset.filter(project__pk=project_pk)
+    if start_date: queryset = queryset.filter(work_date__gte=start_date)
+    if end_date: queryset = queryset.filter(work_date__lte=end_date)
+
+    # 3. Aggregation
     daily_stats = queryset.values(
         'work_date', 'user__full_name', 'user__username', 'user__pk'
-    ).annotate(total_hours=Sum('hours')).order_by('-work_date')
+    ).annotate(
+        total_hours=Sum('hours'),
+        egypt_h=Sum('hours', filter=Q(onsite_Egypt=True)),
+        abroad_h=Sum('hours', filter=Q(onsite_abroad=True))
+    ).order_by('-work_date', 'user__full_name')
 
     refined_entries = []
-    total_h = 0
-    total_ot = 0
-    STANDARD = 8.0
+    totals = {'hours': 0.0, 'ot': 0.0, 'egypt': 0.0, 'abroad': 0.0}
 
     for day in daily_stats:
+        # Task breakdown for OT and Project list
         day_tasks = queryset.filter(work_date=day['work_date'], user__pk=day['user__pk'])
         
-        # Check if ANY entry for this user on this day is onsite
-        is_abroad = day_tasks.filter(onsite_abroad=True).exists()
-        is_egypt = day_tasks.filter(onsite_Egypt=True).exists()
-        
-        project_names = list(day_tasks.values_list('project__name', flat=True).distinct())
-        ot_val = get_post_5pm_overtime(day_tasks)
+        # Calculate OT (External helper function assumed)
+        ot_val = float(get_post_5pm_overtime(day_tasks)) 
         logged = float(day['total_hours'] or 0)
         
+        # Project Breakdown per day
+        project_details = day_tasks.values('project__name').annotate(p_hours=Sum('hours'))
+
         refined_entries.append({
             'date': day['work_date'],
             'employee_name': day['user__full_name'] or day['user__username'],
+            'projects': project_details,
             'logged_hours': logged,
-            'projects': project_names,
             'ot_hours': ot_val,
-            'onsite_abroad': is_abroad,
-            'onsite_egypt': is_egypt,
-            'is_under': logged < STANDARD,
-            'difference': logged - STANDARD,
+            'egypt_hours': float(day['egypt_h'] or 0),
+            'abroad_hours': float(day['abroad_h'] or 0),
         })
-        total_h += logged
-        total_ot += ot_val
+        
+        totals['hours'] += logged
+        totals['ot'] += ot_val
+        totals['egypt'] += float(day['egypt_h'] or 0)
+        totals['abroad'] += float(day['abroad_h'] or 0)
 
+    server_url = request.build_absolute_uri('/')
+    print(server_url)
     context = {
         'entries': refined_entries,
-        'total_hours_sum': total_h,
-        'total_overtime_sum': total_ot,
-        'today': datetime.now().date(),
+        'totals': totals,
+        'today': datetime.now(),
+        'server_url': server_url.rstrip('/'),
     }
 
     html_string = render_to_string('man_days_pdf_template.html', context)
-    # Using WeasyPrint or similar
-    from weasyprint import HTML 
+    
+    # Passing the request's absolute URI as base_url helps resolve paths
     html = HTML(string=html_string, base_url=request.build_absolute_uri())
     
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="Man_Days_Report.pdf"'
+    # Use 'filename' to suggest a name; browser default is usually the first page
+    response['Content-Disposition'] = f'attachment; filename="Man_Days_Report_{datetime.now().strftime("%Y%m%d")}.pdf"'
     response.write(html.write_pdf())
     return response

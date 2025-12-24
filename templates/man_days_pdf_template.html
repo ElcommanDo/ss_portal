@@ -1,134 +1,124 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
     <style>
-        @page {
-            size: A4 landscape;
-            margin: 2.5cm 1cm 1cm 1cm;
-            @top-left { content: "Smart System | Performance Report"; color: #0d6efd; font-weight: bold; }
-            @top-right { content: "Created: {{ today|date:'M d, Y' }}"; color: #666; }
-        }
-        body { font-family: Arial, sans-serif; color: #333; }
-        
-        /* Watermark */
-        .watermark {
-            position: fixed;
-            top: 25%;
-            left: 25%;
-            transform: rotate(-30deg);
-            font-size: 90pt;
-            font-weight: bold;
-            color: rgba(7, 124, 233, 0.075);
-            z-index: -1000;
+        /* PDF Page Configuration */
+        @page { 
+            size: A4 landscape; 
+            margin: 1.5cm 1cm; 
+
+            /* LARGE BOLD TRANSPARENT WATERMARK */
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'><text x='50%' y='50%' text-anchor='middle' fill='rgba(150, 150, 150, 0.15)' font-size='110' font-family='Arial' font-weight='bold' transform='rotate(-45, 400, 400)'>SMART SYSTEM</text></svg>");
+            background-repeat: no-repeat;
+            background-position: center;
+
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: Arial, sans-serif;
+                font-size: 10pt;
+                color: #888;
+            }
         }
 
-        /* Stats Section */
-        .stats-wrapper { width: 100%; margin-bottom: 25px; border-collapse: collapse; }
-        .stat-card { background-color: #f8f9fa; border-left: 5px solid #0d6efd; padding: 15px; width: 48%; }
-
-        /* Project Badge Styles */
-        .project-badge {
-            display: inline-block;
-            padding: 3px 8px;
-            margin: 2px;
-            border-radius: 4px;
-            font-size: 8pt;
-            color: white;
-            font-weight: bold;
-            text-transform: uppercase;
+        /* Typography */
+        body { 
+            font-family: 'Helvetica', 'Arial', sans-serif; 
+            color: #222; 
+            font-size: 11pt; 
+            margin: 0;
+            padding: 0;
         }
-        .p-color-1 { background-color: #6610f2; }
-        .p-color-2 { background-color: #fd7e14; }
-        .p-color-3 { background-color: #20c997; }
-        .p-color-4 { background-color: #d63384; }
-        .p-color-5 { background-color: #0d6efd; }
 
-        .report-table { width: 100%; border-collapse: collapse; }
-        .report-table th { background-color: #212529; color: white; padding: 10px; text-align: left; font-size: 9pt; }
-        .report-table td { padding: 8px; border-bottom: 1px solid #ddd; font-size: 9.5pt; vertical-align: middle; }
+        /* Professional Header Layout */
+        .report-header { width: 100%; display: table; margin-bottom: 25px; border-bottom: 2px solid #0d6efd; padding-bottom: 10px; }
+        .header-left { display: table-cell; vertical-align: middle; }
+        .header-right { display: table-cell; text-align: right; vertical-align: middle; }
         
-        .text-right { text-align: right; }
-        .text-center { text-align: center; }
+        .logo { width: 120px; height: auto; }
+        .company-name { font-size: 22pt; font-weight: bold; color: #0d6efd; }
         
-        /* Status Colors */
-        .red { color: #dc3545; font-weight: bold; }
-        .green { color: #198754; font-weight: bold; }
+        /* Summary Cards */
+        .card-container { width: 100%; display: table; border-spacing: 10px 0; margin-bottom: 30px; }
+        .card { display: table-cell; padding: 18px; border-radius: 8px; color: white; text-align: center; }
+        .bg-blue { background: #0d6efd; } .bg-orange { background: #fd7e14; }
+        .bg-info { background: #0dcaf0; } .bg-success { background: #198754; }
+        .card-value { font-size: 18pt; font-weight: bold; }
+
+        /* Table Order: Matches Utilization Dashboard */
+        table { width: 100%; border-collapse: collapse; }
+        th { background-color: #212529; color: white; padding: 12px 5px; text-align: center; font-size: 10pt; }
+        td { padding: 10px 5px; border-bottom: 1px solid #ddd; font-size: 10.5pt; vertical-align: middle; text-align: center; }
+        .text-start { text-align: left; padding-left: 10px; }
         
-        /* Onsite Marks */
-        .mark-yes { color: #198754; font-size: 14pt; font-weight: bold; }
-        .mark-no { color: #dee2e6; font-size: 12pt; }
+        /* Icon Styling via SVG URIs */
+        .icon { display: inline-block; width: 16px; height: 16px; vertical-align: middle; margin-right: 4px; background-size: contain; background-repeat: no-repeat; }
+        .icon-plane { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%23198754'><path d='M448 336v-40L288 192V79.2c0-22.1-17.9-40-40-40s-40 17.9-40 40V192L48 296v40l160-48v113.6l-48 31.2V472l88-24 88 24v-39.2l-48-31.2V288l160 48z'/></svg>"); }
+        .icon-office { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%230dcaf0'><path d='M432 448V96c0-17.7-14.3-32-32-32L112 64C94.3 64 80 78.3 80 96V448H32c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H432z'/></svg>"); }
+        .icon-laptop { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 512' fill='%236c757d'><path d='M624 416H384V96h240v320zM256 96v320H16V96h240zM16 416v32h608v-32H16z'/></svg>"); }
+        
+        .badge-project { background: #6c757d; color: white; padding: 2px 5px; border-radius: 4px; font-size: 8.5pt; margin: 1px; display: inline-block; }
     </style>
 </head>
 <body>
-    <div class="watermark">SMART SYSTEM</div>
 
-    <table class="stats-wrapper">
-        <tr>
-            <td class="stat-card">
-                <div style="font-size: 8pt; color: #666;">TOTAL HOURS LOGGED</div>
-                <div style="font-size: 16pt; font-weight: bold;">{{ total_hours_sum|floatformat:2 }}h</div>
-            </td>
-            <td style="width: 4%;"></td>
-            <td class="stat-card" style="border-left-color: #ffc107;">
-                <div style="font-size: 8pt; color: #666;">TOTAL OVERTIME (POST-5PM)</div>
-                <div style="font-size: 16pt; font-weight: bold;">{{ total_overtime_sum|floatformat:2 }}h</div>
-            </td>
-        </tr>
-    </table>
+    <div class="report-header">
+        <div class="header-left">
+            <img src="https://smartsystemit.com/wp-content/uploads/2025/01/Smart-System-Logo.png" class="logo">
+            <div class="company-name">SMART SYSTEM</div>
+        </div>
+        <div class="header-right">
+            <h2 style="margin:0; color:#333;">Utilization Summary</h2>
+            <small style="font-size: 10pt; color: #666;">Report Date: {{ today|date:"M d, Y" }}</small>
+        </div>
+    </div>
 
-    <table class="report-table">
+    <div class="card-container">
+        <div class="card bg-blue"><div>TOTAL HOURS</div><div class="card-value">{{ totals.hours|floatformat:1 }}h</div></div>
+        <div class="card bg-orange"><div>OVERTIME</div><div class="card-value">{{ totals.ot|floatformat:1 }}h</div></div>
+        <div class="card bg-info"><div>EGYPT</div><div class="card-value">{{ totals.egypt|floatformat:1 }}h</div></div>
+        <div class="card bg-success"><div>ABROAD</div><div class="card-value">{{ totals.abroad|floatformat:1 }}h</div></div>
+    </div>
+
+    <table>
         <thead>
             <tr>
-                <th style="width: 10%;">Date</th>
-                <th style="width: 15%;">Employee</th>
-                <th style="width: 25%;">Projects Worked</th>
-                <th class="text-center" style="width: 8%;">Abroad</th>
-                <th class="text-center" style="width: 8%;">Egypt</th>
-                <th class="text-right" style="width: 10%;">Hours</th>
-                <th class="text-right" style="width: 24%;">Status / OT</th>
+                <th class="text-start">Date</th>
+                <th class="text-start">Employee</th>
+                <th>Projects</th>
+                <th>Total</th>
+                <th>Egypt</th>
+                <th>Abroad</th>
+                <th>Remote</th>
+                <th>OT</th>
             </tr>
         </thead>
         <tbody>
             {% for entry in entries %}
             <tr>
-                <td>{{ entry.date|date:"M d, Y" }}</td>
-                <td style="font-weight: bold;">{{ entry.employee_name }}</td>
+                <td class="text-start" style="font-weight: bold;">{{ entry.date|date:"Y-m-d" }}</td>
+                <td class="text-start">{{ entry.employee_name }}</td>
                 <td>
-                    {% for project in entry.projects %}
-                        <span class="project-badge p-color-{{ forloop.counter0|add:1|stringformat:'s'|slice:':1' }}">
-                            {{ project }}
-                        </span>
+                    {% for p in entry.projects %}
+                        <span class="badge-project">{{ p.project__name }}: {{ p.p_hours|floatformat:1 }}h</span>
                     {% endfor %}
                 </td>
-                
-                <td class="text-center">
-                    {% if entry.onsite_abroad %}
-                        <span class="mark-yes">&#10004;</span>
-                    {% else %}
-                        <span class="mark-no">&#10006;</span>
-                    {% endif %}
+                <td style="color:#0d6efd; font-weight:bold;">{{ entry.logged_hours|floatformat:1 }}h</td>
+                <td>
+                    {% if entry.egypt_hours > 0 %}
+                        <span class="icon icon-office"></span> <span style="color:#0dcaf0; font-weight:bold;">{{ entry.egypt_hours|floatformat:1 }}h</span>
+                    {% else %}--{% endif %}
                 </td>
-
-                <td class="text-center">
-                    {% if entry.onsite_egypt %}
-                        <span class="mark-yes">&#10004;</span>
-                    {% else %}
-                        <span class="mark-no">&#10006;</span>
-                    {% endif %}
+                <td>
+                    {% if entry.abroad_hours > 0 %}
+                        <span class="icon icon-plane"></span> <span style="color:#198754; font-weight:bold;">{{ entry.abroad_hours|floatformat:1 }}h</span>
+                    {% else %}--{% endif %}
                 </td>
-
-                <td class="text-right">{{ entry.logged_hours|floatformat:2 }}h</td>
-                <td class="text-right">
-                    {% if entry.is_under %}
-                        <span class="red">UNDER ({{ entry.difference|floatformat:2 }}h)</span>
-                    {% else %}
-                        <span class="green">CAPACITY MET</span>
-                    {% endif %}
-                    {% if entry.ot_hours > 0 %}
-                        <br><span style="color:#0dcaf0; font-size:8pt;">+{{ entry.ot_hours|floatformat:2 }}h Post-5PM</span>
-                    {% endif %}
+                <td>
+                    {% if entry.egypt_hours == 0 and entry.abroad_hours == 0 %}
+                        <span class="icon icon-laptop"></span> <span style="color:#6c757d;">Yes</span>
+                    {% else %}--{% endif %}
                 </td>
+                <td style="color:#fd7e14; font-weight:bold;">{% if entry.ot_hours > 0 %}+{{ entry.ot_hours|floatformat:1 }}h{% else %}--{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>

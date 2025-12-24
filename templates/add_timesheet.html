@@ -31,7 +31,6 @@
         background-color: white;
     }
     
-    /* Radio logic: When checked, the sibling label (the card) changes color */
     .btn-check:checked + .location-card.abroad {
         background-color: #0d6efd !important;
         color: white !important;
@@ -53,13 +52,19 @@
         background-color: #f8f9fa;
     }
 
-    .btn-check:checked + .location-card .text-muted {
-        color: rgba(255,255,255,0.8) !important;
+    /* Magnificent Date Input Styling */
+    .locked-date {
+        background-color: #f8f9fa !important;
+        border-right: none !important;
+        font-weight: 600;
+        color: #6c757d;
     }
-
-    .mode-container {
-        overflow: hidden;
+    .unlocked-date {
+        background-color: #fff9e6 !important;
+        border: 2px solid #ffc107 !important;
+        color: #000 !important;
     }
+    .mode-container { overflow: hidden; }
 </style>
 
 <h1 class="mb-4 animate__animated animate__fadeInDown">📝 Add New Timesheet Task Entry</h1>
@@ -93,7 +98,7 @@
                 
                 <div class="col-md-6 mb-3">
                     <label for="id_task_type" class="form-label fw-bold">Task Type</label>
-                    <select class="form-select" name="task_type">
+                    <select class="form-select" id="id_task_type" name="task_type">
                         <option value="Delivery">Delivery</option>
                         <option value="Pre-Sale">Pre-Sale</option>
                         <option value="study">Study / Training</option>
@@ -113,7 +118,7 @@
                 </div>
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <input type="radio" class="btn-check btn-check-location" id="location_abroad" name="location" value="abroad" autocomplete="off">
+                        <input type="radio" class="btn-check btn-check-location" id="location_abroad" name="location" value="abroad">
                         <label class="location-card abroad btn w-100 py-3 d-flex align-items-center justify-content-center text-start" for="location_abroad">
                             <i class="fas fa-plane-departure fa-2x me-3"></i>
                             <div>
@@ -123,7 +128,7 @@
                         </label>
                     </div>
                     <div class="col-md-6">
-                        <input type="radio" class="btn-check btn-check-location" id="location_egypt" name="location" value="egypt" autocomplete="off">
+                        <input type="radio" class="btn-check btn-check-location" id="location_egypt" name="location" value="egypt">
                         <label class="location-card egypt btn w-100 py-3 d-flex align-items-center justify-content-center text-start" for="location_egypt">
                             <i class="fas fa-building fa-2x me-3"></i>
                             <div>
@@ -149,22 +154,34 @@
             
             <div class="mode-container">
                 <div id="time_fields_container" class="row">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-3 mb-3">
                         <label for="start_time" class="form-label fw-bold">Start Time</label>
                         <input type="time" class="form-control" id="start_time" name="start_time" required>
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-3 mb-3">
                         <label for="end_time" class="form-label fw-bold">End Time</label>
                         <input type="time" class="form-control" id="end_time" name="end_time" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Work Date</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-calendar-check"></i></span>
+                            <input type="date" class="form-control locked-date" id="log_work_date" name="work_date_logged" 
+                                   value="{{ today|date:'Y-m-d' }}" readonly style="cursor: not-allowed;">
+                            <button class="btn btn-outline-secondary" type="button" id="unlock_date_btn">
+                                <i class="fas fa-edit me-1"></i> Log Past Date?
+                            </button>
+                        </div>
+                        <small id="date_hint" class="text-muted mt-1 d-block">Defaulted to today.</small>
                     </div>
                 </div>
 
                 <div id="date_field_container" style="display: none;">
                     <div class="mb-3">
-                        <label for="id_work_date" class="form-label fw-bold text-primary">
-                            <i class="fas fa-calendar-alt me-1"></i> Choose Scheduled Date
+                        <label for="future_work_date" class="form-label fw-bold text-primary">
+                            <i class="fas fa-calendar-alt me-1"></i> Choose Scheduled Future Date
                         </label>
-                        <input type="date" class="form-control border-primary shadow-sm" id="id_work_date" name="work_date" value="{{ today|date:'Y-m-d' }}">
+                        <input type="date" class="form-control border-primary shadow-sm" id="future_work_date" name="work_date_scheduled">
                     </div>
                 </div>
             </div>
@@ -185,10 +202,14 @@
         
         const startInput = document.getElementById('start_time');
         const endInput = document.getElementById('end_time');
-        const dateInput = document.getElementById('id_work_date');
+        const logDateInput = document.getElementById('log_work_date');
+        const futureDateInput = document.getElementById('future_work_date');
+        const unlockBtn = document.getElementById('unlock_date_btn');
+        const dateHint = document.getElementById('date_hint');
 
-        const todayDate = dateInput.value;
+        const todayValue = logDateInput.value;
 
+        // Toggle logic: Future vs (Today/Past)
         toggle.addEventListener('change', function () {
             if (this.checked) {
                 timeContainer.style.display = 'none';
@@ -196,21 +217,63 @@
                 dateContainer.className = 'animate__animated animate__fadeInRight';
                 toggleLabel.innerText = "Yes, scheduling for future";
                 toggleLabel.classList.replace('text-muted', 'text-success');
-                startInput.removeAttribute('required');
-                endInput.removeAttribute('required');
-                dateInput.setAttribute('required', 'required');
+                
+                // Attributes
+                startInput.required = false;
+                endInput.required = false;
+                futureDateInput.required = true;
+                
+                // Set min for future date
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                futureDateInput.min = tomorrow.toISOString().split('T')[0];
             } else {
                 dateContainer.style.display = 'none';
                 timeContainer.style.display = 'flex';
                 timeContainer.className = 'row animate__animated animate__fadeInLeft';
                 toggleLabel.innerText = "No, logging work done today";
                 toggleLabel.classList.replace('text-success', 'text-muted');
-                startInput.setAttribute('required', 'required');
-                endInput.setAttribute('required', 'required');
-                dateInput.removeAttribute('required');
-                dateInput.value = todayDate;
+                
+                startInput.required = true;
+                endInput.required = true;
+                futureDateInput.required = false;
+                
+                resetLogDatePicker();
             }
         });
+
+        // Unlock Past Date Logic
+        unlockBtn.addEventListener('click', function() {
+            if (logDateInput.readOnly) {
+                // Unlock
+                logDateInput.readOnly = false;
+                logDateInput.classList.remove('locked-date');
+                logDateInput.classList.add('unlocked-date');
+                logDateInput.style.cursor = 'auto';
+                logDateInput.max = todayValue; // Cannot pick future in "Log" mode
+                logDateInput.focus();
+                
+                this.classList.replace('btn-outline-secondary', 'btn-warning');
+                this.innerHTML = '<i class="fas fa-undo me-1"></i> Reset';
+                dateHint.innerHTML = "Select a <strong>past date</strong> to log previous work.";
+                dateHint.classList.replace('text-muted', 'text-warning');
+            } else {
+                resetLogDatePicker();
+            }
+        });
+
+        function resetLogDatePicker() {
+            logDateInput.readOnly = true;
+            logDateInput.value = todayValue;
+            logDateInput.classList.add('locked-date');
+            logDateInput.classList.remove('unlocked-date');
+            logDateInput.style.cursor = 'not-allowed';
+            
+            unlockBtn.classList.replace('btn-warning', 'btn-outline-secondary');
+            unlockBtn.innerHTML = '<i class="fas fa-edit me-1"></i> Log Past Date?';
+            dateHint.innerText = "Defaulted to today.";
+            dateHint.classList.replace('text-warning', 'text-muted');
+        }
     });
 </script>
 {% endblock %}
