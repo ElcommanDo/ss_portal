@@ -119,136 +119,87 @@ def time_sheet_delete(request, pk):
         ts.delete()
         messages.success(request, 'Time Sheet Entry Deleted Successffully')
         return redirect(next_url)
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 @login_required
 def timesheet_create(request):
     user_projects = Q(created_by=request.user)
     public_projects = Q(is_public=True)
-
-    projects = models.Project.objects.filter(
-        Q(is_active=True),               
-        user_projects | public_projects  
-    ).distinct()
+    projects = models.Project.objects.filter(Q(is_active=True), user_projects | public_projects).distinct()
 
     if request.method == 'POST':
         try:
-            if request.POST.get("is_scheduled"):
-                task_date = request.POST.get('work_date')
-                timesheet, created = models.Timesheet.objects.get_or_create(
-                        user=request.user, 
-                        date=task_date,
-                    
-                    )
+            is_scheduled = request.POST.get("is_scheduled")
+            # توحيد جلب التاريخ بناء على نوع العملية
+            date_field = 'work_date_scheduled' if is_scheduled else 'work_date_logged'
+            work_date_str = request.POST.get(date_field)
 
-                project_id = request.POST.get('project')
-                work_date_str = str(request.POST.get('work_date'))
-                task_description = request.POST.get('task_description')
-                task_type = request.POST.get('task_type')
+            if not work_date_str:
+                messages.error(request, "Error: The Date of the Task is required.")
+                return redirect('add_timesheet')
 
-                hours = 0.00 
-                
-                if not work_date_str or work_date_str.strip() == '':
-                    messages.error(request, "Error: The Date of the Task is required. Please select a date.")
-                    return redirect('add_timesheet')
-                
-                
-                project = get_object_or_404(models.Project, pk=project_id)
-                
-                if not models.Project.objects.filter(Q(pk=project_id) & (user_projects | public_projects)).exists():
-                    messages.error(request, "Invalid project selection or insufficient permissions.")
-                    return redirect('add_timesheet')
+            # تحويل النص إلى Object تاريخ حقيقي لضمان الدقة
+            task_date = parse_date(work_date_str)
 
-                obj = models.TimesheetEntry.objects.create(
-                    user=request.user,
-                    project=project,
-                    work_date=work_date_str, # Date string is now guaranteed to be non-empty
-                    task_description=task_description,
-                    hours=hours,
-                    task_type= task_type,
-                    status='Inprogress',
-                    time_sheet = timesheet,
-                    is_scheduled = True
-                )
-                if request.POST.get("location") == "abroad":
-                    obj.onsite_abroad = True
-                elif request.POST.get("location") == "egypt":
-                    obj.onsite_Egypt = True
-                obj.save()
-                messages.success(request, "Timesheet entry saved successfully!")
-                return redirect('home') 
-            
-            else:
-                timesheet, created = models.Timesheet.objects.get_or_create(
-                        user=request.user, 
-                        date=date.today(),
-                    
-                    )
+            # إنشاء أو جلب الـ Timesheet بناء على تاريخ المهمة المختار (مش تاريخ النهاردة)
+            timesheet, created = models.Timesheet.objects.get_or_create(
+                user=request.user, 
+                date=task_date
+            )
 
-                project_id = request.POST.get('project')
-                work_date_str = str(request.POST.get("work_date_logged"))
-                task_description = request.POST.get('task_description')
-                task_type = request.POST.get('task_type')
+            project_id = request.POST.get('project')
+            task_description = request.POST.get('task_description')
+            task_type = request.POST.get('task_type')
+
+            # حساب الساعات
+            hours = 0.00
+            if not is_scheduled:
                 start_time = request.POST.get('start_time')
                 end_time = request.POST.get('end_time')
-                
                 if start_time and end_time:
                     fmt = '%H:%M'
                     t1 = datetime.strptime(start_time, fmt)
                     t2 = datetime.strptime(end_time, fmt)
-
-                    # Calculate difference
-                    # Using absolute value to ensure it's positive regardless of order
                     delta = abs(t2 - t1)
-                    
-                    # Convert total seconds to hours (float)
                     hours = delta.total_seconds() / 3600.0
-                else:
-                    hours = 0
-                
-                if not work_date_str or work_date_str.strip() == '':
-                    messages.error(request, "Error: The Date of the Task is required. Please select a date.")
-                    return redirect('add_timesheet')
                 
                 if hours <= 0:
                     messages.error(request, "Hours spent must be greater than zero.")
                     return redirect('add_timesheet')
-                
-                project = get_object_or_404(models.Project, pk=project_id)
-                
-                if not models.Project.objects.filter(Q(pk=project_id) & (user_projects | public_projects)).exists():
-                    messages.error(request, "Invalid project selection or insufficient permissions.")
-                    return redirect('add_timesheet')
 
-                obj = models.TimesheetEntry.objects.create(
-                    user=request.user,
-                    project=project,
-                    work_date=work_date_str, # Date string is now guaranteed to be non-empty
-                    task_description=task_description,
-                    hours=hours,
-                    task_type= task_type,
-                    status='Inprogress',
-                    time_sheet = timesheet,
-                    time_start = request.POST.get('start_time'),
-                    time_end = request.POST.get('end_time'),
+            project = get_object_or_404(models.Project, pk=project_id)
+
+            # إنشاء السجل
+            obj = models.TimesheetEntry.objects.create(
+                user=request.user,
+                project=project,
+                work_date=task_date, # نستخدم الـ Object المحول
+                task_description=task_description,
+                hours=hours,
+                task_type=task_type,
+                status='Inprogress',
+                time_sheet=timesheet,
+                is_scheduled=bool(is_scheduled),
+                time_start=request.POST.get('start_time') if not is_scheduled else None,
+                time_end=request.POST.get('end_time') if not is_scheduled else None,
+            )
+
+            # معالجة الموقع
+            location = request.POST.get("location")
+            if location == "abroad":
+                obj.onsite_abroad = True
+            elif location == "egypt":
+                obj.onsite_Egypt = True
             
-                )
-                if request.POST.get("location") == "abroad":
-                    obj.onsite_abroad = True
-                elif request.POST.get("location") == "egypt":
-                    obj.onsite_Egypt = True
-                obj.save()
-                
-                messages.success(request, "Timesheet entry saved successfully!")
-                return redirect('home') 
-            
-        except ValueError:
-            # Catches errors if 'hours' is not a valid number or if other conversions fail
-            messages.error(request, "Invalid input for hours (must be a number) or date format.")
+            obj.save()
+            messages.success(request, "Timesheet entry saved successfully!")
+            return redirect('home')
+
         except Exception as e:
-            # We catch the error here to show the user the issue
-            messages.error(request, f"An error occurred during submission: {e}")
+            messages.error(request, f"An error occurred: {e}")
             
-    context = {'projects': projects, 'today': date.today()}
+    context = {'projects': projects, 'today': timezone.localdate()}
     return render(request, 'add_timesheet.html', context)
 
 # @login_required

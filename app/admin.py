@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser, TimesheetEntry, Project, Timesheet, ProjectCost, Team
-admin.site.register([ TimesheetEntry, Timesheet, ProjectCost])
+admin.site.register([ProjectCost])
 from import_export.admin import ImportExportModelAdmin
 from .resources import (
     TeamResource,
@@ -39,6 +39,19 @@ class TeamAdmin(ImportExportModelAdmin):
     resource_class = TeamResource
 
 
+
+
+@admin.register(Timesheet)
+class TimeSheetAdmin(admin.ModelAdmin):
+    list_filter = ['date']
+
+
+
+@admin.register(TimesheetEntry)
+class TimeSheetEntryAdmin(admin.ModelAdmin):
+    list_filter = ['work_date']
+
+    
 
 @admin.register(Project)
 class ProjectAdmin(ImportExportModelAdmin):
