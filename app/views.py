@@ -1111,30 +1111,30 @@ def timesheet_detail_entries(request, pk):
     return render(request, 'timesheet_detail_entries.html', context)
 
 
-
-
 @login_required
 def user_timesheets(request, scheduled=None):
-    
     current_user = request.user
     
     # 1. Start with Timesheet objects filtered by the current user
     if scheduled:
-        queryset = models.Timesheet.objects.filter(user=current_user, tasks__is_scheduled=True).select_related('user')
+        queryset = models.Timesheet.objects.filter(
+            user=current_user, 
+            tasks__is_scheduled=True
+        ).select_related('user')
     else: 
-        queryset = models.Timesheet.objects.filter(user=current_user, tasks__is_scheduled=False).select_related('user')
+        queryset = models.Timesheet.objects.filter(
+            user=current_user, 
+            tasks__is_scheduled=False
+        ).select_related('user')
     
-    # 2. Aggregation (Calculate total hours and summary status for each daily log)
+    # 2. Aggregation (Calculate total hours and summary status)
     queryset = queryset.annotate(
         total_hours=Sum('tasks__hours'),
-        
-        # Counts for status check
         rejected_count=Count('tasks', filter=Q(tasks__status='REJECTED')),
         inprogress_count=Count('tasks', filter=Q(tasks__status='Inprogress')),
         approved_count=Count('tasks', filter=Q(tasks__status='APPROVED')),
         total_task_count=Count('tasks')
     ).annotate(
-        # Determine a single summary status based on counts
         summary_status=Case(
             When(rejected_count__gt=0, then=Value('REJECTED')),
             When(inprogress_count__gt=0, then=Value('PENDING')),
@@ -1144,51 +1144,50 @@ def user_timesheets(request, scheduled=None):
         )
     )
 
-    # 3. Simple Date Filtering (Allow user to filter their own logs)
+    # 3. Simple Date and Status Filtering
     filters = Q()
     
-    # Filter by Specific Day (user's input date)
     work_date_str = request.GET.get('work_date')
     if work_date_str:
         try:
             work_date = datetime.strptime(work_date_str, '%Y-%m-%d').date()
             filters &= Q(date=work_date)
-        except ValueError: pass 
+        except ValueError: 
+            pass 
 
-    # Filter by Status (Applies to individual entries within the Timesheet)
     status = request.GET.get('status')
-    if status: filters &= Q(tasks__status=status)
+    if status: 
+        filters &= Q(tasks__status=status)
     
-    # Apply filters
+    # Apply filters and ensure distinct results for the paginator
     queryset = queryset.filter(filters).distinct().order_by('-date')
 
-    # 4. Pagination
+    # 4. Pagination Logic
     paginator = Paginator(queryset, 20) 
-    page = request.GET.get('page', 1)
+    page_number = request.GET.get('page', 1)
 
     try:
-        page_obj = paginator.page(page)
+        page_obj = paginator.page(page_number)
     except (PageNotAnInteger, EmptyPage):
         page_obj = paginator.page(1)
 
-    # 5. Context Data
-    # Note: We still pass empty QuerySets for filters the template expects, 
-    # but the user_pk is automatically set by the queryset filter itself.
+    # 5. Clean Query Parameters for Pagination Links
+    # This prevents ?page=2&page=3&page=4 stacking in the URL
+    query_params = request.GET.copy()
+    if 'page' in query_params:
+        del query_params['page']
+
     context = {
         'page_obj': page_obj,
-        'current_user_view': True, # Flag for template customization if needed
-        
-        # Context required by timesheet_list.html (passed empty for simplicity):
+        'current_user_view': True,
         'all_users': models.CustomUser.objects.none(),
         'all_teams': models.Team.objects.none(),
         'all_projects': models.Project.objects.filter(is_public=True, is_active=True),
         'status_choices': models.TimesheetEntry.STATUS_CHOICES,
-        'current_params': request.GET.urlencode(),
-        
+        'current_params': query_params.urlencode(), # Only contains filters, not the page
     }
 
     return render(request, 'time_sheets.html', context)
-
 
 
 @login_required
