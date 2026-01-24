@@ -1476,7 +1476,7 @@ def reports_daily_man_days(request):
     export_pdf = request.GET.get('export_pdf')
 
     # 1. Base Query
-    queryset = TimesheetEntry.objects.filter(is_scheduled=False).select_related('project', 'user')
+    queryset = TimesheetEntry.objects.filter(is_scheduled=False).exclude(task_type="study").select_related('project', 'user')
 
     # 2. Apply Filters
     if user_pk:
@@ -2519,7 +2519,7 @@ def export_man_days_pdf(request):
     end_date = request.GET.get('end_date')
 
     # 2. Base Query
-    queryset = models.TimesheetEntry.objects.filter(is_scheduled=False).select_related('project', 'user')
+    queryset = models.TimesheetEntry.objects.filter(is_scheduled=False).exclude(task_type="study").select_related('project', 'user', )
 
     if user_pk: queryset = queryset.filter(user__pk=user_pk)
     if project_pk: queryset = queryset.filter(project__pk=project_pk)
