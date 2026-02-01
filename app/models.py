@@ -171,3 +171,17 @@ class ProjectCost(models.Model):
     currency = models.CharField(max_length=5)
 
     
+
+class Assignement(models.Model):
+    employee = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="my_assignements")
+    body = models.TextField()
+    priority = models.CharField(max_length=8)
+    project = models.ForeignKey(Project, null=True, blank=True, on_delete=models.PROTECT)
+    status = models.CharField(max_length=30)
+    is_task = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE,
+                                   related_name="created_assignements")
+    deadline = models.DateTimeField()
+

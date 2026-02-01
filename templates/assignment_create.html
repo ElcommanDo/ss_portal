@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mission Control | Dispatch{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --cmd-dark: #0f172a;
+        --cmd-accent: #3b82f6;
+    }
+
+    /* FIX: Prevent horizontal scroll during animations */
+    .mission-dispatch-container {
+        overflow-x: hidden;
+        width: 100%;
+        padding-right: 15px;
+        padding-left: 15px;
+        margin-right: auto;
+        margin-left: auto;
+    }
+
+    .dispatch-card {
+        border: none;
+        border-radius: 28px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+        background: white;
+        overflow: hidden;
+    }
+
+    .header-section {
+        background: var(--cmd-dark);
+        padding: 2.5rem;
+        color: white;
+        position: relative;
+    }
+
+    /* Form Controls */
+    .form-label { font-size: 0.85rem; letter-spacing: 0.5px; margin-bottom: 0.5rem; }
+    .form-control, .form-select {
+        border: 2px solid #e2e8f0;
+        padding: 0.8rem 1rem;
+        border-radius: 14px;
+        background-color: #f8fafc;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--cmd-accent);
+        background-color: white;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+    }
+
+    /* Priority Button Group */
+    .priority-btn { border-radius: 10px; font-weight: 600; padding: 10px; transition: 0.3s; flex: 1; }
+    .btn-check:checked + .btn-outline-danger { background-color: #ef4444; border-color: #ef4444; color: white; }
+    .btn-check:checked + .btn-outline-warning { background-color: #f59e0b; border-color: #f59e0b; color: white; }
+    .btn-check:checked + .btn-outline-primary { background-color: #3b82f6; border-color: #3b82f6; color: white; }
+
+    /* Launch Animation */
+    .btn-launch {
+        background: var(--cmd-accent);
+        border: none;
+        padding: 1.25rem;
+        border-radius: 16px;
+        font-weight: 800;
+        color: white;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .btn-launch:hover {
+        background: #1d4ed8;
+        transform: translateY(-3px);
+        box-shadow: 0 15px 30px rgba(59, 130, 246, 0.3);
+    }
+
+    #rocket-icon { transition: transform 0.8s ease-in; }
+    .fly-away { transform: translateY(-150vh) translateX(50vw) rotate(45deg); opacity: 0; }
+
+    /* List styling based on Priority field */
+    .p-High { border-left: 6px solid #ef4444; }
+    .p-Medium { border-left: 6px solid #f59e0b; }
+    .p-Low { border-left: 6px solid #3b82f6; }
+
+    /* History container scrollbar styling */
+    .history-container::-webkit-scrollbar {
+        width: 6px;
+    }
+    .history-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+    .history-container::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 10px;
+    }
+</style>
+
+<div class="mission-dispatch-container py-4">
+    <div class="row g-5 mx-0">
+        {% if messages %}
+<div class="messages mb-4">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show animate__animated animate__fadeIn" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+        <div class="col-lg-6 px-2">
+            <div class="dispatch-card animate__animated animate__fadeInLeft">
+                <div class="header-section text-center">
+                    <div class="mb-2"><i class="fas fa-satellite-dish fa-3x text-info"></i></div>
+                    <h2 class="fw-bold mb-0">Task Dispatch</h2>
+                    <p class="text-info opacity-75 small mb-0">Assigned By: {{ request.user.username }}</p>
+                </div>
+                
+                <div class="card-body p-4 p-md-5">
+                    <form id="assignmentForm" method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label fw-bold text-muted text-uppercase">Employee</label>
+                                <select class="form-select" name="employee" required>
+                                    <option value="" disabled selected>Select operative...</option>
+                                    {% for emp in employees %}
+                                        <option value="{{ emp.id }}">{{ emp.full_name|default:emp.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label fw-bold text-muted text-uppercase">Project</label>
+                                <select class="form-select" name="project">
+                                    <option value="">No Specific Project</option>
+                                    {% for proj in projects %}
+                                        <option value="{{ proj.id }}">{{ proj.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-muted text-uppercase">Assignment Objectives (Body)</label>
+                            <textarea class="form-control" name="body" rows="4" placeholder="Detail the mission requirements..." required></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-7 mb-4">
+                                <label class="form-label fw-bold text-muted text-uppercase">Deadline</label>
+                                <input type="datetime-local" class="form-control" name="deadline" required>
+                            </div>
+
+                            <div class="col-md-5 mb-4">
+                                <label class="form-label fw-bold text-muted text-uppercase">Priority</label>
+                                <div class="d-flex gap-1">
+                                    <input type="radio" class="btn-check" name="priority" id="pHigh" value="High">
+                                    <label class="btn btn-outline-danger priority-btn" for="pHigh">High</label>
+
+                                    <input type="radio" class="btn-check" name="priority" id="pMed" value="Medium" checked>
+                                    <label class="btn btn-outline-warning priority-btn" for="pMed">Medium</label>
+
+                                    <input type="radio" class="btn-check" name="priority" id="pLow" value="Low">
+                                    <label class="btn btn-outline-primary priority-btn" for="pLow">Low</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <input type="hidden" name="status" value="Pending">
+
+                        <button type="submit" class="btn btn-launch w-100 shadow-lg mt-2" id="submitBtn">
+                            <span id="btnLabel">DISPATCH ASSIGNMENT</span>
+                            <i class="fas fa-rocket ms-2" id="rocket-icon"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 px-2 animate__animated animate__fadeInRight">
+            <h4 class="fw-bold mb-4 d-flex align-items-center">
+                <i class="fas fa-history text-secondary me-2"></i> Recent History
+            </h4>
+
+            <div class="history-container pe-2" style="max-height: 600px; overflow-y: auto; overflow-x: hidden;">
+                {% for assignment in recent_assignments %}
+                <div class="card border-0 shadow-sm p-3 mb-3 p-{{ assignment.priority }}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="fw-bold mb-1">{{ assignment.project.name|default:"General Task" }}</h6>
+                            <p class="small text-muted mb-0">To: <strong>{{ assignment.employee.full_name }}</strong></p>
+                        </div>
+                        <span class="badge {% if assignment.priority == 'High' %}bg-danger{% elif assignment.priority == 'Medium' %}bg-warning text-dark{% else %}bg-primary{% endif %}">
+                            {{ assignment.priority }}
+                        </span>
+                    </div>
+                    <div class="mt-2">
+                        <p class="text-secondary small mb-2">{{ assignment.body|truncatewords:15 }}</p>
+                        <div class="d-flex justify-content-between align-items-center border-top pt-2">
+                            <small class="text-muted"><i class="far fa-clock me-1"></i> Due: {{ assignment.deadline|date:"M d, H:i" }}</small>
+                            <span class="badge bg-light text-dark border">{{ assignment.status }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-5 bg-white rounded-4 shadow-sm">
+                    <i class="fas fa-inbox fa-3x text-light mb-3"></i>
+                    <p class="text-muted">No missions found in the logs.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    document.getElementById('assignmentForm').addEventListener('submit', function(e) {
+        const btn = document.getElementById('submitBtn');
+        const icon = document.getElementById('rocket-icon');
+        const label = document.getElementById('btnLabel');
+
+        e.preventDefault();
+        
+        label.innerText = "LAUNCHING MISSION...";
+        btn.style.background = "#10b981"; 
+        icon.className = "fas fa-rocket ms-2 fly-away";
+
+        setTimeout(() => {
+            this.submit();
+        }, 800);
+    });
+</script>
+{% endblock %}

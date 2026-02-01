@@ -5,68 +5,17 @@
 
 {% block content %}
 <style>
-    /* Soft colors for total logged hours badge */
-    .bg-info-soft { 
-        background-color: #e0f7fa; 
-        color: #0dcaf0;
-    }
-
-    /* Dashboard Header Styles */
-    .table thead th { 
-        font-weight: 600; 
-        text-transform: uppercase; 
-        font-size: 0.85rem; 
-        letter-spacing: 0.5px; 
-        vertical-align: middle;
-    }
-
-    /* Summary Card Typography */
-    .card h3 { 
-        font-size: 1.8rem; 
-        font-weight: 700; 
-        margin-top: 5px;
-    }
-    
-    .card h6 {
-        letter-spacing: 1px;
-    }
-
-    /* Column Widths for the 3-cell Location Layout */
-    .location-cell {
-        width: 130px;
-        transition: all 0.3s ease;
-    }
-
-    /* Pagination Styling */
-    .page-link { 
-        color: #0d6efd; 
-        border: none; 
-        margin: 0 5px; 
-        border-radius: 5px;
-        font-weight: 500;
-    }
-    
-    .page-item.active .page-link {
-        background-color: #0d6efd;
-        color: white;
-    }
-
-    .page-item.disabled .page-link { 
-        background-color: #f8f9fa; 
-        color: #6c757d;
-    }
-
-    /* Animation for table rows on hover */
-    .table-hover tbody tr:hover {
-        background-color: #f1f8ff !important;
-        transition: background-color 0.2s ease;
-    }
-
-    /* Opacity for empty dashes */
-    .opacity-25 {
-        opacity: 0.25;
-    }
+    .bg-info-soft { background-color: #e0f7fa; color: #0dcaf0; }
+    .table thead th { font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; vertical-align: middle; }
+    .card h3 { font-size: 1.8rem; font-weight: 700; margin-top: 5px; }
+    .card h6 { letter-spacing: 1px; }
+    .page-link { color: #0d6efd; border: none; margin: 0 5px; border-radius: 5px; font-weight: 500; }
+    .page-item.active .page-link { background-color: #0d6efd; color: white; }
+    .page-item.disabled .page-link { background-color: #f8f9fa; color: #6c757d; }
+    .table-hover tbody tr:hover { background-color: #f1f8ff !important; transition: background-color 0.2s ease; }
+    .opacity-25 { opacity: 0.25; }
 </style>
+
 <div class="container-fluid py-4 animate__animated animate__fadeIn">
     
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -94,7 +43,6 @@
                 </div>
             </div>
         </div>
-
         <div class="col-md-3">
             <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #ffc107, #fd7e14); color: white;">
                 <div class="card-body">
@@ -108,7 +56,6 @@
                 </div>
             </div>
         </div>
-
         <div class="col-md-3">
             <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #0dcaf0, #20c997); color: white;">
                 <div class="card-body">
@@ -122,7 +69,6 @@
                 </div>
             </div>
         </div>
-
         <div class="col-md-3">
             <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #198754, #20c997); color: white;">
                 <div class="card-body">
@@ -141,8 +87,8 @@
     <div class="card shadow-sm mb-5 border-0 bg-light">
         <div class="card-body p-4">
             <form method="GET" class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label fw-bold">Project</label>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">Project</label>
                     <select class="form-select border-0 shadow-sm" name="project_pk">
                         <option value="">All Projects</option>
                         {% for project in all_projects %}
@@ -150,8 +96,8 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-bold">Employee</label>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">Employee</label>
                     <select class="form-select border-0 shadow-sm" name="user_pk">
                         <option value="">All Employees</option>
                         {% for user in all_users %}
@@ -160,15 +106,23 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label fw-bold">Start Date</label>
+                    <label class="form-label fw-bold small">Location Type</label>
+                    <select class="form-select border-0 shadow-sm" name="work_location">
+                        <option value="">All Types</option>
+                        <option value="abroad" {% if request.GET.work_location == 'abroad' %}selected{% endif %}>Abroad</option>
+                        <option value="remote" {% if request.GET.work_location == 'remote' %}selected{% endif %}>Remote/Office</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">Start Date</label>
                     <input type="date" class="form-control border-0 shadow-sm" name="start_date" value="{{ request.GET.start_date }}">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label fw-bold">End Date</label>
+                    <label class="form-label fw-bold small">End Date</label>
                     <input type="date" class="form-control border-0 shadow-sm" name="end_date" value="{{ request.GET.end_date }}">
                 </div>
                 <div class="col-md-2 d-flex align-items-end gap-2">
-                    <button type="submit" class="btn btn-primary w-100 shadow-sm"><i class="fas fa-filter me-2"></i>Apply</button>
+                    <button type="submit" class="btn btn-primary w-100 shadow-sm"><i class="fas fa-filter"></i></button>
                     <a href="{% url 'reports_man_days' %}" class="btn btn-secondary shadow-sm"><i class="fas fa-sync-alt"></i></a>
                 </div>
             </form>
@@ -204,43 +158,31 @@
                             <i class="far fa-clock me-1"></i> {{ entry.total_hours|floatformat:2 }}h
                         </span>
                     </td>
-                    
                     <td style="width: 120px;">
                         {% if entry.egypt_hours > 0 %}
                             <span class="text-info small fw-bold">
                                 <i class="fas fa-map-marker-alt me-1"></i> Egypt: {{ entry.egypt_hours|floatformat:1 }}h
                             </span>
-                        {% else %}
-                            <span class="text-muted opacity-25">--</span>
-                        {% endif %}
+                        {% else %}<span class="text-muted opacity-25">--</span>{% endif %}
                     </td>
-
                     <td style="width: 120px;">
                         {% if entry.abroad_hours > 0 %}
                             <span class="text-success small fw-bold">
                                 <i class="fas fa-plane me-1"></i> Abroad: {{ entry.abroad_hours|floatformat:1 }}h
                             </span>
-                        {% else %}
-                            <span class="text-muted opacity-25">--</span>
-                        {% endif %}
+                        {% else %}<span class="text-muted opacity-25">--</span>{% endif %}
                     </td>
-
                     <td style="width: 100px;">
                         {% if entry.egypt_hours == 0 and entry.abroad_hours == 0 %}
                             <span class="text-muted small"><i class="fas fa-laptop me-1"></i> Office</span>
-                        {% else %}
-                             <span class="text-muted opacity-25">--</span>
-                        {% endif %}
+                        {% else %}<span class="text-muted opacity-25">--</span>{% endif %}
                     </td>
-                    
                     <td>
                         {% if entry.overtime > 0 %}
                             <span class="text-warning fw-bold">
                                 <i class="fas fa-bolt me-1"></i> +{{ entry.overtime|floatformat:1 }}h
                             </span>
-                        {% else %}
-                            <span class="text-muted small">--</span>
-                        {% endif %}
+                        {% else %}<span class="text-muted small">--</span>{% endif %}
                     </td>
                 </tr>
                 {% empty %}
@@ -254,27 +196,28 @@
             </tbody>
         </table>
     </div>
+{% if page_obj.has_other_pages %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link shadow-sm" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">Previous</a>
+            </li>
+        {% endif %}
 
-    {% if page_obj.has_other_pages %}
-    <nav class="mt-4">
-        <ul class="pagination justify-content-center">
-            {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link shadow-sm" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}">Previous</a></li>
-            {% endif %}
-            <li class="page-item disabled"><span class="page-link shadow-sm">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
-            {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link shadow-sm" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}">Next</a></li>
-            {% endif %}
-        </ul>
-    </nav>
-    {% endif %}
+        <li class="page-item disabled">
+            <span class="page-link shadow-sm">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link shadow-sm" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Next</a>
+            </li>
+        {% endif %}
+        
+    </ul>
+</nav>
+{% endif %}
 </div>
-
-<style>
-    .bg-info-soft { background-color: #e0f7fa; }
-    .table thead th { font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; }
-    .card h3 { font-size: 1.8rem; font-weight: 700; }
-    .page-link { color: #0d6efd; border: none; margin: 0 5px; border-radius: 5px; }
-    .page-item.disabled .page-link { background-color: #f8f9fa; }
-</style>
 {% endblock %}

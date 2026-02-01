@@ -5,13 +5,29 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
     <h1><i class="fas fa-users-cog"></i> User Management</h1>
-    <!-- Button to trigger the Create User Modal -->
     <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#createUserModal">
         <i class="fas fa-user-plus me-2"></i> Create New User
     </button>
 </div>
 
-<!-- Display Django Messages (Crucial for showing the temporary password) -->
+<div class="row mb-4 animate__animated animate__fadeIn">
+    <div class="col-md-5">
+        <form method="GET" action="" class="d-flex">
+            <div class="input-group shadow-sm">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="fas fa-search text-muted"></i>
+                </span>
+                <input type="text" name="search" class="form-control border-start-0" 
+                       placeholder="Search by name or username..." value="{{ search_query|default:'' }}">
+                <button type="submit" class="btn btn-primary px-4">Filter</button>
+                {% if search_query %}
+                    <a href="?" class="btn btn-outline-secondary">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
 {% if messages %}
 <div class="messages mb-4">
     {% for message in messages %}
@@ -45,7 +61,6 @@
                 data-username="{{ user.username }}"
                 data-role="{{ user.role }}"
                 data-team="{{ user.team.pk }}"
-                
                 data-is-active="{% if user.is_active %}Active{% else %}Inactive{% endif %}">
                 
                 <td class="fw-bold">{{ user.full_name }}</td>
@@ -53,7 +68,6 @@
                 <td>{{ user.team.title }}</td>
                 
                 <td>
-                    <!-- Enhanced Role Badge Coloring -->
                     {% if user.role == 'admin' %}
                         <span class="badge bg-danger">Administrator</span>
                     {% elif user.role == 'ceo' %}
@@ -79,19 +93,16 @@
                 </td>
                 <td>{{ user.date_joined|date:"M d, Y" }}</td>
                 <td>
-                    <!-- Edit Button triggers JS to open Edit Modal -->
                     <button class="btn btn-sm btn-outline-info me-2" 
                             onclick="openEditModal(
                                 '{{ user.pk }}', 
                                 '{{ user.username }}', 
                                 '{{ user.full_name }}', 
                                 '{{ user.role }}',
-                                '{{ user.team.pk }}',
-                                
+                                '{{ user.team.pk }}'
                             )">
                         <i class="fas fa-edit"></i> Edit
                     </button>
-                    <!-- Deactivate/Activate Button triggers JS to open Confirmation Modal -->
                     <button class="btn btn-sm {% if user.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
                             onclick="openDeactivateModal(
                                 '{{ user.pk }}', 
@@ -104,7 +115,10 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6" class="text-center text-muted">No users found. Use the "Create New User" button to start.</td>
+                <td colspan="7" class="text-center text-muted py-4">
+                    <i class="fas fa-search mb-2 d-block fa-2x"></i>
+                    No users found matching your criteria.
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -117,7 +131,7 @@
     <ul class="pagination justify-content-center">
         {% if page_obj.has_previous %}
         <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo; Previous</a>
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">&laquo; Previous</a>
         </li>
         {% else %}
         <li class="page-item disabled"><span class="page-link">&laquo; Previous</span></li>
@@ -128,14 +142,14 @@
                 <li class="page-item active"><span class="page-link">{{ i }}</span></li>
             {% else %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                    <a class="page-link" href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}">{{ i }}</a>
                 </li>
             {% endif %}
         {% endfor %}
         
         {% if page_obj.has_next %}
         <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next &raquo;</a>
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">Next &raquo;</a>
         </li>
         {% else %}
         <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
@@ -146,9 +160,6 @@
 {% comment %} END: PAGINATION CONTROLS {% endcomment %}
 
 
-<!-- ============================================= -->
-<!-- MODAL 1: Create New User Form -->
-<!-- ============================================= -->
 <div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -187,14 +198,12 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <!-- Password Generation Section -->
                     <div class="mb-3">
                         <label class="form-label fw-bold d-block">Initial Password (Generated)</label>
                         <div class="input-group">
                             <input type="text" class="form-control fw-bold" id="generated_password_display" value="" placeholder="Click Generate..." disabled required>
                             <button type="button" class="btn btn-primary" onclick="generatePassword()">Generate</button>
                         </div>
-                        <small class="form-text text-muted">A secure, temporary password is required for the new account.</small>
                         <input type="hidden" id="generated_password_hidden" name="generated_password" required>
                     </div>
                 </div>
@@ -207,9 +216,6 @@
     </div>
 </div>
 
-<!-- ============================================= -->
-<!-- MODAL 2: Edit Existing User Modal -->
-<!-- ============================================= -->
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -218,12 +224,9 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             
-            <!-- Action URL must be set dynamically by JavaScript -->
             <form method="post" id="editUserForm" action=""> 
                 {% csrf_token %}
                 <div class="modal-body">
-                    <p class="text-muted">Changes here will overwrite current user data.</p>
-                    
                     <div class="mb-3">
                         <label for="edit_id_username" class="form-label fw-bold">Username (Login ID)</label>
                         <input type="text" class="form-control" id="edit_id_username" name="username" required>
@@ -251,7 +254,7 @@
                         </select>
                     </div>
                     <hr>
-                    <p class="text-warning fw-bold">Leave the field below blank if you do not wish to change the password.</p>
+                    <p class="text-warning fw-bold">Leave blank if you do not wish to change the password.</p>
                     <div class="mb-3">
                         <label for="edit_id_new_password" class="form-label fw-bold">New Password</label>
                         <input type="password" class="form-control" id="edit_id_new_password" name="new_password" placeholder="•••••••••">
@@ -268,9 +271,6 @@
 </div>
 
 
-<!-- ============================================= -->
-<!-- MODAL 3: Deactivate/Activate Confirmation Modal -->
-<!-- ============================================= -->
 <div class="modal fade" id="confirmDeactivateModal" tabindex="-1" aria-labelledby="confirmDeactivateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content">
@@ -283,9 +283,6 @@
                 {% csrf_token %}
                 <div class="modal-body text-center">
                     <p id="confirmMessage" class="fw-bold"></p>
-                    <p class="text-muted">This action can be reversed later.</p>
-                    
-                    <!-- Hidden fields to pass data to Django view -->
                     <input type="hidden" id="confirm_user_id" name="user_id">
                     <input type="hidden" id="confirm_action" name="new_status_action">
                 </div>
@@ -300,64 +297,30 @@
 </div>
 
 
-<!-- ============================================= -->
-<!-- JAVASCRIPT for Modals and Password Generation -->
-<!-- ============================================= -->
 <script>
-    /**
-     * Generates a strong, random password and populates the modal fields.
-     */
     function generatePassword() {
         const length = 14;
         const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
         let password = "";
-        
-        const specialChars = "!@#$%^&*()";
-        const digits = "0123456789";
-        const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        const lower = "abcdefghijklmnopqrstuvwxyz";
-
-        // Ensure complexity requirements are met
-        password += specialChars[Math.floor(Math.random() * specialChars.length)];
-        password += digits[Math.floor(Math.random() * digits.length)];
-        password += upper[Math.floor(Math.random() * upper.length)];
-        password += lower[Math.floor(Math.random() * lower.length)];
-        
-        // Fill the remainder
-        for (let i = password.length; i < length; i++) {
+        for (let i = 0; i < length; i++) {
             password += charset[Math.floor(Math.random() * charset.length)];
         }
-        
-        // Shuffle for true randomness
-        password = password.split('').sort(() => 0.5 - Math.random()).join('');
-
         document.getElementById('generated_password_display').value = password;
         document.getElementById('generated_password_hidden').value = password;
     }
     
-    /**
-     * Opens the Edit modal and pre-fills user data.
-     * Arguments changed to (userId, username, fullName, role)
-     */
     function openEditModal(userId, username, fullName, role, team) {
-        // Set form action URL (assuming a user_edit URL pattern exists)
-        // Uses the URL configuration path: /users/edit/<int:pk>/
         document.getElementById('editUserForm').action = `/users/edit/${userId}/`;
-        
         document.getElementById('edit_id_username').value = username;
         document.getElementById('edit_id_full_name').value = fullName;
         document.getElementById('edit_id_team').value = team;
-
-        document.getElementById('edit_id_role').value = role; // Pre-selects the role
-        document.getElementById('edit_id_new_password').value = ''; // Clear password field
+        document.getElementById('edit_id_role').value = role;
+        document.getElementById('edit_id_new_password').value = '';
 
         const editModal = new bootstrap.Modal(document.getElementById('editUserModal'));
         editModal.show();
     }
     
-    /**
-     * Opens the Deactivate/Activate Confirmation modal.
-     */
     function openDeactivateModal(userId, fullName, currentStatus) {
         const action = currentStatus === 'Active' ? 'Deactivate' : 'Activate';
         const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
@@ -367,44 +330,27 @@
         actionButton.textContent = `Confirm ${action}`;
         actionButton.className = `btn btn-${color}`;
         
-        // Set the confirmation message
         document.getElementById('confirmMessage').innerHTML = 
             `Are you sure you want to change the status of <strong>${fullName}</strong> to **${newStatus}**?`;
             
-        // Set the hidden input fields for the form submission
         document.getElementById('confirm_user_id').value = userId;
-        document.getElementById('confirm_action').value = newStatus; // Send 'Active' or 'Inactive'
+        document.getElementById('confirm_action').value = newStatus;
         
         const deactivateModal = new bootstrap.Modal(document.getElementById('confirmDeactivateModal'));
         deactivateModal.show();
     }
 
-    // Initialize logic on page load
     document.addEventListener('DOMContentLoaded', function() {
-        // 1. New User Modal Logic
         const createUserModal = document.getElementById('createUserModal');
         if (createUserModal) {
-            createUserModal.addEventListener('shown.bs.modal', function () {
-                generatePassword(); 
-                document.getElementById('id_username').focus(); 
-            });
-            createUserModal.addEventListener('hidden.bs.modal', function() {
-                document.getElementById('generated_password_display').value = '';
-                document.getElementById('generated_password_hidden').value = '';
-            });
+            createUserModal.addEventListener('shown.bs.modal', () => generatePassword());
         }
         
-        // 2. Setup the confirmation form submission (Handles Deactivate/Activate)
         document.getElementById('confirmDeactivateForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            const form = this;
             const userId = document.getElementById('confirm_user_id').value;
-            
-            // Set the form action dynamically using the URL configuration path: /users/status/<int:pk>/
-            form.action = `/users/status/${userId}/`; 
-
-            // Must use a direct submit to ensure all data is posted
-            form.submit();
+            this.action = `/users/status/${userId}/`; 
+            this.submit();
         });
     });
 </script>

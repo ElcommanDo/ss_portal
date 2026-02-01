@@ -12,7 +12,8 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import datetime, timedelta, date, time
 from dateutil.relativedelta import relativedelta
 from django.db.models import DecimalField 
-from .models import CustomUser, TimesheetEntry, Project, ProjectCost, Team, Timesheet
+from .models import (CustomUser, TimesheetEntry, Project, ProjectCost, Team,
+                      Timesheet, Assignement)
 from django.contrib.auth import get_user_model
 from django.conf import settings
 import os
@@ -27,6 +28,8 @@ from django.shortcuts import get_object_or_404
 from django.db import transaction 
 import openpyxl 
 import io 
+from django.core.mail import send_mail
+from django.conf import settings
 
 PAGE_SIZE = 15
 CustomUser = get_user_model()
@@ -215,26 +218,39 @@ def timesheet_create(request):
 #         messages.success(request, "The Time Sheet updated successfully...")
 #         return redirect('home')
 
+from django.db.models import Q # Add this import at the top
 
 @user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def users(request):
+    # Get the search query from the URL parameters
+    search_query = request.GET.get('search', '')
+
     if is_leader(request.user):
-        user_list = models.CustomUser.objects.filter(team__team_lead=request.user.full_name).order_by("-date_joined")
-        teams = Team.objects.filter(team_lead = request.user.full_name)
+        user_list = models.CustomUser.objects.filter(team__team_lead=request.user.full_name)
+        teams = Team.objects.filter(team_lead=request.user.full_name)
     else:
-        user_list = models.CustomUser.objects.all().order_by('-date_joined')
-        teams =  models.Team.objects.all()
+        user_list = models.CustomUser.objects.all()
+        teams = models.Team.objects.all()
+
+    # Apply Filter if search_query exists
+    if search_query:
+        user_list = user_list.filter(
+            Q(username__icontains=search_query) | 
+            Q(full_name__icontains=search_query)
+        )
+
+    user_list = user_list.order_by('-date_joined')
 
     paginator = Paginator(user_list, PAGE_SIZE)
     page_number = request.GET.get('page')
-    
     page_obj = paginator.get_page(page_number)
 
     return render(request, 'users.html', {
         "role_choices": models.CustomUser.ROLE_CHOICES,
         "page_obj": page_obj,
         "users": page_obj.object_list,
-        "teams": teams
+        "teams": teams,
+        "search_query": search_query # Pass it back to keep the input filled
     })
 
 
@@ -1466,6 +1482,96 @@ from django.template.loader import render_to_string
 # If using xhtml2pdf: 
 # from xhtml2pdf import pisa 
 
+# @login_required
+# def reports_daily_man_days(request):
+#     STANDARD_HOURS = 8.0
+#     user_pk = request.GET.get('user_pk')
+#     project_pk = request.GET.get('project_pk')
+#     start_date = request.GET.get('start_date')
+#     end_date = request.GET.get('end_date')
+#     export_pdf = request.GET.get('export_pdf')
+
+#     # 1. Base Query
+#     queryset = TimesheetEntry.objects.filter(is_scheduled=False).exclude(task_type="study").select_related('project', 'user')
+
+#     # 2. Apply Filters
+#     if user_pk:
+#         queryset = queryset.filter(user__pk=user_pk)
+#     if project_pk:
+#         queryset = queryset.filter(project__pk=project_pk)
+#     if start_date:
+#         queryset = queryset.filter(work_date__gte=start_date)
+#     if end_date:
+#         queryset = queryset.filter(work_date__lte=end_date)
+
+#     # 3. Aggregation
+#     daily_stats = queryset.values(
+#         'work_date', 'user__full_name', 'user__pk'
+#     ).annotate(
+#         total_daily_hours=Sum('hours'),
+#         egypt_hours=Sum('hours', filter=Q(onsite_Egypt=True)),
+#         abroad_hours=Sum('hours', filter=Q(onsite_abroad=True)),
+#     ).order_by('-work_date', 'user__full_name')
+
+#     refined_entries = []
+#     totals = {'hours': 0.0, 'ot': 0.0, 'egypt': 0.0, 'abroad': 0.0}
+
+#     for day in daily_stats:
+#         # Get tasks for this user/day to calculate OT and list projects
+#         day_entries = queryset.filter(work_date=day['work_date'], user__pk=day['user__pk'])
+        
+#         # Calculate unique projects and their individual hours for this row
+#         project_details = day_entries.values('project__name').annotate(p_hours=Sum('hours'))
+        
+#         post_5_ot = float(get_post_5pm_overtime(day_entries))
+#         logged = float(day['total_daily_hours'] or 0)
+#         work_hours_for_manday = max(0, logged - post_5_ot)
+        
+#         entry_data = {
+#             'work_date': day['work_date'],
+#             'user_full_name': day['user__full_name'],
+#             'total_hours': logged,
+#             'overtime': post_5_ot,
+#             'egypt_hours': float(day['egypt_hours'] or 0),
+#             'abroad_hours': float(day['abroad_hours'] or 0),
+#             'man_day_display': f"{work_hours_for_manday:g}/{STANDARD_HOURS:g}",
+#             'projects': project_details, # List of projects with their specific hours
+#         }
+        
+#         totals['hours'] += logged
+#         totals['ot'] += post_5_ot
+#         totals['egypt'] += entry_data['egypt_hours']
+#         totals['abroad'] += entry_data['abroad_hours']
+#         refined_entries.append(entry_data)
+
+#     # 4. Handle PDF Export
+#     if export_pdf:
+#         context = {'entries': refined_entries, 'totals': totals, 'is_pdf': True}
+#         html = render_to_string('man_days_pdf_template.html', context)
+#         response = HttpResponse(content_type='application/pdf')
+#         response['Content-Disposition'] = 'attachment; filename="man_days_report.pdf"'
+#         # pisa.CreatePDF(html, dest=response) # Uncomment if using xhtml2pdf
+#         return response
+
+#     # 5. Pagination
+#     paginator = Paginator(refined_entries, 20)
+#     page_obj = paginator.get_page(request.GET.get('page'))
+
+#     context = {
+#         'page_obj': page_obj,
+#         'totals': totals,
+#         'all_users': CustomUser.objects.all().order_by('full_name'),
+#         'all_projects': Project.objects.filter(is_active=True).order_by('name'),
+#     }
+#     return render(request, 'man_days_utilization_report.html', context)
+
+from django.db.models import Sum, Q
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+
 @login_required
 def reports_daily_man_days(request):
     STANDARD_HOURS = 8.0
@@ -1473,10 +1579,13 @@ def reports_daily_man_days(request):
     project_pk = request.GET.get('project_pk')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
+    work_location = request.GET.get('work_location') # New Filter
     export_pdf = request.GET.get('export_pdf')
 
     # 1. Base Query
-    queryset = TimesheetEntry.objects.filter(is_scheduled=False).exclude(task_type="study").select_related('project', 'user')
+    queryset = TimesheetEntry.objects.filter(
+        is_scheduled=False
+    ).exclude(task_type="study").select_related('project', 'user')
 
     # 2. Apply Filters
     if user_pk:
@@ -1487,6 +1596,12 @@ def reports_daily_man_days(request):
         queryset = queryset.filter(work_date__gte=start_date)
     if end_date:
         queryset = queryset.filter(work_date__lte=end_date)
+    
+    # Task Type Logic: Abroad vs Remotely (Office)
+    if work_location == 'abroad':
+        queryset = queryset.filter(onsite_abroad=True)
+    elif work_location == 'remote':
+        queryset = queryset.filter(onsite_abroad=False)
 
     # 3. Aggregation
     daily_stats = queryset.values(
@@ -1501,12 +1616,12 @@ def reports_daily_man_days(request):
     totals = {'hours': 0.0, 'ot': 0.0, 'egypt': 0.0, 'abroad': 0.0}
 
     for day in daily_stats:
-        # Get tasks for this user/day to calculate OT and list projects
+        # Get tasks for this specific user/day from the already filtered queryset
         day_entries = queryset.filter(work_date=day['work_date'], user__pk=day['user__pk'])
         
-        # Calculate unique projects and their individual hours for this row
         project_details = day_entries.values('project__name').annotate(p_hours=Sum('hours'))
         
+        # OT Calculation (Assumes your helper function handles the filtered entries)
         post_5_ot = float(get_post_5pm_overtime(day_entries))
         logged = float(day['total_daily_hours'] or 0)
         work_hours_for_manday = max(0, logged - post_5_ot)
@@ -1519,7 +1634,7 @@ def reports_daily_man_days(request):
             'egypt_hours': float(day['egypt_hours'] or 0),
             'abroad_hours': float(day['abroad_hours'] or 0),
             'man_day_display': f"{work_hours_for_manday:g}/{STANDARD_HOURS:g}",
-            'projects': project_details, # List of projects with their specific hours
+            'projects': project_details,
         }
         
         totals['hours'] += logged
@@ -1534,7 +1649,6 @@ def reports_daily_man_days(request):
         html = render_to_string('man_days_pdf_template.html', context)
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="man_days_report.pdf"'
-        # pisa.CreatePDF(html, dest=response) # Uncomment if using xhtml2pdf
         return response
 
     # 5. Pagination
@@ -1546,8 +1660,10 @@ def reports_daily_man_days(request):
         'totals': totals,
         'all_users': CustomUser.objects.all().order_by('full_name'),
         'all_projects': Project.objects.filter(is_active=True).order_by('name'),
+        'search_query': request.GET.urlencode(), # To preserve filters in pagination
     }
     return render(request, 'man_days_utilization_report.html', context)
+
 # @login_required
 # def reports_man_days(request):
 #     # 1. Base Setup
@@ -2510,6 +2626,81 @@ from django.contrib.auth.decorators import login_required
 from weasyprint import HTML
 from . import models  # Ensure this points to your models file
 
+# @login_required
+# def export_man_days_pdf(request):
+#     # 1. Capture Filters
+#     user_pk = request.GET.get('user_pk')
+#     project_pk = request.GET.get('project_pk')
+#     start_date = request.GET.get('start_date')
+#     end_date = request.GET.get('end_date')
+
+#     # 2. Base Query
+#     queryset = models.TimesheetEntry.objects.filter(is_scheduled=False).exclude(task_type="study").select_related('project', 'user', )
+
+#     if user_pk: queryset = queryset.filter(user__pk=user_pk)
+#     if project_pk: queryset = queryset.filter(project__pk=project_pk)
+#     if start_date: queryset = queryset.filter(work_date__gte=start_date)
+#     if end_date: queryset = queryset.filter(work_date__lte=end_date)
+
+#     # 3. Aggregation
+#     daily_stats = queryset.values(
+#         'work_date', 'user__full_name', 'user__username', 'user__pk'
+#     ).annotate(
+#         total_hours=Sum('hours'),
+#         egypt_h=Sum('hours', filter=Q(onsite_Egypt=True)),
+#         abroad_h=Sum('hours', filter=Q(onsite_abroad=True))
+#     ).order_by('-work_date', 'user__full_name')
+
+#     refined_entries = []
+#     totals = {'hours': 0.0, 'ot': 0.0, 'egypt': 0.0, 'abroad': 0.0}
+
+#     for day in daily_stats:
+#         # Task breakdown for OT and Project list
+#         day_tasks = queryset.filter(work_date=day['work_date'], user__pk=day['user__pk'])
+        
+#         # Calculate OT (External helper function assumed)
+#         ot_val = float(get_post_5pm_overtime(day_tasks)) 
+#         logged = float(day['total_hours'] or 0)
+        
+#         # Project Breakdown per day
+#         project_details = day_tasks.values('project__name').annotate(p_hours=Sum('hours'))
+
+#         refined_entries.append({
+#             'date': day['work_date'],
+#             'employee_name': day['user__full_name'] or day['user__username'],
+#             'projects': project_details,
+#             'logged_hours': logged,
+#             'ot_hours': ot_val,
+#             'egypt_hours': float(day['egypt_h'] or 0),
+#             'abroad_hours': float(day['abroad_h'] or 0),
+#         })
+        
+#         totals['hours'] += logged
+#         totals['ot'] += ot_val
+#         totals['egypt'] += float(day['egypt_h'] or 0)
+#         totals['abroad'] += float(day['abroad_h'] or 0)
+
+#     server_url = request.build_absolute_uri('/')
+#     print(server_url)
+#     context = {
+#         'entries': refined_entries,
+#         'totals': totals,
+#         'today': datetime.now(),
+#         'server_url': server_url.rstrip('/'),
+#     }
+
+#     html_string = render_to_string('man_days_pdf_template.html', context)
+    
+#     # Passing the request's absolute URI as base_url helps resolve paths
+#     html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    
+#     response = HttpResponse(content_type='application/pdf')
+#     # Use 'filename' to suggest a name; browser default is usually the first page
+#     response['Content-Disposition'] = f'attachment; filename="Man_Days_Report_{datetime.now().strftime("%Y%m%d")}.pdf"'
+#     response.write(html.write_pdf())
+#     return response
+
+
 @login_required
 def export_man_days_pdf(request):
     # 1. Capture Filters
@@ -2517,16 +2708,26 @@ def export_man_days_pdf(request):
     project_pk = request.GET.get('project_pk')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
+    work_location = request.GET.get('work_location')  # New Filter Parameter
 
     # 2. Base Query
-    queryset = models.TimesheetEntry.objects.filter(is_scheduled=False).exclude(task_type="study").select_related('project', 'user', )
+    queryset = models.TimesheetEntry.objects.filter(
+        is_scheduled=False
+    ).exclude(task_type="study").select_related('project', 'user')
 
+    # Apply existing filters
     if user_pk: queryset = queryset.filter(user__pk=user_pk)
     if project_pk: queryset = queryset.filter(project__pk=project_pk)
     if start_date: queryset = queryset.filter(work_date__gte=start_date)
     if end_date: queryset = queryset.filter(work_date__lte=end_date)
 
-    # 3. Aggregation
+    # NEW: Apply Task Type (Location) Filter logic
+    if work_location == 'abroad':
+        queryset = queryset.filter(onsite_abroad=True)
+    elif work_location == 'remote':
+        queryset = queryset.filter(onsite_abroad=False)
+
+    # 3. Aggregation (Will now respect the work_location filter applied above)
     daily_stats = queryset.values(
         'work_date', 'user__full_name', 'user__username', 'user__pk'
     ).annotate(
@@ -2539,10 +2740,10 @@ def export_man_days_pdf(request):
     totals = {'hours': 0.0, 'ot': 0.0, 'egypt': 0.0, 'abroad': 0.0}
 
     for day in daily_stats:
-        # Task breakdown for OT and Project list
+        # Task breakdown for OT and Project list (Inherits the location filter)
         day_tasks = queryset.filter(work_date=day['work_date'], user__pk=day['user__pk'])
         
-        # Calculate OT (External helper function assumed)
+        # Calculate OT (External helper function)
         ot_val = float(get_post_5pm_overtime(day_tasks)) 
         logged = float(day['total_hours'] or 0)
         
@@ -2565,21 +2766,62 @@ def export_man_days_pdf(request):
         totals['abroad'] += float(day['abroad_h'] or 0)
 
     server_url = request.build_absolute_uri('/')
-    print(server_url)
     context = {
         'entries': refined_entries,
         'totals': totals,
         'today': datetime.now(),
         'server_url': server_url.rstrip('/'),
+        'applied_filter': work_location, # Useful if you want to display the filter type in the PDF header
     }
 
     html_string = render_to_string('man_days_pdf_template.html', context)
     
-    # Passing the request's absolute URI as base_url helps resolve paths
+    # Generate PDF
     html = HTML(string=html_string, base_url=request.build_absolute_uri())
     
     response = HttpResponse(content_type='application/pdf')
-    # Use 'filename' to suggest a name; browser default is usually the first page
     response['Content-Disposition'] = f'attachment; filename="Man_Days_Report_{datetime.now().strftime("%Y%m%d")}.pdf"'
     response.write(html.write_pdf())
     return response
+
+
+@user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
+def assignement_create(request):
+    if request.method == "POST":
+        data = request.POST
+        try:
+            assignment =Assignement.objects.create(employee=CustomUser.objects.get(id=data.get("employee")),
+                                       body=data.get("body"),
+                                       status="Pending",
+                                       project=Project.objects.get(id=data.get("project")),
+                                       created_by=request.user,
+                                       priority=data.get("priority"),
+                                       deadline=data.get("deadline")
+                                       )
+            subject = f"🚀 New Mission Assigned: {assignment.project.name if assignment.project else 'General Task'}"
+            html_message = render_to_string('mission_notification.html', {
+                'employee': assignment.employee.full_name,
+                'project': assignment.project.name if assignment.project else 'General',
+                'priority': assignment.priority,
+                'deadline': assignment.deadline,
+                'body': assignment.body,
+            })
+
+            send_mail(
+                subject,
+                "", # Plain text version (optional)
+                settings.DEFAULT_FROM_EMAIL,
+                [assignment.employee.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            messages.success(request, "The Assignement Created Successfully..")
+            return redirect('assign_task')
+
+        except Exception as e:
+            messages.warning(request, f'there is an Error Occured {e}')
+    return render(request, 'assignment_create.html', {
+        "employees": CustomUser.objects.all(),
+        "projects": Project.objects.all(),
+        "recent_assignments": Assignement.objects.all().order_by('-created_at')[:5]
+    })

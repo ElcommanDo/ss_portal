@@ -44,5 +44,7 @@ urlpatterns = [
     path('reports/public-health/', views.reports_public_project_health, name='reports_public_project_health'),
     path('download_sqlite/', views.download_sqlite, name='download_sqlite'),
     path('bulk-uplaod-tiemsheets/', views.timesheet_bulk_upload, name="timesheet_bulk_upload"),
-    path('export_man_days_pdf', views.export_man_days_pdf, name='export_man_days_pdf')
+    path('export_man_days_pdf', views.export_man_days_pdf, name='export_man_days_pdf'),
+    path('assignement-create/', views.assignement_create, name="assign_task"),
+
 ]
