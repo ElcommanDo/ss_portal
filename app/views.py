@@ -409,13 +409,29 @@ def projects(request):
 
 from django.utils import timezone
 from datetime import timedelta, datetime, time
+import json
+import os
 
 @login_required
 def timesheet_dashboard(request):
     user = request.user
     context = {}
-    
-    # Use timezone-aware "today"
+    import random  
+
+    try:
+
+        json_path = os.path.join(settings.BASE_DIR, 'config', 'wisdom.json')
+        
+        with open(json_path, 'r', encoding='utf-8') as f:
+            wisdoms_list = json.load(f)
+            
+            if wisdoms_list:
+                random_wisdom = random.choice(wisdoms_list)
+                context['daily_wisdom'] = random_wisdom['quote']
+                
+    except Exception as e:
+        context['daily_wisdom'] = "إتقان العمل أمانة، وبالأمانة تُبنى الأمم."
+        print(f"Error reading wisdom.json: {e}")
     today_dt = timezone.now()
     today_date = today_dt.date()
 
