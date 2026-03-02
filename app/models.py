@@ -185,3 +185,45 @@ class Assignement(models.Model):
                                    related_name="created_assignements")
     deadline = models.DateTimeField()
 
+
+
+from django.db import models
+from django.conf import settings
+
+# 1. KPI Definition (The Master Record)
+class KPI(models.Model):
+    title = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    # This acts as the starting point for everyone (e.g., 100%)
+    base_score = models.IntegerField(default=100)
+    icon_class = models.CharField(max_length=50, default="fas fa-chart-line") 
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+# 2. Employee KPI Score (The Live State)
+class EmployeeKPIScore(models.Model):
+    employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="kpi_scores")
+    kpi = models.ForeignKey(KPI, on_delete=models.CASCADE)
+    # The actual current points the employee has
+    current_score = models.IntegerField(default=100)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('employee', 'kpi')
+
+    def __str__(self):
+        return f"{self.employee.username} - {self.kpi.title}: {self.current_score}"
+
+# 3. Deduction/Log (The History & Audit Trail)
+class KPILog(models.Model):
+    employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    kpi = models.ForeignKey(KPI, on_delete=models.CASCADE)
+    points_changed = models.IntegerField() # e.g., -10
+    reason = models.TextField()
+    admin_actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="kpi_actions")
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.employee.username} | {self.points_changed} pts | {self.kpi.title}"
