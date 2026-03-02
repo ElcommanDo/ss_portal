@@ -2841,3 +2841,39 @@ def assignement_create(request):
         "projects": Project.objects.all(),
         "recent_assignments": Assignement.objects.all().order_by('-created_at')[:5]
     })
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+def kpi_dashboard(request):
+    all_kpis = KPI.objects.all()
+    employees = User.objects.all() 
+    
+    context = {
+        'kpis': all_kpis,
+        'employees': employees,
+    }
+    return render(request, 'kpi_dashboard.html', context)
+
+from .models import KPI
+
+@user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
+def add_kpi(request):
+    if request.method == "POST":
+        title = request.POST.get('title')
+        icon = request.POST.get('icon_class')
+        description = request.POST.get('description')
+        
+        KPI.objects.create(
+            title=title,
+            icon_class=icon,
+            description=description
+        )
+        
+        messages.success(request, f"KPI '{title}' has been added successfully!")
+        return redirect('kpi_dashboard')
+    return 1
+    
+def company_profile(request):
+    return render(request, 'company_profile.html', {
+    })

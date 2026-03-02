@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-0">KPIs Control Center</h2>
+            <p class="text-muted">Monitor and manage employee performance metrics</p>
+        </div>
+        <button class="btn btn-primary shadow-sm px-4" data-bs-toggle="modal" data-bs-target="#addKPIModal">
+            <i class="fas fa-plus me-2"></i>Configure New KPI
+        </button>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 15px;">
+                <h6 class="fw-bold text-muted mb-3 text-uppercase">Performance Trends</h6>
+                <div style="height: 300px;"> <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 15px; background: #f8f9fc;">
+                <h6 class="fw-bold text-muted mb-3 text-uppercase">KPI Distribution</h6>
+                <div style="height: 300px;">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius: 15px; overflow: hidden;">
+        <div class="card-header bg-white py-3 border-0">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0 fw-bold">Active Employees</h5>
+                </div>
+                <div class="col text-end">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary">Export PDF</button>
+                        <button class="btn btn-outline-secondary">History Logs</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Employee</th>
+                        <th>Department</th>
+                        {% for kpi in kpis %}
+                        <th class="text-center">{{ kpi.title }}</th>
+                        {% endfor %}
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar me-3 bg-primary-soft text-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #eef2ff;">
+                                    {{ employee.username|slice:":1"|upper }}
+                                </div>
+                                <span class="fw-bold text-dark">{{ employee.username }}</span>
+                            </div>
+                        </td>
+                        <td><span class="badge bg-light text-secondary border">Tech Team</span></td>
+                        
+                        {% for kpi in kpis %}
+                        <td class="text-center">
+                            <div class="progress" style="height: 8px; width: 80px; margin: 0 auto;">
+                                <div class="progress-bar bg-success" style="width: 85%"></div>
+                            </div>
+                            <small class="fw-bold mt-1 d-block text-success">85%</small>
+                        </td>
+                        {% endfor %}
+
+                        <td class="text-end pe-4">
+                            <button class="btn btn-sm btn-danger rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#deductModal" onclick="setDeductTarget('{{employee.id}}', '{{employee.username}}')">
+                                <i class="fas fa-minus-circle me-1"></i> Deduct
+                            </button>
+                            <a href="#" class="btn btn-sm btn-light rounded-circle ms-2"><i class="fas fa-chevron-right"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addKPIModal" tabindex="-1" aria-labelledby="addKPIModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+            <div class="modal-header border-0 bg-dark text-white p-4" style="border-radius: 15px 15px 0 0;">
+                <h5 class="modal-title fw-bold" id="addKPIModalLabel">Configure New Performance Indicator</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'add_kpi' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase text-muted">KPI Title</label>
+                        <input type="text" name="title" class="form-control border-0 bg-light p-3" 
+                               placeholder="e.g., Task Completion Speed" required style="border-radius: 10px;">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase text-muted">Icon Class (FontAwesome)</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-0 bg-light"><i class="fas fa-icons"></i></span>
+                            <input type="text" name="icon_class" class="form-control border-0 bg-light p-3" 
+                                   placeholder="e.g., fas fa-bolt" value="fas fa-chart-line" style="border-radius: 0 10px 10px 0;">
+                        </div>
+                        <small class="text-muted">Use FontAwesome classes (e.g., fas fa-star, fas fa-clock).</small>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label fw-bold small text-uppercase text-muted">Description</label>
+                        <textarea name="description" class="form-control border-0 bg-light p-3" rows="4" 
+                                  placeholder="Define what this KPI measures..." style="border-radius: 10px;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-toggle="modal" data-bs-target="#addKPIModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">Save Indicator</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="deductModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+            <div class="modal-header border-0 bg-danger text-white p-4" style="border-radius: 15px 15px 0 0;">
+                <h5 class="modal-title fw-bold">Deduct KPI Points</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="" method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <p class="text-muted mb-4">Reducing points for: <strong id="targetEmployeeName" class="text-dark"></strong></p>
+                    
+                    <input type="hidden" name="employee_id" id="targetEmployeeId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase">Select KPI Category</label>
+                        <select class="form-select border-0 bg-light" name="kpi_id" required>
+                            {% for kpi in kpis %}
+                            <option value="{{ kpi.id }}">{{ kpi.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase">Points to Deduct</label>
+                        <input type="number" name="points" class="form-control border-0 bg-light" placeholder="e.g. 10" required>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label fw-bold small text-uppercase">Reason (Sent via Email)</label>
+                        <textarea name="reason" class="form-control border-0 bg-light" rows="3" placeholder="Explain why..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4">Confirm Deduction</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Fixed height Chart implementation
+    const ctxPerf = document.getElementById('performanceChart').getContext('2d');
+    new Chart(ctxPerf, {
+        type: 'line',
+        data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            datasets: [{
+                label: 'Avg Performance',
+                data: [65, 78, 72, 85],
+                borderColor: '#4e73df',
+                tension: 0.4,
+                fill: true,
+                backgroundColor: 'rgba(78, 115, 223, 0.05)'
+            }]
+        },
+        options: { maintainAspectRatio: false }
+    });
+
+    const ctxDist = document.getElementById('distributionChart').getContext('2d');
+    new Chart(ctxDist, {
+        type: 'doughnut',
+        data: {
+            labels: ['High', 'Average', 'Low'],
+            datasets: [{
+                data: [15, 25, 5],
+                backgroundColor: ['#1cc88a', '#4e73df', '#e74a3b']
+            }]
+        },
+        options: { maintainAspectRatio: false, cutout: '70%' }
+    });
+
+    function setDeductTarget(id, name) {
+        document.getElementById('targetEmployeeId').value = id;
+        document.getElementById('targetEmployeeName').innerText = name;
+    }
+</script>
+{% endblock %}

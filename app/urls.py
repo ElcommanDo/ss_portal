@@ -46,5 +46,8 @@ urlpatterns = [
     path('bulk-uplaod-tiemsheets/', views.timesheet_bulk_upload, name="timesheet_bulk_upload"),
     path('export_man_days_pdf', views.export_man_days_pdf, name='export_man_days_pdf'),
     path('assignement-create/', views.assignement_create, name="assign_task"),
-
+    path('KPIs-Dashboard/', views.kpi_dashboard, name="kpi_dashboard"),
+    path('KPIs-Dashboard/add/', views.add_kpi, name="add_kpi"),
+    path('company-profile/', views.company_profile, name="company_profile"),
+    
 ]
