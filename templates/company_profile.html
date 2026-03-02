@@ -1,0 +1,602 @@
+{%load static%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart System | Your Trusted Partner in Performance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Space+Grotesk:wght@500;600;700&display=swap');
+       
+        :root {
+            --primary: #0a2540;
+        }
+       
+        .tail-container { font-family: 'Inter', system-ui, sans-serif; }
+        .heading-font { font-family: 'Space Grotesk', sans-serif; }
+        .hero-bg {
+            background: linear-gradient(rgba(10, 37, 64, 0.85), rgba(10, 37, 64, 0.9)),
+                        url('https://picsum.photos/id/1015/2000/1200') center/cover no-repeat;
+            background-attachment: fixed;
+        }
+        .service-card {
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .service-card:hover {
+            transform: translateY(-20px) scale(1.03);
+            box-shadow: 0 25px 50px -12px rgb(10 37 64 / 0.25);
+        }
+        .nav-link {
+            position: relative;
+        }
+        .nav-link:after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -2px;
+            left: 0;
+            background-color: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        .nav-link:hover:after { width: 100%; }
+        .glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+        }
+        .dark .glass {
+            background: rgba(15, 23, 42, 0.85);
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeInUp 0.8s backwards; }
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Space+Grotesk:wght@500;600;700&display=swap');
+       
+        :root {
+            --primary: #0a2540;
+        }
+       
+        .tail-container { font-family: 'Inter', system-ui, sans-serif; }
+        .heading-font { font-family: 'Space Grotesk', sans-serif; }
+        .hero-bg {
+            background: linear-gradient(rgba(10, 37, 64, 0.85), rgba(10, 37, 64, 0.9)),
+                        url('https://picsum.photos/id/1015/2000/1200') center/cover no-repeat;
+            background-attachment: fixed;
+        }
+        .service-card {
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .service-card:hover {
+            transform: translateY(-20px) scale(1.03);
+            box-shadow: 0 25px 50px -12px rgb(10 37 64 / 0.25);
+        }
+        .nav-link {
+            position: relative;
+        }
+        .nav-link:after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -2px;
+            left: 0;
+            background-color: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        .nav-link:hover:after { width: 100%; }
+        .glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+        }
+        .dark .glass {
+            background: rgba(15, 23, 42, 0.85);
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeInUp 0.8s backwards; }
+        /* ==================== SYMMETRIC TYPEWRITER - FIXED HEIGHT + ULTRA SMOOTH ==================== */
+.typing-line {
+    display: block;
+    min-height: 1.2em;                    /* ← THIS FIXES THE HEIGHT JUMP (works on all screen sizes) */
+    overflow: hidden;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.45s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.typing-line.active {
+    opacity: 1;
+}
+
+/* Perfect for Space Grotesk + leading-none */
+@media (prefers-reduced-motion: reduce) {
+    .typing-line {
+        transition: none;
+        min-height: auto;
+    }
+}
+    </style>
+</head>
+<body class="tail-container bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 overflow-x-hidden">
+    <!-- NAVBAR -->
+    <nav class="bg-white dark:bg-zinc-900 shadow-xl sticky top-0 z-50 border-b border-zinc-100 dark:border-zinc-800">
+        <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-[#0a2540] rounded-2xl flex items-center justify-center text-white text-2xl font-bold heading-font">SS</div>
+                <div>
+                    <img src="{%static 'img/Smart-System-Logo.webp' %}" width="200px">
+                </div>
+            </div>
+            <div class="hidden md:flex items-center gap-10 text-sm font-medium">
+                <a href="#" class="nav-link text-zinc-700 dark:text-zinc-300 hover:text-[#0a2540] dark:hover:text-white">Home</a>
+                <a href="#services" class="nav-link text-zinc-700 dark:text-zinc-300 hover:text-[#0a2540] dark:hover:text-white">Services</a>
+                <a href="#partners" class="nav-link text-zinc-700 dark:text-zinc-300 hover:text-[#0a2540] dark:hover:text-white">Partners</a>
+                <a href="#why-us" class="nav-link text-zinc-700 dark:text-zinc-300 hover:text-[#0a2540] dark:hover:text-white">Why Us</a>
+                <a href="#clients" class="nav-link text-zinc-700 dark:text-zinc-300 hover:text-[#0a2540] dark:hover:text-white">Clients</a>
+                <a href="#resources" class="nav-link text-zinc-700 dark:text-zinc-300 hover:text-[#0a2540] dark:hover:text-white">Insights</a>
+                <a href="#contact" class="nav-link text-zinc-700 dark:text-zinc-300 hover:text-[#0a2540] dark:hover:text-white">Contact</a>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="toggleDarkMode()" id="theme-toggle"
+                        class="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-xl transition-all">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <a href="#contact"
+                   class="px-8 py-3.5 bg-[#0a2540] hover:bg-blue-700 text-white rounded-3xl font-semibold text-sm tracking-wider transition-all shadow-lg shadow-blue-900/30">
+                    GET A QUOTE
+                </a>
+                <button id="mobile-menu-btn" class="md:hidden text-3xl text-[#0a2540] dark:text-white">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800 py-6 px-6">
+            <div class="flex flex-col gap-6 text-lg font-medium">
+                <a href="#services" class="hover:text-blue-600 dark:hover:text-blue-400">Services</a>
+                <a href="#partners" class="hover:text-blue-600 dark:hover:text-blue-400">Partners</a>
+                <a href="#why-us" class="hover:text-blue-600 dark:hover:text-blue-400">Why Us</a>
+                <a href="#clients" class="hover:text-blue-600 dark:hover:text-blue-400">Clients</a>
+                <a href="#resources" class="hover:text-blue-600 dark:hover:text-blue-400">Insights</a>
+                <a href="#contact" class="hover:text-blue-600 dark:hover:text-blue-400">Contact</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <header class="hero-bg h-screen flex items-center text-white relative">
+        <div class="max-w-7xl mx-auto px-6 pt-20">
+            <div class="max-w-3xl mt-7">
+                <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-6 py-2 rounded-3xl text-sm mb-6">
+                    <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                    EST. 2007 • MENA &amp; AFRICA
+                </div>
+               
+               <h1 class="heading-font text-5xl md:text-8xl font-bold leading-none tracking-tighter mb-6">
+    <span id="type-line1" class="typing-line block"></span>
+    <span id="type-line2" class="typing-line block"></span>
+    <span id="type-line3" class="typing-line block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300"></span>
+</h1>
+               
+                <p class="text-2xl md:text-2xl text-white/90 font-light max-w-lg mb-10">
+                    Market leaders &amp; innovators trust Smart System to deliver the latest technologies and solutions.
+                </p>
+                
+                <div class="mt-16 flex items-center gap-12 text-sm">
+                    <div class="flex items-center gap-4">
+                        <div class="text-5xl font-bold heading-font">17+</div>
+                        <div class="leading-tight">
+                            <div class="font-semibold">Years</div>
+                            <div class="text-white/70">of excellence</div>
+                        </div>
+                    </div>
+                    <div class="h-12 w-px bg-white/30"></div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-5xl font-bold heading-font">250+</div>
+                        <div class="leading-tight">
+                            <div class="font-semibold">Projects</div>
+                            <div class="text-white/70">delivered</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="absolute bottom-12 left-1/2 flex flex-col items-center gap-2 text-white/60 text-xs tracking-widest">
+            <div class="w-px h-16 bg-gradient-to-b from-transparent via-white/40 to-transparent"></div>
+            SCROLL TO DISCOVER
+        </div>
+        <div class="absolute bottom-0 left-0 right-0 bg-white/10 backdrop-blur-lg py-4">
+            <div class="max-w-7xl mx-auto px-6 flex items-center justify-center gap-12 text-xs opacity-75">
+                <div class="flex items-center gap-6">
+                    <span class="font-semibold">POWERED BY</span>
+                    <i class="fa-brands fa-vmware text-3xl"></i>
+                    <i class="fa-brands fa-cisco text-3xl"></i>
+                    <span class="font-bold text-xl tracking-tighter">IBM</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- SERVICES -->
+    <section id="services" class="py-28 bg-white dark:bg-zinc-900">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <span class="px-6 py-2 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-full text-sm font-semibold">STATE-OF-THE-ART SOLUTIONS</span>
+                <h2 class="heading-font text-5xl font-bold mt-6 text-zinc-900 dark:text-white">Solutions That Move Your Business Forward</h2>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="service-card bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-10 group">
+                    <div class="w-14 h-14 bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center text-3xl mb-8 group-hover:rotate-12 transition-transform">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-3 text-zinc-900 dark:text-white">Business Solutions</h3>
+                    <p class="text-zinc-600 dark:text-zinc-400 leading-relaxed">Discover the advanced solutions that helps in improving various business functions &amp; metrics</p>
+                    <a href="#" class="mt-8 inline-flex items-center text-blue-600 dark:text-blue-400 font-medium group-hover:gap-3 gap-2 transition-all">
+                        Explore <span class="text-xl">→</span>
+                    </a>
+                </div>
+                <div class="service-card bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-10 group">
+                    <div class="w-14 h-14 bg-cyan-100 dark:bg-cyan-950 text-cyan-600 dark:text-cyan-400 rounded-2xl flex items-center justify-center text-3xl mb-8 group-hover:rotate-12 transition-transform">
+                        <i class="fa-solid fa-cloud"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-3 text-zinc-900 dark:text-white">Cloud &amp; Virtualization</h3>
+                    <p class="text-zinc-600 dark:text-zinc-400 leading-relaxed">Explore our comprehensive suite of services designed to revolutionize your IT infrastructure</p>
+                    <a href="#" class="mt-8 inline-flex items-center text-blue-600 dark:text-blue-400 font-medium group-hover:gap-3 gap-2 transition-all">
+                        Explore <span class="text-xl">→</span>
+                    </a>
+                </div>
+                <div class="service-card bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-10 group">
+                    <div class="w-14 h-14 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center text-3xl mb-8 group-hover:rotate-12 transition-transform">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-3 text-zinc-900 dark:text-white">Network &amp; Security</h3>
+                    <p class="text-zinc-600 dark:text-zinc-400 leading-relaxed">Unlock unparalleled network performance and fortify your defenses with our cutting-edge solutions</p>
+                    <a href="#" class="mt-8 inline-flex items-center text-blue-600 dark:text-blue-400 font-medium group-hover:gap-3 gap-2 transition-all">
+                        Explore <span class="text-xl">→</span>
+                    </a>
+                </div>
+                <div class="service-card bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-10 group">
+                    <div class="w-14 h-14 bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center text-3xl mb-8 group-hover:rotate-12 transition-transform">
+                        <i class="fa-solid fa-server"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-3 text-zinc-900 dark:text-white">Data Centers</h3>
+                    <p class="text-zinc-600 dark:text-zinc-400 leading-relaxed">Uncover digital transformation as we take you through our state-of-the-art data center solutions</p>
+                    <a href="#" class="mt-8 inline-flex items-center text-blue-600 dark:text-blue-400 font-medium group-hover:gap-3 gap-2 transition-all">
+                        Explore <span class="text-xl">→</span>
+                    </a>
+                </div>
+                <div class="service-card bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-10 group">
+                    <div class="w-14 h-14 bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center text-3xl mb-8 group-hover:rotate-12 transition-transform">
+                        <i class="fa-solid fa-database"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-3 text-zinc-900 dark:text-white">Backup &amp; Recovery</h3>
+                    <p class="text-zinc-600 dark:text-zinc-400 leading-relaxed">Explore our robust backup &amp; recovery solutions safeguarding your critical data</p>
+                    <a href="#" class="mt-8 inline-flex items-center text-blue-600 dark:text-blue-400 font-medium group-hover:gap-3 gap-2 transition-all">
+                        Explore <span class="text-xl">→</span>
+                    </a>
+                </div>
+                <div class="service-card bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-10 group">
+                    <div class="w-14 h-14 bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400 rounded-2xl flex items-center justify-center text-3xl mb-8 group-hover:rotate-12 transition-transform">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-3 text-zinc-900 dark:text-white">Collaboration</h3>
+                    <p class="text-zinc-600 dark:text-zinc-400 leading-relaxed">Unlock the power of seamless collaboration with solutions designed to drive innovation</p>
+                    <a href="#" class="mt-8 inline-flex items-center text-blue-600 dark:text-blue-400 font-medium group-hover:gap-3 gap-2 transition-all">
+                        Explore <span class="text-xl">→</span>
+                    </a>
+                </div>
+                <div class="service-card bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-10 group col-span-1 md:col-span-2 lg:col-span-1">
+                    <div class="w-14 h-14 bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-400 rounded-2xl flex items-center justify-center text-3xl mb-8 group-hover:rotate-12 transition-transform">
+                        <i class="fa-solid fa-lightbulb"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-3 text-zinc-900 dark:text-white">Light Current Systems</h3>
+                    <p class="text-zinc-600 dark:text-zinc-400 leading-relaxed">Discover the future of smart infrastructure with our systems offering unparalleled connectivity</p>
+                    <a href="#" class="mt-8 inline-flex items-center text-blue-600 dark:text-blue-400 font-medium group-hover:gap-3 gap-2 transition-all">
+                        Explore <span class="text-xl">→</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- WHY CHOOSE US -->
+    <section id="why-us" class="py-28 bg-gradient-to-br from-zinc-900 to-[#0a2540] text-white">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid lg:grid-cols-12 gap-16 items-center">
+                <div class="lg:col-span-5">
+                    <h2 class="heading-font text-6xl font-bold leading-none mb-8">Why Industry Leaders Choose Smart System</h2>
+                    <p class="text-xl text-white/70">With over 17 years of proven expertise across MENA &amp; Africa, we deliver more than technology — we deliver transformation.</p>
+                </div>
+                <div class="lg:col-span-7 grid md:grid-cols-2 gap-8">
+                    <div class="glass rounded-3xl p-10">
+                        <i class="fa-solid fa-lock text-5xl mb-6 text-emerald-400"></i>
+                        <h3 class="text-2xl font-semibold mb-3">Secure &amp; Scalable</h3>
+                        <p class="text-white/80">Our systems grow with your business, ensuring data security and performance at every stage.</p>
+                    </div>
+                    <div class="glass rounded-3xl p-10">
+                        <i class="fa-solid fa-award text-5xl mb-6 text-amber-400"></i>
+                        <h3 class="text-2xl font-semibold mb-3">Proven Expertise</h3>
+                        <p class="text-white/80">17+ years delivering top-quality solutions tailored to your unique needs.</p>
+                    </div>
+                    <div class="glass rounded-3xl p-10">
+                        <i class="fa-solid fa-handshake text-5xl mb-6 text-blue-400"></i>
+                        <h3 class="text-2xl font-semibold mb-3">Trusted by Leaders</h3>
+                        <p class="text-white/80">We partner with the biggest names in the region and deliver measurable results.</p>
+                    </div>
+                    <div class="glass rounded-3xl p-10">
+                        <i class="fa-solid fa-plug text-5xl mb-6 text-violet-400"></i>
+                        <h3 class="text-2xl font-semibold mb-3">Smart Integration</h3>
+                        <p class="text-white/80">Seamlessly integrates with your existing systems for zero-disruption operations.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROCESS -->
+    <section class="py-28 bg-white dark:bg-zinc-950">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <span class="text-blue-600 dark:text-blue-400 font-semibold">04 STEPS</span>
+                <h2 class="heading-font text-5xl font-bold mt-4 text-zinc-900 dark:text-white">How We Take You to the Next Level</h2>
+            </div>
+            <div class="grid md:grid-cols-4 gap-8">
+                <div class="text-center">
+                    <div class="mx-auto w-24 h-24 bg-blue-100 dark:bg-blue-950 rounded-full flex items-center justify-center text-6xl mb-6 text-blue-600 dark:text-blue-400">1</div>
+                    <h4 class="font-semibold text-2xl mb-3 text-zinc-900 dark:text-white">Discovery</h4>
+                    <p class="text-zinc-600 dark:text-zinc-400">Deep dive into your business goals and current infrastructure</p>
+                </div>
+                <div class="text-center">
+                    <div class="mx-auto w-24 h-24 bg-blue-100 dark:bg-blue-950 rounded-full flex items-center justify-center text-6xl mb-6 text-blue-600 dark:text-blue-400">2</div>
+                    <h4 class="font-semibold text-2xl mb-3 text-zinc-900 dark:text-white">Design</h4>
+                    <p class="text-zinc-600 dark:text-zinc-400">Architect tailored, future-proof solutions</p>
+                </div>
+                <div class="text-center">
+                    <div class="mx-auto w-24 h-24 bg-blue-100 dark:bg-blue-950 rounded-full flex items-center justify-center text-6xl mb-6 text-blue-600 dark:text-blue-400">3</div>
+                    <h4 class="font-semibold text-2xl mb-3 text-zinc-900 dark:text-white">Deploy</h4>
+                    <p class="text-zinc-600 dark:text-zinc-400">Seamless implementation with minimal downtime</p>
+                </div>
+                <div class="text-center">
+                    <div class="mx-auto w-24 h-24 bg-blue-100 dark:bg-blue-950 rounded-full flex items-center justify-center text-6xl mb-6 text-blue-600 dark:text-blue-400">4</div>
+                    <h4 class="font-semibold text-2xl mb-3 text-zinc-900 dark:text-white">Optimize</h4>
+                    <p class="text-zinc-600 dark:text-zinc-400">Continuous support, training &amp; evolution</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PARTNERS -->
+    <section id="partners" class="py-28 bg-zinc-100 dark:bg-zinc-900">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-12">
+                <h2 class="heading-font text-4xl font-bold text-zinc-900 dark:text-white">Our Esteemed Partners</h2>
+            </div>
+            <div class="flex flex-wrap justify-center items-center gap-x-16 gap-y-12 opacity-75 grayscale hover:grayscale-0 transition-all">
+                <i class="fa-brands fa-vmware text-7xl"></i>
+                <i class="fa-brands fa-cisco text-7xl"></i>
+                <span class="font-black text-7xl tracking-tighter">IBM</span>
+                <span class="font-black text-7xl tracking-tighter text-red-600">DELL</span>
+                <i class="fa-brands fa-microsoft text-7xl"></i>
+            </div>
+        </div>
+    </section>
+
+    <!-- AWARDS -->
+    <section class="py-28 bg-white dark:bg-zinc-950">
+        <div class="max-w-7xl mx-auto px-6 text-center">
+            <h2 class="heading-font text-5xl font-bold mb-12 text-zinc-900 dark:text-white">Awarded &amp; Recognized</h2>
+            <div class="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                <div class="bg-gradient-to-br from-amber-50 to-white p-10 rounded-3xl border border-amber-200">
+                    <i class="fa-solid fa-trophy text-6xl text-amber-500 mb-6"></i>
+                    <p class="font-semibold">VMware NSX Partner of the Year</p>
+                    <p class="text-sm text-zinc-500 mt-2">2017 &amp; 2018</p>
+                </div>
+                <div class="bg-gradient-to-br from-blue-50 to-white p-10 rounded-3xl border border-blue-200">
+                    <i class="fa-solid fa-trophy text-6xl text-blue-600 mb-6"></i>
+                    <p class="font-semibold">Cisco Partner Plus Program</p>
+                    <p class="text-sm text-zinc-500 mt-2">New Partner of the Year</p>
+                </div>
+                <div class="bg-gradient-to-br from-emerald-50 to-white p-10 rounded-3xl border border-emerald-200">
+                    <i class="fa-solid fa-medal text-6xl text-emerald-500 mb-6"></i>
+                    <p class="font-semibold">Recognized Across MENA</p>
+                    <p class="text-sm text-zinc-500 mt-2">For excellence in digital transformation</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section id="resources" class="py-28 bg-zinc-900 text-white">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex justify-between items-end mb-12">
+                <h2 class="heading-font text-5xl font-bold">Trending Insights</h2>
+                <a href="#" class="text-blue-400 hover:underline flex items-center gap-2">View all articles <span>→</span></a>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-zinc-800 rounded-3xl overflow-hidden group">
+                    <div class="h-52 bg-[url('https://picsum.photos/id/1018/800/600')] bg-cover"></div>
+                    <div class="p-8">
+                        <h3 class="font-semibold text-xl mb-3">IBM Maximo: Enterprise Asset Management</h3>
+                        <p class="text-zinc-400 line-clamp-3">Maximo is an Enterprise Asset Management (EAM) software suite offered by IBM...</p>
+                    </div>
+                </div>
+                <!-- You can add the other article cards here if you want - they were missing in original too -->
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact" class="py-28 bg-white dark:bg-zinc-950">
+        <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-20">
+            <div>
+                <h2 class="heading-font text-6xl font-bold leading-none text-zinc-900 dark:text-white">Have an Inquiry?</h2>
+                <p class="text-2xl text-zinc-600 dark:text-zinc-400 mt-6">Reach out and our specialists will assist you promptly.</p>
+               
+                <div class="mt-16 space-y-10">
+                    <div>
+                        <div class="font-semibold text-sm tracking-widest text-zinc-500">EGYPT (HQ)</div>
+                        <div class="mt-3 text-zinc-600 dark:text-zinc-400">Villa 5, Area 10, Al Lotus, South 90 St, Fifth Settlement, New Cairo</div>
+                        <div class="mt-2 font-mono">+20 114 455 4448</div>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-sm tracking-widest text-zinc-500">SAUDI ARABIA</div>
+                        <div class="mt-3 text-zinc-600 dark:text-zinc-400">Riyadh • +966 11 516 0108</div>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-sm tracking-widest text-zinc-500">UAE</div>
+                        <div class="mt-3 text-zinc-600 dark:text-zinc-400">Ras Al Khaimah</div>
+                    </div>
+                    <div class="pt-8 border-t">
+                        <a href="mailto:info@smartsystemit.com" class="text-3xl font-medium hover:text-blue-600 transition-colors">info@smartsystemit.com</a>
+                    </div>
+                </div>
+            </div>
+            <!-- Contact Form -->
+            <form class="bg-zinc-50 dark:bg-zinc-900 p-10 rounded-3xl space-y-8">
+                <input type="text" placeholder="Your Name" class="w-full px-6 py-6 bg-white dark:bg-zinc-800 border-0 rounded-3xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
+                <input type="email" placeholder="Business Email" class="w-full px-6 py-6 bg-white dark:bg-zinc-800 border-0 rounded-3xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
+                <textarea placeholder="Tell us about your project..." rows="5" class="w-full px-6 py-6 bg-white dark:bg-zinc-800 border-0 rounded-3xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"></textarea>
+                <button type="submit"
+                        class="w-full py-7 bg-gradient-to-r from-[#0a2540] to-blue-700 text-white font-bold text-lg rounded-3xl hover:scale-[1.02] transition-all">
+                    SEND MESSAGE →
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <!-- FOOTER - RESTORED TO YOUR ORIGINAL EXACT VERSION -->
+    <footer class="bg-[#0a2540] text-white py-20">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid md:grid-cols-5 gap-12">
+                <div class="md:col-span-2">
+                    <div class="flex items-center gap-3 mb-8">
+                        <div class="w-12 h-12 bg-white rounded-3xl flex items-center justify-center text-[#0a2540] text-4xl font-bold">SS</div>
+                        <span class="text-3xl font-bold heading-font">Smart System</span>
+                    </div>
+                    <p class="max-w-md text-white/70">Our mission is to inspire you with our services. We dream to strive for true excellence.</p>
+                </div>
+                <div>
+                    <div class="text-xs tracking-widest opacity-50 mb-6">QUICK LINKS</div>
+                    <div class="space-y-4 text-sm">
+                        <a href="#" class="block hover:text-blue-400">About Us</a>
+                        <a href="#" class="block hover:text-blue-400">Services</a>
+                        <a href="#" class="block hover:text-blue-400">Clients</a>
+                        <a href="#" class="block hover:text-blue-400">Careers</a>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-xs tracking-widest opacity-50 mb-6">OFFICES</div>
+                    <div class="text-sm space-y-6">
+                        <div>New Cairo • Alexandria</div>
+                        <div>Riyadh, KSA</div>
+                        <div>Ras Al Khaimah, UAE</div>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-xs tracking-widest opacity-50 mb-6">NEWSLETTER</div>
+                    <input type="email" placeholder="your@email.com"
+                           class="w-full bg-white/10 border border-white/20 rounded-3xl px-6 py-5 placeholder:text-white/40 focus:outline-none">
+                    <button class="mt-4 w-full py-5 bg-white text-[#0a2540] font-bold rounded-3xl">SUBSCRIBE</button>
+                </div>
+            </div>
+            <div class="border-t border-white/10 mt-20 pt-10 text-xs flex flex-wrap justify-between items-center opacity-60">
+                <div>© 2007–2026 Smart System IT. All rights reserved.</div>
+                <div class="flex gap-8">
+                    <a href="#">Privacy</a>
+                    <a href="#">Terms</a>
+                    <a href="#">Sitemap</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile menu
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+
+        // Dark mode toggle
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('theme-toggle');
+            if (document.documentElement.classList.contains('dark')) {
+                icon.innerHTML = '<i class="fa-solid fa-sun"></i>';
+            } else {
+                icon.innerHTML = '<i class="fa-solid fa-moon"></i>';
+            }
+        }
+
+        // Scroll animations
+        function animateOnScroll() {
+            const cards = document.querySelectorAll('.service-card');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry, i) => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animationDelay = `${i * 80}ms`;
+                        entry.target.classList.add('animate-in');
+                    }
+                });
+            }, { threshold: 0.2 });
+            cards.forEach(card => observer.observe(card));
+        }
+
+        window.onload = () => {
+            animateOnScroll();
+            console.log('%c✅ Footer restored • Light & Dark Mode working perfectly!', 'color:#3b82f6; font-size:13px');
+        };
+    </script>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    const lines = [
+        { id: 'type-line1', text: 'Your Trusted',   speed: 36 },
+        { id: 'type-line2', text: 'Partner in',     speed: 36 },
+        { id: 'type-line3', text: 'Performance',    speed: 36 }
+    ];
+
+    const PAUSE_BETWEEN_LINES = 60;   // perfectly symmetric pause
+
+    function typeLine(lineIndex) {
+        const line = lines[lineIndex];
+        const el = document.getElementById(line.id);
+        
+        el.classList.add('active');        // smooth fade-in
+        el.textContent = '';
+        
+        let i = 0;
+        const typeChar = () => {
+            if (i < line.text.length) {
+                el.textContent += line.text.charAt(i);
+                i++;
+                setTimeout(typeChar, line.speed);   // fixed speed = ultra smooth & symmetric
+            } else {
+                // Line finished → move to next after symmetric pause
+                if (lineIndex < lines.length - 1) {
+                    setTimeout(() => typeLine(lineIndex + 1), PAUSE_BETWEEN_LINES);
+                }
+            }
+        };
+        
+        typeChar();
+    }
+
+    // Start the beautiful symmetric sequence
+    typeLine(0);
+});
+</script>
+</body>
+</html>
