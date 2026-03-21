@@ -98,7 +98,7 @@
         </div>
 
         <div class="col-md-3">
-            <a href="#" class="card text-decoration-none shadow border-0 h-100 admin-card-link">
+            <a href="{%url 'missions_list' %}" class="card text-decoration-none shadow border-0 h-100 admin-card-link">
                 <div class="card-body text-center p-4">
                     <i class="fas fa-shuttle-space fa-3x text-danger mb-3"></i>
                     <h5 class="card-title fw-bold text-dark">My Missions</h5>
@@ -107,7 +107,7 @@
             </a>
         </div>
         <div class="col-md-6 col-lg-3">
-    <a href="" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+    <a href="{% url 'my_kpi' current_year current_month  %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
         <div class="card-body text-center p-4">
             <div class="mb-3">
                 <i class="fas fa-bullseye fa-3x text-primary animate__animated animate__pulse animate__infinite"></i>
@@ -164,7 +164,12 @@
             </a>
         </div>
         <div class="col-md-6 col-lg-3">
-    <a href="{%url 'kpi_dashboard' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+            {% if request.user.role in 'admin,ceo,top-manager,delivery-manager' or request.user.is_superuser %}
+    <a href="{% url 'employee_kpi_list' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+{% else %}
+    <a href="{% url 'my_kpi' current_year current_month %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+{% endif %}
+
         <div class="card-body text-center p-4">
             <div class="mb-3">
                 <i class="fas fa-bullseye fa-3x text-primary animate__animated animate__pulse animate__infinite"></i>
@@ -185,10 +190,10 @@
 
         {% if request.user.is_superuser or request.user.role == 'admin' or request.user.role == 'ceo' or request.user.role == 'project-manager' or request.user.role == 'leader' or request.user.role == 'top-manager' or request.user.role == 'delivery-manager' %}
         <div class="col-md-6 col-lg-3">
-            <a href="{% url 'assign_task' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+            <a href="{% url 'missions_list' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
                 <div class="card-body text-center p-4 rounded-3 bg-white">
                     <i class="fas fa-rocket fa-3x text-danger mb-3"></i>
-                    <h5 class="card-title fw-bold text-dark">Assign Missions</h5>
+                    <h5 class="card-title fw-bold text-dark">Missions</h5>
                     <p class="text-danger small fw-bold">Dispatch Center</p>
                 </div>
             </a>

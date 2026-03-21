@@ -46,8 +46,21 @@ urlpatterns = [
     path('bulk-uplaod-tiemsheets/', views.timesheet_bulk_upload, name="timesheet_bulk_upload"),
     path('export_man_days_pdf', views.export_man_days_pdf, name='export_man_days_pdf'),
     path('assignement-create/', views.assignement_create, name="assign_task"),
-    path('KPIs-Dashboard/', views.kpi_dashboard, name="kpi_dashboard"),
-    path('KPIs-Dashboard/add/', views.add_kpi, name="add_kpi"),
     path('company-profile/', views.company_profile, name="company_profile"),
-    
+    path('missions-list/', views.missions_list, name="missions_list"),
+    path('missions/reminder/<int:task_id>/', views.send_mission_reminder, name='send_mission_reminder'),
+    path('kpi/templates/', views.KPITemplateListView.as_view(), name='kpi_template_list'),
+    path('kpi/templates/create/', views.KPITemplateCreateView.as_view(), name='kpi_template_create'),
+    path('kpi/templates/<int:pk>/update/', views.KPITemplateUpdateView.as_view(), name='kpi_template_update'),
+    path('kpi/templates/<int:pk>/delete/', views.KPITemplateDeleteView.as_view(), name='kpi_template_delete'),
+    path('kpi/employees/', views.EmployeeKPIListView.as_view(), name='employee_kpi_list'),  # List all employees' KPIs
+    path('kpi/employees/<int:employee_id>/<int:year>/<int:month>/', views.EmployeeKPIDetailView.as_view(), name='employee_kpi_detail'),
+    path('kpi/my/<int:year>/<int:month>/', views.MyKPIView.as_view(), name='my_kpi'),
+    path('kpi/feedback/create/', views.KPIFeedbackCreateView.as_view(), name='kpi_feedback_create'),
+    path('ajax/category/create/', views.ajax_create_category, name='ajax_create_category'),
+    path('employees/<int:employee_id>/send-feedback/', views.send_kpi_feedback, name='send_kpi_feedback'),
+    path('missions/accept/<int:pk>/', views.accept_mission, name='accept_mission'),
+    path('employee/<int:employee_id>/pdf/<int:year>/<int:month>/', 
+     views.export_kpi_pdf, name='export_kpi_pdf'),
+    path('missions/update/<int:mission_id>/', views.mission_update,name="mission_update" )
 ]

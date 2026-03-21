@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Missions & Tasks{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --cmd-dark: #0f172a;
+        --cmd-accent: #3b82f6;
+        --cmd-success: #10b981;
+        --cmd-danger: #ef4444;
+        --cmd-warning: #f59e0b;
+    }
+
+    /* Message Styles */
+    .custom-alert {
+        border-radius: 16px;
+        background: white;
+        padding: 1.25rem;
+        border: none;
+        border-left: 6px solid var(--cmd-accent);
+    }
+    .alert-success { border-left-color: var(--cmd-success); }
+    .alert-danger, .alert-error { border-left-color: var(--cmd-danger); }
+    .alert-warning { border-left-color: var(--cmd-warning); }
+
+    /* Modal Styling */
+    .modal-content { border: none; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+    .modal-header-custom { background: var(--cmd-dark); padding: 2rem; color: white; text-align: center; border: none; position: relative; }
+    .modal-header-custom .btn-close-white { position: absolute; top: 1.5rem; right: 1.5rem; }
+
+    /* Form Elements */
+    .form-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; }
+    .form-control, .form-select { border: 2px solid #e2e8f0; padding: 0.75rem 1rem; border-radius: 12px; background-color: #f8fafc; transition: all 0.3s ease; }
+    .form-control:focus, .form-select:focus { border-color: var(--cmd-accent); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); background-color: white; }
+
+    /* Priority Buttons */
+    .priority-group { display: flex; gap: 10px; }
+    .priority-btn { flex: 1; border-radius: 10px; font-weight: 600; padding: 8px; transition: 0.3s; text-align: center; }
+    .btn-check:checked + .btn-outline-danger { background-color: var(--cmd-danger) !important; color: white; }
+    .btn-check:checked + .btn-outline-warning { background-color: var(--cmd-warning) !important; color: white; }
+    .btn-check:checked + .btn-outline-primary { background-color: var(--cmd-accent) !important; color: white; }
+
+    /* Launch Button & Rocket */
+    .btn-launch { background: var(--cmd-accent); border: none; padding: 1rem; border-radius: 14px; font-weight: 800; color: white; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .btn-launch:hover { background: #1d4ed8; transform: translateY(-2px); }
+    #rocket-icon { transition: transform 0.8s ease-in; }
+    .fly-away { transform: translateY(-100vh) translateX(50vw) rotate(45deg); opacity: 0; }
+
+    /* Pagination Styling */
+    .pagination-container { display: flex; justify-content: center; padding: 24px 0; background: #f8fafc; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; }
+    .mag-pagination { display: flex; gap: 10px; align-items: center; }
+    .mag-page-link { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: white; color: var(--cmd-dark); text-decoration: none; font-weight: 700; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); border: 1px solid #e2e8f0; }
+    .mag-page-link:hover { transform: translateY(-5px); background: var(--cmd-accent); color: white; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3); }
+    .mag-page-link.active { background: var(--cmd-dark); color: white; border-color: var(--cmd-dark); }
+
+    /* Row Animation */
+    @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .mission-row { animation: slideInUp 0.5s ease backwards; }
+    .mission-row:nth-child(1) { animation-delay: 0.1s; }
+    .mission-row:nth-child(2) { animation-delay: 0.15s; }
+    .mission-row:nth-child(3) { animation-delay: 0.2s; }
+
+    /* Reminder Button */
+    .reminder-btn {
+        background: white !important;
+        border: 1px solid #e2e8f0 !important;
+        color: var(--cmd-warning) !important;
+        transition: all 0.2s ease;
+    }
+    .reminder-btn:hover {
+        background: #fefce8 !important;
+        border-color: var(--cmd-warning) !important;
+        transform: scale(1.05);
+    }
+</style>
+
+<div class="pt-4">
+    {% if messages %}
+    <div class="messages-hook mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show custom-alert shadow-sm animate__animated animate__fadeInDown" role="alert">
+            <div class="d-flex align-items-center">
+                {% if message.tags == 'success' %}
+                    <i class="fas fa-check-circle me-3 fa-lg text-success"></i>
+                {% elif message.tags == 'error' or message.tags == 'danger' %}
+                    <i class="fas fa-exclamation-triangle me-3 fa-lg text-danger"></i>
+                {% else %}
+                    <i class="fas fa-info-circle me-3 fa-lg text-info"></i>
+                {% endif %}
+                <div class="fw-bold text-dark">{{ message }}</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 fw-bold mb-0">Missions and Tasks</h1>
+        <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#addMissionModal">
+            <i class="fas fa-paper-plane me-2"></i> Dispatch Mission
+        </button>
+      
+    </div>
+
+    {# Authorized Filter and Created Table #}
+    {% if request.user.role in 'admin,top-manager,delivery-manager,ceo,leader' or request.user.is_superuser %}
+        {% if employees %}
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 15px;">
+            <div class="card-body p-3">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="employee_filter" class="form-label mb-1">Filter by Employee</label>
+                        <select class="form-select border-0 bg-light" id="employee_filter" name="employee">
+                            <option value="">All Operatives</option>
+                            {% for emp in employees %}
+                                <option value="{{ emp.id }}" {% if request.GET.employee == emp.id|stringformat:"s" %}selected{% endif %}>{{ emp.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-dark w-100">Apply Filter</button>
+                    </div>
+                    {% if request.GET.employee %}
+                    <div class="col-md-1">
+                        <a href="?" class="btn btn-link text-muted small">Clear</a>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card border-0 shadow-sm mb-5" style="border-radius: 20px; overflow: hidden;">
+            <div class="card-header bg-white py-3 border-0">
+                <h5 class="mb-0 fw-bold text-primary"><i class="fas fa-tasks me-2"></i>Missions Created by Me</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if created_tasks_by_me %}
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Type</th>
+                                <th>Description</th>
+                                <th>Priority</th>
+                                <th>Assigned To</th>
+                                <th>Status</th>
+                                <th>Deadline</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in created_tasks_by_me %}
+                            <tr class="mission-row">
+                                <td class="ps-4">
+                                    <span class="badge rounded-pill {% if task.is_task %}bg-secondary{% else %}bg-dark{% endif %}">
+                                        {% if task.is_task %}Task{% else %}Mission{% endif %}
+                                    </span>
+                                </td>
+                                <td class="small">{{ task.body|truncatewords:10 }}</td>
+                                <td>
+                                    <span class="text-uppercase fw-bold small {% if task.priority|lower == 'high' %}text-danger{% elif task.priority|lower == 'medium' %}text-warning{% else %}text-info{% endif %}">
+                                        {{ task.priority }}
+                                    </span>
+                                </td>
+                                <td><div class="d-flex align-items-center"><i class="fas fa-user-circle me-2 text-muted"></i>{{ task.employee.username }}</div></td>
+                                <td>
+                                    {% if task.deadline < now and task.status != 'completed' %}
+                                        <span class="badge bg-danger animate__animated animate__pulse animate__infinite">LATE</span>
+                                    {% else %}
+                                        <span class="badge {% if task.status == 'pending' %}bg-warning{% elif task.status == 'in_progress' %}bg-info{% else %}bg-success{% endif %}">
+                                            {{ task.status|title }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="small">{{ task.deadline|date:"Y-m-d H:i" }}</td>
+                                <td class="text-end pe-4">
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm text-primary" onclick="openUpdateModal('{{ task.id }}', '{{ task.body|escapejs }}', '{{ task.employee.id }}', '{{ task.deadline|date:'Y-m-d\TH:i' }}', '{{ task.status }}', '{{ task.priority }}', true)">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <!-- NEW ALARM / REMINDER BUTTON -->
+                                          {% if task.deadline < now and task.status != 'completed' %}
+                                   
+                                        <button class="btn btn-sm reminder-btn" onclick="sendReminder('{{ task.id }}')" title="Send Reminder">
+                                            <i class="fas fa-bell"></i>
+                                        </button>
+
+                                        {%endif%}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% if created_tasks_by_me.has_other_pages %}
+                <div class="pagination-container">
+                    <nav class="mag-pagination">
+                        {% if created_tasks_by_me.has_previous %}
+                            <a href="?p_created={{ created_tasks_by_me.previous_page_number }}&p_assigned={{ assigned_tasks_to_me.number }}&employee={{ request.GET.employee|default:'' }}" class="mag-page-link"><i class="fas fa-chevron-left"></i></a>
+                        {% endif %}
+                        {% for num in created_tasks_by_me.paginator.page_range %}
+                            {% if created_tasks_by_me.number == num %}
+                                <span class="mag-page-link active">{{ num }}</span>
+                            {% elif num > created_tasks_by_me.number|add:'-3' and num < created_tasks_by_me.number|add:'3' %}
+                                <a href="?p_created={{ num }}&p_assigned={{ assigned_tasks_to_me.number }}&employee={{ request.GET.employee|default:'' }}" class="mag-page-link">{{ num }}</a>
+                            {% endif %}
+                        {% endfor %}
+                        {% if created_tasks_by_me.has_next %}
+                            <a href="?p_created={{ created_tasks_by_me.next_page_number }}&p_assigned={{ assigned_tasks_to_me.number }}&employee={{ request.GET.employee|default:'' }}" class="mag-page-link"><i class="fas fa-chevron-right"></i></a>
+                        {% endif %}
+                    </nav>
+                </div>
+                {% endif %}
+                {% else %}
+                <p class="text-center py-5 text-muted">No created missions found.</p>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    {# ASSIGNED TO ME TABLE #}
+    <div class="card border-0 shadow-sm mb-5" style="border-radius: 20px; overflow: hidden;">
+        <div class="card-header bg-white py-3 border-0">
+            <h5 class="mb-0 fw-bold text-success"><i class="fas fa-inbox me-2"></i>Assigned to Me</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if assigned_tasks_to_me %}
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Type</th>
+                            <th>Description</th>
+                            <th>Priority</th>
+                            <th>Created By</th>
+                            <th>Status</th>
+                            <th>Deadline</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in assigned_tasks_to_me %}
+                        <tr class="mission-row">
+                            <td class="ps-4"><span class="badge rounded-pill bg-light text-dark border">{% if task.is_task %}Task{% else %}Mission{% endif %}</span></td>
+                            <td class="small">{{ task.body|truncatewords:15 }}</td>
+                            <td class="fw-bold small">{{ task.priority|title }}</td>
+                            <td>{{ task.created_by.username }}</td>
+                            <td>
+                                {% if task.deadline < now and task.status != 'completed' %}
+                                    <span class="badge bg-danger animate__animated animate__headShake animate__infinite">OVERDUE</span>
+                                {% else %}
+                                    <span class="badge {% if task.status == 'pending' %}bg-warning text-dark{% elif task.status == 'in_progress' %}bg-info{% else %}bg-success{% endif %}">
+                                        {{ task.status|title }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="small">{{ task.deadline|date:"Y-m-d H:i" }}</td>
+                            <td class="text-end pe-4">
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="openUpdateModal('{{ task.id }}', '{{ task.body|escapejs }}', '{{ task.employee.id }}', '{{ task.deadline|date:'Y-m-d\TH:i' }}', '{{ task.status }}', '{{ task.priority }}', false)">Update</button>
+                                   
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if assigned_tasks_to_me.has_other_pages %}
+            <div class="pagination-container">
+                <nav class="mag-pagination">
+                    {% if assigned_tasks_to_me.has_previous %}
+                        <a href="?p_assigned={{ assigned_tasks_to_me.previous_page_number }}&p_created={{ created_tasks_by_me.number|default:1 }}&employee={{ request.GET.employee|default:'' }}" class="mag-page-link"><i class="fas fa-chevron-left"></i></a>
+                    {% endif %}
+                    {% for num in assigned_tasks_to_me.paginator.page_range %}
+                        {% if assigned_tasks_to_me.number == num %}
+                            <span class="mag-page-link active">{{ num }}</span>
+                        {% elif num > assigned_tasks_to_me.number|add:'-3' and num < assigned_tasks_to_me.number|add:'3' %}
+                            <a href="?p_assigned={{ num }}&p_created={{ created_tasks_by_me.number|default:1 }}&employee={{ request.GET.employee|default:'' }}" class="mag-page-link">{{ num }}</a>
+                        {% endif %}
+                    {% endfor %}
+                    {% if assigned_tasks_to_me.has_next %}
+                        <a href="?p_assigned={{ assigned_tasks_to_me.next_page_number }}&p_created={{ created_tasks_by_me.number|default:1 }}&employee={{ request.GET.employee|default:'' }}" class="mag-page-link"><i class="fas fa-chevron-right"></i></a>
+                    {% endif %}
+                </nav>
+            </div>
+            {% endif %}
+            {% else %}
+            <p class="text-center py-5 text-muted">No pending assignments.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# CREATE MODAL #}
+<div class="modal fade" id="addMissionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content animate__animated animate__zoomIn">
+            <div class="modal-header-custom">
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="mb-2"><i class="fas fa-satellite-dish fa-3x text-info"></i></div>
+                <h3 class="fw-bold mb-0 text-white">MISSION DISPATCH</h3>
+                <p class="text-info opacity-75 small mb-0">Authorized by: {{ request.user.username }}</p>
+            </div>
+            
+            <form id="assignmentForm" method="post" action="">
+                {% csrf_token %}
+                <div class="modal-body p-4 p-md-5">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label for="employee" class="form-label">Assign Operative</label>
+                            <select class="form-select" id="employee" name="employee" required>
+                                <option value="" disabled selected>Select employee...</option>
+                                {% for emp in employees %}
+                                    <option value="{{ emp.id }}">{{ emp.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                         <div class="col-md-6">
+                                <label class="form-label fw-bold text-muted text-uppercase">Project</label>
+                                <select class="form-select" name="project">
+                                    <option value="">No Specific Project</option>
+                                    {% for proj in projects %}
+                                        <option value="{{ proj.id }}">{{ proj.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        <div class="col-12">
+                            <label for="body" class="form-label">Mission Objectives</label>
+                            <textarea class="form-control" id="body" name="body" rows="4" placeholder="Enter detailed task instructions..." required></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="deadline" class="form-label">Completion Deadline</label>
+                            <input type="datetime-local" class="form-control" id="deadline" name="deadline" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Priority Level</label>
+                            <div class="priority-group">
+                                <input type="radio" class="btn-check" name="priority" id="pHigh" value="high">
+                                <label class="btn btn-outline-danger priority-btn" for="pHigh">High</label>
+                                <input type="radio" class="btn-check" name="priority" id="pMed" value="medium" checked>
+                                <label class="btn btn-outline-warning priority-btn" for="pMed">Medium</label>
+                                <input type="radio" class="btn-check" name="priority" id="pLow" value="low">
+                                <label class="btn btn-outline-primary priority-btn" for="pLow">Low</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check form-switch p-3 bg-light rounded-3">
+                                <input class="form-check-input ms-0 me-3" type="checkbox" id="is_task" name="is_task">
+                                <label class="form-check-label fw-bold" for="is_task">Mark as standard Task</label>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="status" value="pending">
+                </div>
+                <div class="modal-footer border-0 p-4 p-md-5 pt-0">
+                    <button type="submit" class="btn btn-launch w-100 shadow-lg" id="submitBtn">
+                        <span id="btnLabel">LAUNCH MISSION</span>
+                        <i class="fas fa-rocket ms-2" id="rocket-icon"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# UPDATE MODAL #}
+<div class="modal fade" id="updateMissionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content animate__animated animate__fadeIn">
+            <div class="modal-header-custom">
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="mb-2"><i class="fas fa-edit fa-3x text-warning"></i></div>
+                <h3 class="fw-bold mb-0 text-white">UPDATE MISSION</h3>
+                <p id="updateModalSubtitle" class="text-warning opacity-75 small mb-0"></p>
+            </div>
+            
+            <form id="updateAssignmentForm" method="post" action="">
+                {% csrf_token %}
+                <div class="modal-body p-4 p-md-5">
+                    <div class="row g-4">
+                        <div class="col-12 admin-only">
+                            <label for="update_body" class="form-label">Mission Objectives</label>
+                            <textarea class="form-control" id="update_body" name="body" rows="4" required></textarea>
+                        </div>
+
+                        <div class="col-md-6 admin-only">
+                            <label for="update_employee" class="form-label">Operative</label>
+                            <select class="form-select" id="update_employee" name="employee">
+                                {% for emp in employees %}
+                                    <option value="{{ emp.id }}">{{ emp.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 admin-only">
+                            <label for="update_deadline" class="form-label">Deadline</label>
+                            <input type="datetime-local" class="form-control" id="update_deadline" name="deadline">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="update_status" class="form-label">Status Update</label>
+                            <select class="form-select" id="update_status" name="status">
+                                <option value="pending">Pending</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 admin-only">
+                            <label class="form-label">Priority</label>
+                            <div class="priority-group">
+                                <input type="radio" class="btn-check" name="priority" id="upHigh" value="high">
+                                <label class="btn btn-outline-danger priority-btn" for="upHigh">High</label>
+                                <input type="radio" class="btn-check" name="priority" id="upMed" value="medium">
+                                <label class="btn btn-outline-warning priority-btn" for="upMed">Med</label>
+                                <input type="radio" class="btn-check" name="priority" id="upLow" value="low">
+                                <label class="btn btn-outline-primary priority-btn" for="upLow">Low</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 p-md-5 pt-0">
+                    <button type="submit" class="btn btn-dark w-100 p-3 rounded-4 fw-bold">APPLY UPDATES</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Handle Mission Launch Animation
+    document.getElementById('assignmentForm').addEventListener('submit', function(e) {
+        const btn = document.getElementById('submitBtn');
+        const icon = document.getElementById('rocket-icon');
+        const label = document.getElementById('btnLabel');
+        e.preventDefault();
+        label.innerText = "INITIATING LAUNCH...";
+        btn.style.background = "#10b981";
+        icon.className = "fas fa-rocket ms-2 animate__animated fly-away";
+        setTimeout(() => { this.submit(); }, 800);
+    });
+
+    // Auto-dismiss Django alerts after 5s
+    setTimeout(function() {
+        let alerts = document.querySelectorAll('.custom-alert');
+        alerts.forEach(function(alert) {
+            let bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+
+    function openUpdateModal(id, body, empId, deadline, status, priority, isAdmin) {
+        const modal = new bootstrap.Modal(document.getElementById('updateMissionModal'));
+        const form = document.getElementById('updateAssignmentForm');
+        
+        form.action = `/missions/update/${id}/`; 
+
+        document.getElementById('update_body').value = body;
+        document.getElementById('update_employee').value = empId;
+        document.getElementById('update_deadline').value = deadline;
+        document.getElementById('update_status').value = status;
+        document.getElementById('updateModalSubtitle').innerText = `Editing Task: #${id}`;
+
+        const pVal = priority.toLowerCase();
+        const priorityId = pVal === 'high' ? 'upHigh' : (pVal === 'medium' ? 'upMed' : 'upLow');
+        const radio = document.getElementById(priorityId);
+        if(radio) radio.checked = true;
+
+        const adminFields = document.querySelectorAll('.admin-only');
+        adminFields.forEach(field => {
+            field.style.display = isAdmin ? 'block' : 'none';
+            field.querySelectorAll('input, select, textarea').forEach(inp => inp.disabled = !isAdmin);
+        });
+
+        modal.show();
+    }
+
+    // NEW: Send Reminder Function (orange alarm icon → white background button)
+    function sendReminder(id) {
+        if (confirm(`Send reminder for mission/task #${id}?\n\nThis will notify the assigned operative immediately.`)) {
+            window.location.href = `/missions/reminder/${id}/`;
+        }
+    }
+</script>
+{% endblock %}

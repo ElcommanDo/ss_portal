@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, TimesheetEntry, Project, Timesheet, ProjectCost, Team
-admin.site.register([ProjectCost])
+from .models import CustomUser, TimesheetEntry, Project, Assignement, Timesheet, ProjectCost, Team
+admin.site.register([ProjectCost, Assignement])
 from import_export.admin import ImportExportModelAdmin
 from .resources import (
     TeamResource,
@@ -18,7 +18,7 @@ class CustomUserAdmin(UserAdmin, ImportExportModelAdmin):
     # Fieldsets for editing users
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('Personal Info', {'fields': ('full_name', 'role')}),
+        ('Personal Info', {'fields': ('full_name', 'role', 'email')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
     )
 

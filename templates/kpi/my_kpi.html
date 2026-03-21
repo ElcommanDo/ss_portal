@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+<div class="container-fluid px-4 py-5 animate__animated animate__fadeIn">
+    <div class="row align-items-center mb-5">
+        <div class="col-md-8">
+            <h1 class="display-5 fw-bold text-dark mb-1">
+                <i class="fas fa-chart-line text-primary me-3"></i>My Performance
+            </h1>
+            <p class="text-muted fs-5">Track your professional KPIs and progress targets.</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <div class="card border-0 shadow-lg bg-primary text-white p-3 animate__animated animate__pulse animate__infinite animate__slow" style="border-radius: 20px;">
+                <div class="card-body text-center p-2">
+                    <span class="text-uppercase small fw-bold opacity-75 d-block mb-1">Total Score</span>
+                    <h2 class="display-6 fw-bold mb-0">{{ total_score }}%</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <form method="get" class="d-flex align-items-center gap-3">
+            <select name="month_selector" class="form-select w-auto">
+                {% for y_choice, m_choice, val_string, label in month_choices %}
+                    <option value="{{ val_string }}" 
+                        {% if month == m_choice and year == y_choice %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp animate__delay-1s" style="border-radius: 16px;">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-uppercase small fw-bold">
+                        <tr>
+                            <th class="ps-4 py-4" style="width: 30%;">KPI Description</th>
+                            <th style="width: 15%;">Measurement</th>
+                            <th class="text-center">Grade</th>
+                            <th class="text-center">Weight</th>
+                            <th class="text-center">Score</th>
+                            <th class="pe-4" style="width: 25%;">Manager Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for kpi in object_list %}
+                        <tr class="kpi-row">
+                            <td class="ps-4">
+                                <div class="d-flex flex-column">
+                                    <span class="badge bg-primary-soft text-primary align-self-start mb-2 px-3 py-2" style="background-color: rgba(13, 110, 253, 0.1);">
+                                        {{ kpi.kpi_template.category.name }}
+                                    </span>
+                                    <span class="text-dark fw-medium">
+                                        {{ kpi.kpi_template.description|truncatewords:10 }}
+                                        {% if kpi.kpi_template.description|wordcount > 10 %}
+                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none ms-1 fw-bold shadow-none" 
+                                                    data-bs-toggle="modal" data-bs-target="#descModal{{ kpi.pk }}">
+                                                (see more)
+                                            </button>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" 
+                                        data-bs-toggle="popover" data-bs-trigger="focus" 
+                                        title="Measurement Methodology" 
+                                        data-bs-content="{{ kpi.kpi_template.way_of_measure }}">
+                                    <i class="fas fa-info-circle me-1"></i> Guide
+                                </button>
+                            </td>
+                            <td class="text-center">
+                                <span class="h5 mb-0 fw-bold text-primary">{{ kpi.grade }}</span>
+                            </td>
+                            <td class="text-center text-muted fw-bold">{{ kpi.kpi_template.weight }}%</td>
+                            <td class="text-center">
+                                <span class="badge rounded-pill {% if kpi.score >= 80 %}bg-success{% elif kpi.score >= 50 %}bg-warning{% else %}bg-danger{% endif %} px-3 py-2">
+                                    {{ kpi.score }}%
+                                </span>
+                            </td>
+                            <td class="pe-4">
+                                {% if kpi.notes %}
+                                    <span class="small text-muted fst-italic">
+                                        {{ kpi.notes|truncatewords:8 }}
+                                        {% if kpi.notes|wordcount > 8 %}
+                                            <button type="button" class="btn btn-link btn-sm p-0 text-info text-decoration-none ms-1 shadow-none" 
+                                                    data-bs-toggle="modal" data-bs-target="#notesModal{{ kpi.pk }}">
+                                                (more)
+                                            </button>
+                                        {% endif %}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <div class="text-muted py-4">
+                                    <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                                    <p class="fs-5">No KPIs have been assigned to your profile yet.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% for kpi in object_list %}
+    <div class="modal fade" id="descModal{{ kpi.pk }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+                <div class="modal-header bg-primary text-white" style="border-top-left-radius: 15px; border-top-right-radius: 15px;">
+                    <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>KPI Description</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-0 text-dark" style="white-space: pre-wrap; line-height: 1.6;">{{ kpi.kpi_template.description }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if kpi.notes %}
+    <div class="modal fade" id="notesModal{{ kpi.pk }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+                <div class="modal-header bg-dark text-white" style="border-top-left-radius: 15px; border-top-right-radius: 15px;">
+                    <h5 class="modal-title"><i class="fas fa-sticky-note me-2"></i>Manager Feedback</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 bg-light">
+                    <p class="mb-0 text-dark" style="white-space: pre-wrap; line-height: 1.6;">{{ kpi.notes }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
+<style>
+    .kpi-row { transition: all 0.3s ease; }
+    .kpi-row:hover { background-color: #f8fbff; }
+    .table thead th { border-top: none; color: #6c757d; font-size: 0.8rem; letter-spacing: 0.5px; }
+    .popover { border: none; box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15); border-radius: 12px; z-index: 1060; }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. Initialize Bootstrap Popovers
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl, {
+                trigger: 'focus'
+            })
+        });
+
+        // 2. Handle Dropdown Navigation
+        const selector = document.querySelector('select[name="month_selector"]');
+        if (selector) {
+            selector.addEventListener('change', function() {
+                const selectedValue = this.value; // "2026-3"
+                const parts = selectedValue.split('-');
+                const newYear = parts[0];
+                const newMonth = parts[1];
+
+                // Check if we are on the "My KPI" page or "Employee Detail" page
+                // We use a dummy URL for replacement. Adjust 'my_kpi' to your actual URL name if different.
+                let url = "{% url 'my_kpi' year=9999 month=8888 %}";
+                url = url.replace('9999', newYear).replace('8888', newMonth);
+
+                window.location.href = url;
+            });
+        }
+    });
+</script>
+{% endblock %}

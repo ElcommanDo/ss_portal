@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.http import FileResponse, Http404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import login, logout, authenticate
@@ -30,7 +31,7 @@ import openpyxl
 import io 
 from django.core.mail import send_mail
 from django.conf import settings
-
+from django.forms import modelformset_factory
 PAGE_SIZE = 15
 CustomUser = get_user_model()
 
@@ -42,6 +43,10 @@ def is_admin(user):
 
 def is_manager(user):
     return user.role in ["project-manager", "delivery-manager", "top-manager", "ceo"] 
+
+
+def is_top_manager(user):
+    return user.role in ["delivery-manager", "top-manager", "ceo"] 
 
 def is_engineer(user):
     return user.role == "engineer" or user.role == "developer" 
@@ -67,7 +72,11 @@ def login_request(request):
 
 @login_required
 def home(request):
-    return render(request, 'dashboard.html', {})
+    return render(request, 'dashboard.html', {
+        "current_year": datetime.now().year,
+         "current_month": datetime.now().month,
+
+    })
 
 
 @login_required
@@ -415,7 +424,11 @@ import os
 @login_required
 def timesheet_dashboard(request):
     user = request.user
-    context = {}
+    context = {
+          "current_year": datetime.now().year,
+         "current_month": datetime.now().month,
+
+    }
     import random  
 
     try:
@@ -500,6 +513,8 @@ def timesheet_dashboard(request):
     ).count()
     
     context['active_users_count'] = models.CustomUser.objects.filter(is_active=True).count()
+    context["current_year"] = "2026"
+    context["month_year"] = "01"
     
     return render(request, template, context)
 
@@ -2815,22 +2830,29 @@ def assignement_create(request):
                                        deadline=data.get("deadline")
                                        )
             subject = f"🚀 New Mission Assigned: {assignment.project.name if assignment.project else 'General Task'}"
+
+            accept_url = request.build_absolute_uri(
+                reverse('accept_mission', kwargs={'pk': assignment.pk})
+            )
+
             html_message = render_to_string('mission_notification.html', {
                 'employee': assignment.employee.full_name,
                 'project': assignment.project.name if assignment.project else 'General',
                 'priority': assignment.priority,
                 'deadline': assignment.deadline,
                 'body': assignment.body,
+                'accept_url': accept_url,          
             })
 
             send_mail(
                 subject,
-                "", # Plain text version (optional)
+                "", 
                 settings.DEFAULT_FROM_EMAIL,
                 [assignment.employee.email],
                 html_message=html_message,
                 fail_silently=False,
             )
+            print(accept_url)
             messages.success(request, "The Assignement Created Successfully..")
             return redirect('assign_task')
 
@@ -2845,35 +2867,453 @@ def assignement_create(request):
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
-def kpi_dashboard(request):
-    all_kpis = KPI.objects.all()
-    employees = User.objects.all() 
-    
-    context = {
-        'kpis': all_kpis,
-        'employees': employees,
-    }
-    return render(request, 'kpi_dashboard.html', context)
-
-from .models import KPI
-
-@user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
-def add_kpi(request):
-    if request.method == "POST":
-        title = request.POST.get('title')
-        icon = request.POST.get('icon_class')
-        description = request.POST.get('description')
-        
-        KPI.objects.create(
-            title=title,
-            icon_class=icon,
-            description=description
-        )
-        
-        messages.success(request, f"KPI '{title}' has been added successfully!")
-        return redirect('kpi_dashboard')
-    return 1
-    
 def company_profile(request):
     return render(request, 'company_profile.html', {
     })
+
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.utils import timezone
+from .models import Assignement, CustomUser, Project 
+
+@login_required
+def missions_list(request):
+    if request.method == "POST":
+        data = request.POST
+        try:
+            assignment =Assignement.objects.create(employee=CustomUser.objects.get(id=data.get("employee")),
+                                       body=data.get("body"),
+                                       status="Pending",
+                                       project=Project.objects.get(id=data.get("project")),
+                                       created_by=request.user,
+                                       priority=data.get("priority"),
+                                       deadline=data.get("deadline")
+                                       )
+            subject = f"🚀 New Mission Assigned: {assignment.project.name if assignment.project else 'General Task'}"
+
+            accept_url = request.build_absolute_uri(
+                reverse('accept_mission', kwargs={'pk': assignment.pk})
+            )
+
+            html_message = render_to_string('mission_notification.html', {
+                'employee': assignment.employee.full_name,
+                'project': assignment.project.name if assignment.project else 'General',
+                'priority': assignment.priority,
+                'deadline': assignment.deadline,
+                'body': assignment.body,
+                'accept_url': accept_url,          
+            })
+
+            send_mail(
+                subject,
+                "", 
+                settings.DEFAULT_FROM_EMAIL,
+                [assignment.employee.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            print(accept_url)
+            messages.success(request, "The Assignement Created Successfully..")
+            return redirect('missions_list')
+
+        except Exception as e:
+            messages.warning(request, f'there is an Error Occured {e}')
+            return redirect("missions_list")
+         
+    user = request.user
+    if is_admin(user) or is_top_manager(user):
+        employees = CustomUser.objects.all()
+    elif is_leader(user):
+        employees = CustomUser.objects.filter(team__team_lead=user.full_name)
+    else:
+        employees = None
+
+    selected_employee_id = request.GET.get('employee')
+
+    created_qs = Assignement.objects.filter(created_by=user).order_by('-deadline')
+    assigned_qs = Assignement.objects.filter(employee=user).order_by('-deadline')
+
+    if selected_employee_id:
+        created_qs = created_qs.filter(employee_id=selected_employee_id)
+
+    paginator_created = Paginator(created_qs, 10) 
+    paginator_assigned = Paginator(assigned_qs, 10)
+
+    page_created = request.GET.get('p_created')
+    page_assigned = request.GET.get('p_assigned')
+
+    created_page_obj = paginator_created.get_page(page_created)
+    assigned_page_obj = paginator_assigned.get_page(page_assigned)
+
+    return render(request, 'missions_list.html', {
+        "employees": employees,
+        "created_tasks_by_me": created_page_obj,
+        "assigned_tasks_to_me": assigned_page_obj,
+        "projects": Project.objects.all(),
+        "now": timezone.now(),
+    })
+
+@login_required
+def send_mission_reminder(request, task_id):
+    """Sends a reminder email for overdue missions."""
+    task = get_object_or_404(Assignement, id=task_id, created_by=request.user)
+    
+    subject = f"🚨 URGENT: Mission Overdue - {task.body[:30]}..."
+    message = f"Hello {task.employee.username},\n\nYour mission is currently OVERDUE.\n\nTask: {task.body}\nDeadline: {task.deadline.strftime('%Y-%m-%d %H:%M')}\n\nPlease update the status immediately."
+    
+    try:
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [task.employee.email])
+        messages.success(request, f"Reminder signal sent to {task.employee.username}!")
+    except Exception:
+        messages.error(request, "Failed to send email. Check SMTP settings.")
+        
+    return redirect('missions_list')
+
+@login_required
+def update_task_status(request, task_id):
+    user = request.user
+
+# In views.py (use Django generic views for CRUD)
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.shortcuts import get_object_or_404, redirect
+from django.db.models import Sum
+from .models import KPITemplate, EmployeeKPI, KPIFeedback, CustomUser
+from .forms import KPITemplateForm, EmployeeKPIFormSet
+
+# Admin check mixin
+class AdminRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        return self.request.user.is_staff  # Assuming staff are admins as per your CustomUser save method
+
+from django.contrib.auth.mixins import UserPassesTestMixin
+from django.core.exceptions import PermissionDenied
+
+class ManagementRequiredMixin(UserPassesTestMixin):
+    """
+    Allows access only to Admins, Delivery Managers, Top Managers, or CEOs.
+    """
+    def test_func(self):
+        user = self.request.user
+        is_admin = user.is_superuser or user.role == "admin"
+        is_manager = user.role in ["delivery-manager", "top-manager", "ceo"]
+        
+        return user.is_authenticated and (is_admin or is_manager)
+
+    def handle_no_permission(self):
+        if self.request.user.is_authenticated:
+            raise PermissionDenied  # Shows 403 Forbidden
+        return super().handle_no_permission()
+
+# KPI Template Views
+class KPITemplateListView(LoginRequiredMixin, ManagementRequiredMixin, ListView):
+    model = KPITemplate
+    template_name = 'kpi/template_list.html'  # HTML: List all templates with edit/delete links
+
+from django.views.generic import CreateView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from .models import KPITemplate, KPICategory
+from .forms import KPITemplateForm
+from django.http import JsonResponse
+from .models import KPICategory
+
+def ajax_create_category(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        if name:
+            category, created = KPICategory.objects.get_or_create(name=name)
+            return JsonResponse({'id': category.id, 'name': category.name})
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+class KPITemplateCreateView(LoginRequiredMixin, ManagementRequiredMixin, CreateView):
+    model = KPITemplate
+    form_class = KPITemplateForm
+    template_name = 'kpi/template_form.html'
+    success_url = '/kpi/templates/'
+
+
+class KPITemplateUpdateView(LoginRequiredMixin, ManagementRequiredMixin, UpdateView):
+    model = KPITemplate
+    form_class = KPITemplateForm
+    template_name = 'kpi/template_form.html'
+    success_url = '/kpi/templates/'
+
+class KPITemplateDeleteView(LoginRequiredMixin, ManagementRequiredMixin, DeleteView):
+    model = KPITemplate
+    template_name = 'kpi/template_confirm_delete.html'  # HTML: Confirm delete
+    success_url = '/kpi/templates/'
+
+    
+class EmployeeKPIListView(LoginRequiredMixin, ManagementRequiredMixin, ListView):
+    model = CustomUser
+    template_name = 'kpi/employee_list.html'
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        search_query = self.request.GET.get('search', '')
+        if search_query:
+            # Filters by username OR full_name (case-insensitive)
+            queryset = queryset.filter(
+                Q(username__icontains=search_query) | 
+                Q(full_name__icontains=search_query)
+            )
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["current_year"] = datetime.now().year
+        context["current_month"] = datetime.now().month
+        return context
+
+class EmployeeKPIDetailView(LoginRequiredMixin, AdminRequiredMixin, DetailView):
+    model = CustomUser
+    template_name = 'kpi/employee_kpi_detail.html'
+    pk_url_kwarg = 'employee_id'
+
+    def dispatch(self, request, *args, **kwargs):
+        today = date.today()
+        self.year = kwargs.get('year', today.year)
+        self.month = kwargs.get('month', today.month)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        employee = self.object
+        
+        # 1. Ensure records exist
+        templates = KPITemplate.objects.all()
+        for template in templates:
+            EmployeeKPI.objects.get_or_create(
+                employee=employee,
+                kpi_template=template,
+                year=self.year,
+                month=self.month,
+                defaults={'grade': template.default_grade}
+            )
+        
+        # 2. Fetch records ordered by category for a better UI
+        kpis = EmployeeKPI.objects.filter(employee=employee, year=self.year, month=self.month).select_related('kpi_template', 'kpi_template__category')
+        total_score = round(kpis.aggregate(Sum('score'))['score__sum'] or Decimal('0.00'), 2)
+        
+        # 3. Formset setup
+        EmployeeKPIFormSet = modelformset_factory(EmployeeKPI, fields=('grade', 'notes'), extra=0)
+        
+        # If we are returning from a failed POST, the formset is already in context
+        if 'formset' not in context:
+            context['formset'] = EmployeeKPIFormSet(queryset=kpis)
+            
+        context['total_score'] = total_score
+        context['year'] = self.year
+        context['month'] = self.month
+        context['month_choices'] = self.get_month_choices()
+        return context
+    
+    def get_month_choices(self):
+        today = date.today()
+        choices = []
+        for i in range(12):
+            y = today.year if today.month > i else today.year - 1
+            m = (today.month - i - 1) % 12 + 1
+            
+            # We pass: (year_int, month_int, "year-month_string", "label_string")
+            choices.append((y, m, f"{y}-{m}", f"{y}-{m:02d}"))
+        return choices
+    
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        employee = self.object
+        
+        kpis = EmployeeKPI.objects.filter(
+            employee=employee, year=self.year, month=self.month
+        )
+        
+        EmployeeKPIFormSet = modelformset_factory(EmployeeKPI, fields=('grade', 'notes'), extra=0)
+        formset = EmployeeKPIFormSet(request.POST, queryset=kpis)
+        
+        if formset.is_valid():
+            formset.save()
+            messages.success(request, f"KPIs for {employee.full_name} ({self.year}-{self.month:02d}) have been updated successfully!")
+            return redirect('employee_kpi_detail', employee_id=employee.id, year=self.year, month=self.month)
+        else:
+            messages.error(request, "There was an error updating the grades. Please check the values.")
+            return self.render_to_response(self.get_context_data(formset=formset))
+                
+
+
+class MyKPIView(LoginRequiredMixin, ListView):
+    template_name = 'kpi/my_kpi.html'  
+    
+    def dispatch(self, request, *args, **kwargs):
+        today = date.today()
+        self.year = kwargs.get('year', today.year)
+        self.month = kwargs.get('month', today.month)
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_queryset(self):
+        return EmployeeKPI.objects.filter(
+            employee=self.request.user, year=self.year, month=self.month
+        )
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        total_score = round(self.get_queryset().aggregate(Sum('score'))['score__sum'] or Decimal('0.00'), 2)
+        context['total_score'] = total_score
+        context['year'] = self.year
+        context['month'] = self.month
+        # Add month choices similar to detail view
+        context['month_choices'] = self.get_month_choices()  # Reuse method if refactored
+        return context
+
+    def get_month_choices(self):
+        today = date.today()
+        choices = []
+        for i in range(12):
+            y = today.year if today.month > i else today.year - 1
+            m = (today.month - i - 1) % 12 + 1
+            
+            # We pass: (year_int, month_int, "year-month_string", "label_string")
+            choices.append((y, m, f"{y}-{m}", f"{y}-{m:02d}"))
+        return choices
+    
+# Feedback Create (for admins to log complaints/issues)
+class KPIFeedbackCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
+    model = KPIFeedback
+    fields = ['employee', 'kpi_template', 'feedback_type', 'description', 'date', 'value']
+    template_name = 'kpi/feedback_form.html'
+    success_url = '/kpi/employees/'  
+
+from django.template.loader import render_to_string
+from django.core.mail import EmailMultiAlternatives
+from django.utils.html import strip_tags
+from django.conf import settings
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect
+from .models import  EmployeeKPI
+
+def send_kpi_feedback(request, employee_id):
+    if request.method == "POST":
+        employee = get_object_or_404(CustomUser, id=employee_id) 
+        year = request.POST.get('year')
+        month = request.POST.get('month')
+        overall_notes = request.POST.get('message')
+        kpis = EmployeeKPI.objects.filter(
+            employee=employee, 
+            year=year, 
+            month=month
+        )
+
+        total_score = sum(kpi.score for kpi in kpis) if kpis.exists() else 0
+        
+        if total_score >= 90: achievement_level = "Outstanding Performance"
+        elif total_score >= 80: achievement_level = "Excellent Achievement"
+        elif total_score >= 70: achievement_level = "Good Progress"
+        else: achievement_level = "Improvement Required"
+
+        # 4. Prepare Email Content
+        subject = f"🚀 Performance Report: {employee.full_name} ({month}/{year})"
+        
+        context = {
+            'employee': employee,
+            'month': month,
+            'year': year,
+            'total_score': round(total_score, 1),
+            'achievement_level': achievement_level,
+            'overall_notes': overall_notes,
+            'kpis': kpis,
+            'logo_url': request.build_absolute_uri(settings.STATIC_URL + 'img/Smart-System-Logo.webp') # Ensure your logo path is correct
+        }
+
+        html_content = render_to_string('kpi/kpi_email_report.html', context)
+        text_content = strip_tags(html_content) 
+
+        # 5. Send Email
+        try:
+            email = EmailMultiAlternatives(
+                subject,
+                text_content,
+                settings.DEFAULT_FROM_EMAIL,
+                [employee.email]
+            )
+            email.attach_alternative(html_content, "text/html")
+            email.send()
+            
+            messages.success(request, f"Report sent successfully to {employee.email}")
+        except Exception as e:
+            messages.error(request, f"Failed to send email: {str(e)}")
+
+    return redirect(request.META.get('HTTP_REFERER', 'employee_kpi_list'))
+
+def accept_mission(request, pk):
+    assignment = get_object_or_404(Assignement, pk=pk)
+    creator = assignment.created_by
+    subject = f"✅ Mission #{pk} ACCEPTED by {assignment.employee.username} - {assignment.employee.full_name}"
+
+    message = f"""
+Hello {creator.username},
+
+Great news! 
+
+{assignment.employee.username} has clicked "ACCEPT MISSION" and confirmed they received and understood the task.
+
+Mission details:
+• Project: {assignment.project.name if assignment.project else 'General Task'}
+• Priority: {assignment.priority}
+• Deadline: {assignment.deadline}
+
+You can view the full mission here:
+https://smartsystem.pythonanywhere.com/missions-list//
+
+Best regards,
+Smart Systems Command Center
+"""
+
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [creator.email],
+        fail_silently=False,
+    )
+
+    # Optional: nice thank-you page for the employee
+    return redirect('missions_list')  # or create a simple "Mission Accepted" success page
+
+def custom_404_view(request, exception):
+    return render(request, '404.html', status=404)
+
+from django.utils import timezone
+
+def export_kpi_pdf(request, employee_id, year, month):
+    employee = get_object_or_404(CustomUser, id=employee_id)
+    kpis = EmployeeKPI.objects.filter(
+        employee=employee, year=year, month=month
+    ).select_related('kpi_template', 'kpi_template__category')
+    
+    total_score = kpis.aggregate(Sum('score'))['score__sum'] or 0
+
+    html_string = render_to_string('kpi/kpi_performance_template_report.html', {
+        'object': employee,
+        'kpis': kpis,
+        'total_score': round(total_score, 2),
+        'report_date': timezone.now(), # For the "Created On" field
+        'label': f"{year}-{month:02d}",
+    })
+
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="SmartSystem_Report_{employee.full_name}.pdf"'
+    response.write(html.write_pdf())
+    return response
+
+@login_required
+def mission_update(request, mission_id):
+    if request.method=="POST":
+        data = request.POST
+        mission = Assignement.objects.get(id=mission_id)
+        if mission.employee == request.user:
+            mission.status = data.get("status")
+            mission.save()
+            messages.success(request, 'the mission Updated Successffully.')
+            return redirect('missions_list')

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 | System Disconnect</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;500;800&display=swap');
+
+        :root {
+            --primary: #3b82f6;
+            --bg: #030712;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --line: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            perspective: 1000px;
+        }
+
+        /* Responsive Grid Background */
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(var(--line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--line) 1px, transparent 1px);
+            background-size: 50px 50px;
+            mask-image: radial-gradient(circle at center, black, transparent 80%);
+            z-index: -1;
+            transform: rotateX(45deg) scale(2);
+            animation: grid-move 20s linear infinite;
+        }
+
+        @keyframes grid-move {
+            from { background-position: 0 0; }
+            to { background-position: 0 100px; }
+        }
+
+        /* Container designed for all screens */
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            text-align: center;
+            padding: 20px;
+            z-index: 10;
+        }
+
+        /* Error Code with Responsive Font Size */
+        .error-num {
+            font-size: clamp(8rem, 20vw, 15rem);
+            font-weight: 800;
+            letter-spacing: -0.05em;
+            line-height: 0.8;
+            background: linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.1) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+            user-select: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 100px;
+            color: var(--primary);
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            font-weight: 500;
+            margin-bottom: 16px;
+            color: var(--text-main);
+        }
+
+        p {
+            font-size: clamp(1rem, 2vw, 1.125rem);
+            color: var(--text-dim);
+            max-width: 500px;
+            margin: 0 auto 40px;
+            line-height: 1.6;
+        }
+
+        /* Modern Button Interaction */
+        .actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 15px;
+        }
+
+        .btn-primary {
+            background: var(--text-main);
+            color: var(--bg);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255,255,255,0.1);
+            background: #fff;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-main);
+            border: 1px solid var(--line);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* Floating Interactive Element */
+        .cursor-glow {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 480px) {
+            .container { padding: 10px; }
+            .btn { width: 100%; }
+            .actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grid-bg"></div>
+    <div class="cursor-glow" id="glow"></div>
+
+    <div class="container">
+        <div class="status-badge">Error Code: 404</div>
+        <div class="error-num" id="tilt">404</div>
+        <h1>System connection lost.</h1>
+        <p>The requested resource could not be found on our servers. It may have been moved or deleted.</p>
+        
+        <div class="actions">
+            <a href="/" class="btn btn-primary">Go to Dashboard</a>
+            <a href="#" onclick="history.back()" class="btn btn-secondary">Return Back</a>
+        </div>
+    </div>
+
+    <script>
+        const glow = document.getElementById('glow');
+        const tilt = document.getElementById('tilt');
+
+        document.addEventListener('mousemove', (e) => {
+            // Smooth Glow Follow
+            requestAnimationFrame(() => {
+                glow.style.left = e.clientX + 'px';
+                glow.style.top = e.clientY + 'px';
+            });
+
+            // Subtle 3D Tilt Effect for the 404 Text
+            const xVal = (window.innerWidth / 2 - e.pageX) / 50;
+            const yVal = (window.innerHeight / 2 - e.pageY) / 50;
+            
+            tilt.style.transform = `rotateY(${xVal}deg) rotateX(${-yVal}deg)`;
+        });
+
+        // Touch support for the glow
+        document.addEventListener('touchmove', (e) => {
+            glow.style.left = e.touches[0].clientX + 'px';
+            glow.style.top = e.touches[0].clientY + 'px';
+        });
+    </script>
+</body>
+</html>

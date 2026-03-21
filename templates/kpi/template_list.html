@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid px-4 py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="fw-bold text-dark"><i class="fas fa-layer-group text-primary me-2"></i>KPI Templates</h1>
+        <a href="{% url 'kpi_template_create' %}" class="btn btn-primary shadow-sm px-4">
+            <i class="fas fa-plus-circle me-2"></i>Add New KPI Template
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Category</th>
+                            <th style="width: 30%;">Description</th>
+                            <th style="width: 20%;">Way of Measure</th>
+                            <th class="text-center">Default</th>
+                            <th class="text-center">Max</th>
+                            <th class="text-center">Weight (%)</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for template in object_list %}
+                        <tr>
+                            <td class="ps-4 fw-bold text-muted">{{ template.category.name }}</td>
+                            <td>
+                                <div class="description-text">
+                                    {{ template.description|truncatewords:12 }}
+                                    {% if template.description|wordcount > 12 %}
+                                        <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-decoration-none fw-bold" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#descModal{{ template.pk }}">
+                                            ... (click for more)
+                                        </button>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="modal fade" id="descModal{{ template.pk }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 shadow">
+                                            <div class="modal-header bg-primary text-white">
+                                                <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Full Description</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body p-4">
+                                                <p class="mb-0 text-dark" style="white-space: pre-wrap; line-height: 1.6;">{{ template.description }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="small text-muted">{{ template.way_of_measure|truncatewords:8 }}</span>
+                            </td>
+                            <td class="text-center">{{ template.default_grade }}</td>
+                            <td class="text-center">{{ template.max_grade }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-info-soft text-info px-3 py-2 fw-bold" style="background-color: rgba(13, 202, 240, 0.1);">
+                                    {{ template.weight }}%
+                                </span>
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="btn-group shadow-sm" style="border-radius: 8px; overflow: hidden;">
+                                    <a href="{% url 'kpi_template_update' template.pk %}" class="btn btn-warning btn-sm px-3">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'kpi_template_delete' template.pk %}" class="btn btn-danger btn-sm px-3">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7" class="text-center py-5 text-muted">No templates found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table thead th { 
+        font-size: 0.85rem; 
+        text-transform: uppercase; 
+        letter-spacing: 0.5px; 
+        color: #6c757d;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .description-text {
+        font-size: 0.9rem;
+        color: #495057;
+        line-height: 1.4;
+    }
+</style>
+{% endblock %}

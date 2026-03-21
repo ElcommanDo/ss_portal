@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        .wrapper { background-color: #f4f7f9; padding: 40px 10px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header { background-color: #0d1b2a; color: #ffffff; padding: 40px; text-align: center; }
+        .logo-text { font-size: 24px; font-weight: bold; letter-spacing: 2px; margin-bottom: 5px; }
+        .sub-header { font-size: 14px; opacity: 0.7; text-transform: uppercase; }
+        .content { padding: 40px; color: #333333; }
+        .score-box { text-align: center; margin: 30px 0; }
+        .score-circle { display: inline-block; width: 100px; height: 100px; line-height: 100px; border-radius: 50%; background: #e0e7ff; color: #1e3a8a; font-size: 28px; font-weight: bold; border: 4px solid #1e3a8a; }
+        .feedback-section { background-color: #fff9db; border-left: 5px solid #fcc419; padding: 20px; border-radius: 6px; margin: 25px 0; }
+        .feedback-title { font-weight: bold; color: #856404; display: block; margin-bottom: 10px; }
+        .kpi-table { width: 100%; border-collapse: collapse; margin-top: 25px; }
+        .kpi-table th { text-align: left; padding: 12px; border-bottom: 2px solid #edf2f7; color: #718096; font-size: 12px; text-transform: uppercase; }
+        .kpi-table td { padding: 12px; border-bottom: 1px solid #edf2f7; font-size: 14px; }
+        .footer { background-color: #f8fafc; padding: 30px; text-align: center; font-size: 12px; color: #94a3b8; }
+        .power-brand { font-weight: bold; color: #475569; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <div class="logo-text">SMART SYSTEM</div>
+                <div class="sub-header">Official Performance Report</div>
+            </div>
+            <div class="content">
+                <p>Hello <strong>{{ employee.full_name }}</strong>,</p>
+                <p>Your performance review for <strong>{{ month }}/{{ year }}</strong> is complete.</p>
+
+                <div class="score-box">
+                    <div class="score-circle">{{ total_score }}%</div>
+                    <h3 style="color: #1e3a8a; margin-top: 15px;">{{ achievement_level }}</h3>
+                </div>
+
+                <div class="feedback-section">
+                    <span class="feedback-title"><i class="fas fa-comment"></i> Administrator Feedback:</span>
+                    <p style="margin: 0; font-style: italic; line-height: 1.5;">
+                        {% if overall_notes %}{{ overall_notes|linebreaksbr }}{% else %}Excellent progress this month. Keep up the high standard of work.{% endif %}
+                    </p>
+                </div>
+
+                <table class="kpi-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th style="text-align: right;">Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for kpi in kpis %}
+                        <tr>
+                            <td>{{ kpi.kpi_template.category.name }}</td>
+                            <td style="text-align: right; font-weight: bold;">{{ kpi.score }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="footer">
+                <p>This is an automated report from the Smart System Management Portal.</p>
+                <p class="power-brand">Powered by SMART SYSTEM</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

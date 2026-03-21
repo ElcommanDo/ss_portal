@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: 'Helvetica', sans-serif;
+                font-size: 8pt;
+                color: #64748b;
+            }
+        }
+
+        body { font-family: 'Inter', 'Helvetica', sans-serif; color: #0f172a; margin: 0; position: relative; z-index: 1;}
+
+     /* Optimized for PDF generation */
+.watermark-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    z-index: -1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+}
+
+.watermark-text {
+    /* Use 'pt' for PDF instead of 'vw' */
+    font-size: 90pt; 
+    font-weight: 900;
+    color: #e2e8f0; /* Use a static light grey */
+    opacity: 0.5;
+    transform: rotate(-45deg);
+    white-space: nowrap;
+    font-family: Arial, sans-serif;
+}
+        /* CORPORATE HEADER */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #1e3a8a;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .brand-name { font-size: 24pt; font-weight: 900; color: #1e3a8a; }
+        .creation-date { font-size: 9pt; color: #64748b; text-align: right; }
+
+        /* SCORE SUMMARY CARD */
+        .summary-card {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2);
+        }
+        .total-label { font-size: 10pt; text-transform: uppercase; letter-spacing: 2px; opacity: 0.9; }
+        .total-value { font-size: 48pt; font-weight: 800; display: block; line-height: 1; }
+
+        /* ENHANCED TABLE */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { 
+            background: #f1f5f9; 
+            color: #475569; 
+            padding: 12px 15px; 
+            text-align: left; 
+            font-size: 8pt; 
+            text-transform: uppercase;
+            border-bottom: 2px solid #cbd5e1;
+        }
+        td { padding: 15px; border-bottom: 1px solid #e2e8f0; font-size: 9.5pt; vertical-align: top; }
+        
+        .kpi-title { font-weight: 700; color: #1e3a8a; margin-bottom: 4px; }
+        .kpi-desc { font-size: 8pt; color: #64748b; line-height: 1.4; }
+        
+        .badge-target { background: #f1f5f9; color: #475569; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 8pt; }
+        .score-final { font-weight: 800; color: #1e3a8a; font-size: 11pt; }
+
+        /* SIGNATURES */
+        .footer-signatures { margin-top: 80px; width: 100%; }
+        .sig-line { border-top: 1px solid #334155; width: 200px; margin-bottom: 5px; }
+        .sig-text { font-size: 9pt; font-weight: 700; color: #1e3a8a; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+    <div class="watermark-wrapper">
+    <div class="watermark-text">SMART SYSTEM</div>
+</div>
+    <div class="header-container">
+        <div class="brand-name">SMART SYSTEM</div>
+        <div class="creation-date">
+            <strong>REPORT ID:</strong> #{{ object.id }}-{{ year }}{{ month }}<br>
+            <strong>CREATED ON:</strong> {{ report_date|date:"d M Y" }}
+        </div>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <h2 style="margin: 0; color: #334155;">Performance Analysis: {{ object.full_name }}</h2>
+        <p style="margin: 5px 0; color: #64748b;">Review Cycle: <strong>{{ label }}</strong></p>
+    </div>
+
+    <div class="summary-card">
+        <span class="total-label">Aggregate Performance Score</span>
+        <span class="total-value">{{ total_score }}%</span>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th width="45%">KPI Metric Detail</th>
+                <th width="15%" style="text-align: center;">Target (Default)</th>
+                <th width="15%" style="text-align: center;">Actual Grade</th>
+                <th width="10%" style="text-align: center;">Weight</th>
+                <th width="15%" style="text-align: right;">Weighted Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for kpi in kpis %}
+            <tr>
+                <td>
+                    <div class="kpi-title">{{ kpi.kpi_template.category.name }}</div>
+                    <div class="kpi-desc">{{ kpi.kpi_template.description }}</div>
+                </td>
+                <td style="text-align: center;">
+                    <span class="badge-target">{{ kpi.kpi_template.default_grade }}</span>
+                </td>
+                <td style="text-align: center; font-weight: bold;">{{ kpi.grade }}</td>
+                <td style="text-align: center;">{{ kpi.kpi_template.weight }}%</td>
+                <td style="text-align: right;" class="score-final">{{ kpi.score }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer-signatures">
+        <table style="border: none; margin-top: 40px;">
+            <tr>
+                <td style="border: none; width: 50%;">
+                    <div class="sig-line"></div>
+                    <div class="sig-text">Chief Executive Officer</div>
+                    <div style="font-size: 8pt; color: #64748b;">Smart System Group</div>
+                </td>
+                <td style="border: none; width: 50%; text-align: right;">
+                    <div class="sig-line" style="margin-left: auto;"></div>
+                    <div class="sig-text">Department Head</div>
+                    <div style="font-size: 8pt; color: #64748b;">Internal Audit & HR</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+</body>
+</html>

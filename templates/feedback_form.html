@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="mb-4">Add KPI Feedback</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}  <!-- Fields: employee, kpi_template, feedback_type, etc. -->
+    <button type="submit" class="btn btn-primary">Submit Feedback</button>
+    <a href="{% url 'employee_kpi_list' %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

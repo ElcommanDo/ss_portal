@@ -1,10 +1,8 @@
 from django.db import models
-from django.contrib.auth.models import BaseUserManager
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
-from django.db import models
-from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
-
+from django.contrib.auth.models import BaseUserManager,PermissionsMixin, AbstractBaseUser, PermissionsMixin
+from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
+from decimal import Decimal
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, password=None, **extra_fields):
@@ -186,44 +184,79 @@ class Assignement(models.Model):
     deadline = models.DateTimeField()
 
 
-
-from django.db import models
-from django.conf import settings
-
-# 1. KPI Definition (The Master Record)
-class KPI(models.Model):
-    title = models.CharField(max_length=100)
-    description = models.TextField(blank=True, null=True)
-    # This acts as the starting point for everyone (e.g., 100%)
-    base_score = models.IntegerField(default=100)
-    icon_class = models.CharField(max_length=50, default="fas fa-chart-line") 
-    created_at = models.DateTimeField(auto_now_add=True)
-
+class KPICategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)  # e.g., 'Project/Services Based KPIs', 'Personal KPIs', 'Business Contribution KPIs'
+    
     def __str__(self):
-        return self.title
-
-# 2. Employee KPI Score (The Live State)
-class EmployeeKPIScore(models.Model):
-    employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="kpi_scores")
-    kpi = models.ForeignKey(KPI, on_delete=models.CASCADE)
-    # The actual current points the employee has
-    current_score = models.IntegerField(default=100)
-    last_updated = models.DateTimeField(auto_now=True)
+        return self.name
 
     class Meta:
-        unique_together = ('employee', 'kpi')
+        verbose_name_plural = "KPI Categories"
+        ordering = ['name']
 
+
+class KPITemplate(models.Model):
+    category = models.ForeignKey(KPICategory, on_delete=models.PROTECT, related_name='kpis')
+    description = models.TextField()
+    way_of_measure = models.TextField(help_text="Describe how the grade is measured, e.g., '(Fulfilled=10, Conflict in one=6, two=0)'")
+    default_grade = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('10.00'), validators=[MinValueValidator(0)])
+    max_grade = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('10.00'), help_text="Maximum possible grade (can be >10 for overachievement)")
+    weight = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0)], help_text="Weight in percentage, e.g., 12.00 for 12%")
+    notes = models.TextField(blank=True)
+    
     def __str__(self):
-        return f"{self.employee.username} - {self.kpi.title}: {self.current_score}"
+        return f"{self.description[:50]}... ({self.weight}%)"
 
-# 3. Deduction/Log (The History & Audit Trail)
-class KPILog(models.Model):
-    employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    kpi = models.ForeignKey(KPI, on_delete=models.CASCADE)
-    points_changed = models.IntegerField() # e.g., -10
-    reason = models.TextField()
-    admin_actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="kpi_actions")
-    timestamp = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ['category', 'description']
+        verbose_name_plural = "KPI Templates"
 
+
+class EmployeeKPI(models.Model):
+    employee = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='kpis')
+    kpi_template = models.ForeignKey(KPITemplate, on_delete=models.PROTECT)
+    grade = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('10.00'), validators=[MinValueValidator(0)])
+    score = models.DecimalField(max_digits=5, decimal_places=2, blank=True, help_text="Automatically calculated as (grade / 10) * weight")
+    notes = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    year = models.PositiveIntegerField()  # e.g., 2026
+    month = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])  # 1-12
+    def save(self, *args, **kwargs):
+        # Automatic calculation: score = (grade / 10) * weight
+        # This allows overachievement if grade > 10 (e.g., 15 / 10 * weight = 1.5 * weight)
+        self.score = (self.grade / Decimal('10')) * self.kpi_template.weight
+        super().save(*args, **kwargs)
+    
     def __str__(self):
-        return f"{self.employee.username} | {self.points_changed} pts | {self.kpi.title}"
+        return f"{self.employee.username} - {self.kpi_template.description[:20]}... ({self.year}-{self.month:02d})"
+    class Meta:
+        unique_together = ['employee', 'kpi_template', 'year', 'month']
+        ordering = ['-year', '-month', 'kpi_template__category', 'kpi_template']
+        verbose_name_plural = "Employee KPIs"
+
+
+# Optional: For semi-automation, add a Complaint/Feedback model to track issues
+# This can be used to auto-deduct grades for certain KPIs (e.g., complaint-based)
+class KPIFeedback(models.Model):
+    FEEDBACK_TYPE_CHOICES = [
+        ('complaint', 'Complaint'),
+        ('issue', 'Issue'),
+        ('conflict', 'Conflict'),
+        ('breach', 'Breach'),
+        ('lead', 'Lead Generated'),  # For business KPIs
+        ('idea', 'Idea Submitted'),
+    ]
+    
+    employee = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='kpi_feedback')
+    kpi_template = models.ForeignKey(KPITemplate, on_delete=models.PROTECT, null=True, blank=True, help_text="Link to specific KPI if applicable")
+    feedback_type = models.CharField(max_length=20, choices=FEEDBACK_TYPE_CHOICES)
+    description = models.TextField()
+    date = models.DateField()
+    value = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'), help_text="Numeric value, e.g., 1 for one complaint, or 15 for qualified lead")
+    created_by = models.ForeignKey(CustomUser, on_delete=models.PROTECT, related_name='created_feedback')
+    
+    def __str__(self):
+        return f"{self.employee.username} - {self.feedback_type} on {self.date}"
+
+    class Meta:
+        ordering = ['-date']
