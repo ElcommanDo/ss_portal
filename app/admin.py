@@ -1,7 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from . import models
 from .models import CustomUser, TimesheetEntry, Project, Assignement, Timesheet, ProjectCost, Team
-admin.site.register([ProjectCost, Assignement])
+
+admin.site.register([ProjectCost, Assignement, models.KPITemplate, models.KPICategory, models.EmployeeKPI, models.KPIFeedback])
 from import_export.admin import ImportExportModelAdmin
 from .resources import (
     TeamResource,

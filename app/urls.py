@@ -62,5 +62,13 @@ urlpatterns = [
     path('missions/accept/<int:pk>/', views.accept_mission, name='accept_mission'),
     path('employee/<int:employee_id>/pdf/<int:year>/<int:month>/', 
      views.export_kpi_pdf, name='export_kpi_pdf'),
-    path('missions/update/<int:mission_id>/', views.mission_update,name="mission_update" )
+    path('missions/update/<int:mission_id>/', views.mission_update,name="mission_update" ),
+    path('employee-profile/', views.employee_profile, name='employee_profile'),
+    path('employee-profile/<int:employee_id>/', views.employee_profile, name='employee_profile_preview'),
+    path('vacation-requests/', views.vacation_requests, name='vacation_requests'),
+    path('add-vacation/', views.add_vacations, name='add_vacations'),
+    path('process-vacation/', views.process_vacation, name='process_vacation'),
+    path('settings/',views.employee_settings, name='settings')
+    
+
 ]

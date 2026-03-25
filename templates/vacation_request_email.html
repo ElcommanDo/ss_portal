@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        .wrapper { background-color: #f0f2f5; padding: 40px 10px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        .header { background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%); color: #ffffff; padding: 40px; text-align: center; }
+        .logo-text { font-size: 26px; font-weight: bold; letter-spacing: 1px; margin-bottom: 5px; }
+        .sub-header { font-size: 13px; opacity: 0.9; text-transform: uppercase; letter-spacing: 2px; }
+        .content { padding: 40px; color: #2b2d42; line-height: 1.6; }
+        
+        .request-badge { 
+            display: inline-block; 
+            padding: 8px 16px; 
+            background-color: #eef2ff; 
+            color: #4361ee; 
+            border-radius: 50px; 
+            font-weight: bold; 
+            font-size: 14px; 
+            margin-bottom: 20px;
+        }
+
+        .info-grid { 
+            width: 100%; 
+            background-color: #f8fafc; 
+            border-radius: 12px; 
+            padding: 20px; 
+            margin: 25px 0; 
+        }
+        .info-row { display: table; width: 100%; margin-bottom: 10px; }
+        .info-label { display: table-cell; width: 40%; color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; }
+        .info-value { display: table-cell; width: 60%; color: #1e293b; font-size: 15px; font-weight: 500; }
+
+        .reason-box { 
+            border-left: 4px solid #4361ee; 
+            padding: 15px 20px; 
+            background-color: #f1f5f9; 
+            border-radius: 0 8px 8px 0; 
+            margin-top: 20px;
+        }
+        .reason-title { font-size: 12px; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; display: block;}
+
+        .btn-container { text-align: center; margin-top: 35px; }
+        .btn { 
+            background-color: #4361ee; 
+            color: #ffffff !important; 
+            padding: 14px 30px; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            display: inline-block;
+            box-shadow: 0 4px 6px rgba(67, 97, 238, 0.2);
+        }
+
+        .footer { background-color: #f8fafc; padding: 30px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #edf2f7; }
+        .power-brand { font-weight: bold; color: #4361ee; margin-top: 10px; display: block; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <div class="logo-text">SMART SYSTEM</div>
+                <div class="sub-header">Vacation Request Notification</div>
+            </div>
+            <div class="content">
+                <div class="request-badge">New Request Pending</div>
+                
+                <p>Hello Admin,</p>
+                <p>A new vacation request has been submitted by <strong>{{ vacation.user.vacation.user.username }} - {{ vacation.user.full_name }} </strong>. Please review the details below:</p>
+
+                <div class="info-grid">
+                    <div class="info-row">
+                        <span class="info-label">Start Date:</span>
+                        <span class="info-value">{{ vacation.date|date:"d M Y" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Duration:</span>
+                        <span class="info-value">{{ vacation.duration }} Day{{ vacation.duration|pluralize }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Current Status:</span>
+                        <span class="info-value" style="color: #f59e0b;">{{ vacation.get_status_display }}</span>
+                    </div>
+                </div>
+
+                <div class="reason-box">
+                    <span class="reason-title">Employee Reason:</span>
+                    <p style="margin: 0; font-style: italic;">"{{ vacation.reason }}"</p>
+                </div>
+
+                <div class="btn-container">
+                    <a href="{{vacation_url}}" class="btn">Review in Dashboard</a>
+                </div>
+            </div>
+            <div class="footer">
+                <p>This is an automated notification from your SmartSystem Portal.</p>
+                <span class="power-brand">Powered by SmartSystem Portal</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

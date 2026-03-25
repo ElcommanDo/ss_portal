@@ -3083,7 +3083,8 @@ class EmployeeKPIDetailView(LoginRequiredMixin, AdminRequiredMixin, DetailView):
         employee = self.object
         
         # 1. Ensure records exist
-        templates = KPITemplate.objects.all()
+        templates = KPITemplate.objects.filter(Q(source="General")|Q(source=employee.team.title))
+        print(templates)
         for template in templates:
             EmployeeKPI.objects.get_or_create(
                 employee=employee,
@@ -3317,3 +3318,164 @@ def mission_update(request, mission_id):
             mission.save()
             messages.success(request, 'the mission Updated Successffully.')
             return redirect('missions_list')
+
+
+def employee_profile(request, employee_id=None):
+    user = None
+    if request.user.is_authenticated:
+        user = request.user
+    if employee_id:
+        user = get_object_or_404(CustomUser, id=employee_id)
+    return render(request, 'employee_profile.html', {
+        "user": user
+
+    })
+from .models import Vacation  
+
+from django.db.models import Q
+from django.core.paginator import Paginator
+from datetime import date
+
+@login_required
+def vacation_requests(request):
+    if request.user.role in ['leader', 'delivery-manager', 'ceo'] or request.user.is_superuser or request.user.is_staff:
+        base_queryset = Vacation.objects.all().order_by('-date')
+    else:
+        base_queryset = Vacation.objects.filter(user=request.user).order_by('-date')
+
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    date_filter = request.GET.get('date', '')
+
+    filtered_queryset = base_queryset
+    
+    if search_query:
+        filtered_queryset = filtered_queryset.filter(
+            Q(user__username__icontains=search_query) | 
+            Q(user__full_name__icontains=search_query) |
+            Q(reason__icontains=search_query)
+        )
+    
+    if status_filter:
+        filtered_queryset = filtered_queryset.filter(status=status_filter)
+        
+    if date_filter:
+        filtered_queryset = filtered_queryset.filter(date=date_filter)
+
+    paginator = Paginator(filtered_queryset, 3) 
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    today = date.today()
+    vacations_this_month = base_queryset.filter(
+        date__year=today.year,
+        date__month=today.month
+    ).count()
+
+    context = {
+        'vacations': page_obj,          
+        'page_obj': page_obj,           
+        'vacations_this_month': vacations_this_month,
+        'current_month': today.replace(day=1),
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'date_filter': date_filter,
+    }
+    
+    return render(request, 'vacation_requests.html', context)
+
+@login_required
+def add_vacations(request):
+    if request.method == "POST":
+        data = request.POST
+        obj = Vacation.objects.create(
+            user = request.user,
+            date = data.get("date"),
+            reason = data.get("reason"),
+            duration = data.get("duration"),
+            status = "pending",
+
+                )
+        subject = f"🚀 New Vacation Request: {obj.user.username}"
+
+        vacation_url = request.build_absolute_uri(reverse("vacation_requests"))
+        html_message = render_to_string('vacation_request_email.html', {
+                'vacation': obj,
+                'vacation_url': vacation_url              
+            })
+
+        send_mail(
+            subject,
+            "", 
+            settings.DEFAULT_FROM_EMAIL,
+            ['amustafa@smartsystemeg.com', 'semad@smartsystemeg.com'],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        
+        messages.success(request, 'Vacation Request Sent success')
+        return redirect('vacation_requests')
+
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+
+@login_required
+def process_vacation(request):
+    if request.method == "POST" and (request.user.is_staff or request.user.role in ['leader', 'ceo']):
+        v_id = request.POST.get('vacation_id')
+        action = request.POST.get('status_action')
+        reject_reason = request.POST.get('reject_reason', '')
+
+        vacation = Vacation.objects.get(id=v_id)
+        vacation.status = action
+        vacation.save()
+
+        # --- Email Logic ---
+        subject = f"Vacation Request Update: {action.capitalize()}"
+        template = 'vacation_status_email.html'
+        
+        context = {
+            'employee_name': vacation.user.full_name,
+            'status': action,
+            'date': vacation.date,
+            'duration': vacation.duration,
+            'reject_reason': reject_reason if action == 'rejected' else None,
+            'site_url': request.build_absolute_uri(reverse("vacation_requests"))
+        }
+
+        html_content = render_to_string(template, context)
+        msg = EmailMultiAlternatives(subject, strip_tags(html_content), settings.DEFAULT_FROM_EMAIL, [vacation.user.email])
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
+
+        messages.success(request, f"Vacation request for {vacation.user.username} has been {action}.")
+        return redirect('vacation_requests')
+
+from .models import employeeProfile
+@login_required
+def employee_settings(request):
+    try:
+        user = request.user
+        profile, created = employeeProfile.objects.get_or_create(user=user)
+        if request.method=="POST":
+            
+            data = request.POST
+            profile.job_title = data.get("job_title")
+            if request.FILES.get("image"):
+                profile.image = request.FILES.get("image")
+            if request.FILES.get("cv"):
+                profile.cv = request.FILES.get("cv")
+            profile.phone = data.get("phone")
+            profile.bio = data.get("bio")
+            profile.linkedin = data.get("linkedin")
+            profile.save()
+            messages.success(request, "Profile Updated Successfully.")
+            return redirect('settings')
+        return render(request, 'settings.html', {
+            "profile": profile
+        })
+    except Exception as e:
+        messages.warning(request, f"Error Happen {e}")
+        return redirect("settings")
+    
+        

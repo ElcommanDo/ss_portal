@@ -79,6 +79,23 @@
                                 <div class="form-text small">Upper limit</div>
                             </div>
                             <div class="col-6">
+        
+                                <label class="form-label fw-bold">For</label>
+                                <select name="source"  class="form-control">
+                                <option value="">select one choice</option>
+                                <option value="General" {%if form.source.value == 'General' %} selected {%endif%}>General</option>    
+                                <option value="Infra_Team" {%if form.source.value == 'Infra_Team' %} selected {%endif%}>Infra_Team</option>    
+                                <option value="Maximo_Functional" {%if form.source.value == 'Maximo_Functional' %} selected {%endif%}>Maximo_Functional</option>    
+                                <option value="Maximo_Technical" {%if form.source.value == 'Maximo_Technical' %} selected {%endif%}>Maximo_Technical</option>    
+                              
+                                <option value="PMO" {%if form.source.value == 'PMO' %} selected {%endif%}>PMO</option>    
+                                <option value="SDM" {%if form.source.value == 'SDM' %} selected {%endif%}>SDM</option>    
+                                <option value="Top_mgmt" {%if form.source.value == 'Top_mgmt' %} selected {%endif%}>Top_mgmt</option>    
+
+                            </select>
+                            
+                                </div>
+                            <div class="col-6">
                                 <label class="form-label fw-bold">Default</label>
                                 <input type="number" step="0.01" name="default_grade" value="{{ form.default_grade.value|default:10 }}" class="form-control">
                                 <div class="form-text small">Starting value</div>

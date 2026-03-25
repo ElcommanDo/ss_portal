@@ -21,10 +21,20 @@ class CustomUserManager(BaseUserManager):
 
 
 class Team(models.Model):
-    title = models.CharField(max_length=100)
+    TITLES = [
+        ('Infra_Team', 'Infra_Team'),
+        ('Maximo_Functional', 'Maximo_Functional'),
+        ('Maximo_Technical', 'Maximo_Technical'),
+        ('PMO', 'PMO'),
+        ('SDM', 'SDM'),
+        ('Top_mgmt', 'Top_mgmt'),
+        
+        
+    ]
+    title = models.CharField(max_length=100, choices=TITLES)
     team_lead = models.CharField(max_length=220, null=True)
 
-    
+
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = [
@@ -51,6 +61,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     objects = CustomUserManager()
     date_joined = models.DateTimeField(auto_now_add=True)
     email = models.EmailField(null=True, blank=True)
+    
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['role']
 
@@ -81,6 +92,50 @@ class Project(models.Model):
     class Meta:
         ordering = ['name']
         verbose_name_plural = "Projects"
+
+class employeeProfile(models.Model):
+    user = models.OneToOneField(CustomUser, related_name='profile', on_delete=models.CASCADE)
+    job_title = models.CharField(max_length=220, default='Smart System Engineer')
+    image = models.ImageField(upload_to='emp_images', null=True, blank=True)
+    phone = models.CharField(max_length=18, default='01xxxxxxxxxx')
+    bio = models.TextField(default=' ')
+    linkedin = models.URLField(default='https://Example.linkedin.com/profile')
+    cv = models.FileField(upload_to="CVs", null=True, blank=True)
+
+class Skill(models.Model):
+    profile = models.ForeignKey(employeeProfile, on_delete=models.CASCADE, related_name='skills')
+    title = models.CharField(max_length=220)
+    level = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)])
+
+class Certificate(models.Model):
+    profile = models.ForeignKey(employeeProfile, on_delete=models.CASCADE, related_name='certificates')
+    certificate_title = models.CharField(max_length=220)
+    obtain_date = models.DateField()
+    description = models.TextField(default=' ')
+
+
+class Experience(models.Model):
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    still_in_work = models.BooleanField(default=False)
+    title = models.CharField(max_length=220)
+    description = models.TextField(default=' ')
+
+    
+class Vacation(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    date = models.DateField()
+    reason = models.TextField(default=' ')
+    duration = models.IntegerField()
+    status = models.CharField( max_length=13, choices=(
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
+        
+          
+    ))
+
 
 
 class Timesheet(models.Model):
@@ -196,6 +251,16 @@ class KPICategory(models.Model):
 
 
 class KPITemplate(models.Model):
+    SOURCE = [
+       ('Infra_Team', 'Infra_Team'),
+        ('Maximo_Functional', 'Maximo_Functional'),
+        ('Maximo_Technical', 'Maximo_Technical'),
+        ('PMO', 'PMO'),
+        ('SDM', 'SDM'),
+        ('Top_mgmt', 'Top_mgmt'),
+        ('General', 'General'),
+              ]
+    source = models.CharField(max_length=50, choices=SOURCE, default='General')
     category = models.ForeignKey(KPICategory, on_delete=models.PROTECT, related_name='kpis')
     description = models.TextField()
     way_of_measure = models.TextField(help_text="Describe how the grade is measured, e.g., '(Fulfilled=10, Conflict in one=6, two=0)'")
@@ -260,3 +325,4 @@ class KPIFeedback(models.Model):
 
     class Meta:
         ordering = ['-date']
+

@@ -45,9 +45,10 @@
         transition: transform 0.3s ease;
     }
     .card:hover {
-        transform: translateY(-5px); /* تأثير بسيط عند الوقوف بالماوس */
+        transform: translateY(-5px);
     }
 </style>
+
 <h1 class="mb-4 animate__animated animate__fadeInDown">
     {% if request.user.is_staff %}
         <i class="fas fa-crown me-2 text-warning"></i> Admin Control Panel
@@ -77,55 +78,97 @@
     </div>
 
     <div class="row g-4 mt-2 animate__animated animate__fadeInUp">
+
+        <!-- Weekly Hours -->
         <div class="col-md-3">
             <div class="card text-white bg-primary shadow h-100 rounded-3">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-clock me-2"></i> Weekly Hours</h5>
                     <p class="card-text fs-2">{{ weekly_hours|default:"0.0" }}h</p>
-                    <small class="opacity-75">Calculated from Sunday</small>
+                    <p class="text-white-50 small mt-2">Total hours logged this week (calculated from Sunday).</p>
                 </div>
             </div>
         </div>
         
+        <!-- Log History -->
         <div class="col-md-3">
             <a href="{% url 'user_timesheets' %}" class="card text-decoration-none shadow border-0 h-100 admin-card-link">
                 <div class="card-body text-center p-4">
                     <i class="fas fa-history fa-3x text-info mb-3"></i>
                     <h5 class="card-title fw-bold text-dark">Log History</h5>
-                    <p class="text-muted small">Review all my past entries.</p>
+                    <p class="text-muted small mt-2">Review all my past entries and edit previous timesheets.</p>
                 </div>
             </a>
         </div>
 
+        <!-- My Missions -->
         <div class="col-md-3">
             <a href="{%url 'missions_list' %}" class="card text-decoration-none shadow border-0 h-100 admin-card-link">
                 <div class="card-body text-center p-4">
                     <i class="fas fa-shuttle-space fa-3x text-danger mb-3"></i>
                     <h5 class="card-title fw-bold text-dark">My Missions</h5>
-                    <p class="text-muted small">Tasks assigned by management.</p>
+                    <p class="text-muted small mt-2">Tasks assigned by management with deadlines and priorities.</p>
                 </div>
             </a>
         </div>
+
+        <!-- KPIs System -->
         <div class="col-md-6 col-lg-3">
-    <a href="{% url 'my_kpi' current_year current_month  %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
-        <div class="card-body text-center p-4">
-            <div class="mb-3">
-                <i class="fas fa-bullseye fa-3x text-primary animate__animated animate__pulse animate__infinite"></i>
-            </div>
-            <h5 class="card-title fw-bold text-dark">KPIs System</h5>
-            <p class="text-muted small">Your performance indicators</p>
+            <a href="{% url 'my_kpi' current_year current_month  %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-bullseye fa-3x text-primary animate__animated animate__pulse animate__infinite"></i>
+                    </div>
+                    <h5 class="card-title fw-bold text-dark">KPIs System</h5>
+                    <p class="text-muted small mt-2">Track your monthly performance indicators and targets.</p>
+                </div>
+            </a>
         </div>
-    </a>
-</div>
+
+        <!-- Scheduled -->
         <div class="col-md-3">
             <a href="{% url 'scheduled_user_timesheets' 'scheduled' %}" class="card text-decoration-none shadow border-0 h-100 admin-card-link">
                 <div class="card-body text-center p-4">
                     <i class="fas fa-calendar-alt fa-3x text-success mb-3"></i>
                     <h5 class="card-title fw-bold text-dark">Scheduled</h5>
-                    <p class="text-muted small">Future tasks overview.</p>
+                    <p class="text-muted small mt-2">View and manage all future planned tasks and deadlines.</p>
                 </div>
             </a>
         </div>
+
+        <!-- Vacation Request -->
+        <div class="col-md-6 col-lg-3">
+            <a href="{%url 'vacation_requests' %}" class="card text-decoration-none shadow border-0 h-100 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-plane-departure fa-3x text-info mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">Vacation Request</h5>
+                    <p class="text-muted small mt-2">Submit your leave request, choose dates, and track approval status from management.</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- Settings -->
+        <div class="col-md-6 col-lg-3">
+            <a href="{%url 'settings' %}" class="card text-decoration-none shadow border-0 h-100 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-cog fa-3x text-warning mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">Settings</h5>
+                    <p class="text-muted small mt-2">Customize your account preferences, notifications, and system display options.</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- View My Profile -->
+        <div class="col-md-6 col-lg-3">
+            <a href="{%url 'employee_profile'%}" class="card text-decoration-none shadow border-0 h-100 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-id-card fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">View My Profile</h5>
+                    <p class="text-muted small mt-2">See your personal details, contact info, role, and update your profile picture.</p>
+                </div>
+            </a>
+        </div>
+
     </div>
 
 {% else %}
@@ -137,97 +180,148 @@
 
     <div class="row g-4 mt-2 animate__animated animate__fadeInUp">
         
+        <!-- Manage Users -->
         <div class="col-md-6 col-lg-3">
             <a href="{% url 'users' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
                 <div class="card-body text-center p-4">
                     <i class="fas fa-users fa-3x text-primary mb-3"></i>
                     <h5 class="card-title fw-bold text-dark">Manage Users</h5>
+                    <p class="text-muted small mt-2">Add, edit, deactivate users and manage roles &amp; permissions.</p>
                 </div>
             </a>
         </div>
 
+        <!-- Manage Teams -->
         <div class="col-md-6 col-lg-3">
             <a href="{% url 'teams' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
                 <div class="card-body text-center p-4">
                     <i class="fas fa-people-group fa-3x text-info mb-3"></i>
                     <h5 class="card-title fw-bold text-dark">Manage Teams</h5>
+                    <p class="text-muted small mt-2">Create, edit teams and assign members to projects.</p>
                 </div>
             </a>
         </div>
 
+        <!-- Review Logs -->
         <div class="col-md-6 col-lg-3">
             <a href="{% url 'timesheet' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
                 <div class="card-body text-center p-4">
                     <i class="fas fa-clipboard-check fa-3x text-success mb-3"></i>
                     <h5 class="card-title fw-bold text-dark">Review Logs</h5>
+                    <p class="text-muted small mt-2">Approve or reject employee timesheets and view full history.</p>
                 </div>
             </a>
         </div>
+
+        <!-- KPIs System -->
         <div class="col-md-6 col-lg-3">
             {% if request.user.role in 'admin,ceo,top-manager,delivery-manager' or request.user.is_superuser %}
-    <a href="{% url 'employee_kpi_list' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
-{% else %}
-    <a href="{% url 'my_kpi' current_year current_month %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
-{% endif %}
-
-        <div class="card-body text-center p-4">
-            <div class="mb-3">
-                <i class="fas fa-bullseye fa-3x text-primary animate__animated animate__pulse animate__infinite"></i>
+                <a href="{% url 'employee_kpi_list' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+            {% else %}
+                <a href="{% url 'my_kpi' current_year current_month %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
+            {% endif %}
+            <div class="card-body text-center p-4">
+                <div class="mb-3">
+                    <i class="fas fa-bullseye fa-3x text-primary animate__animated animate__pulse animate__infinite"></i>
+                </div>
+                <h5 class="card-title fw-bold text-dark">KPIs System</h5>
+                <p class="text-muted small mt-2">Manage performance indicators, targets, and employee scores.</p>
             </div>
-            <h5 class="card-title fw-bold text-dark">KPIs System</h5>
-            <p class="text-muted small">Manage performance indicators</p>
+            </a>
         </div>
-    </a>
-</div>
+
+        <!-- Projects -->
         <div class="col-md-6 col-lg-3">
             <a href="{% url 'projects' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
                 <div class="card-body text-center p-4">
                     <i class="fas fa-briefcase fa-3x text-warning mb-3"></i>
                     <h5 class="card-title fw-bold text-dark">Projects</h5>
+                    <p class="text-muted small mt-2">Create, edit projects and assign teams &amp; resources.</p>
                 </div>
             </a>
         </div>
 
         {% if request.user.is_superuser or request.user.role == 'admin' or request.user.role == 'ceo' or request.user.role == 'project-manager' or request.user.role == 'leader' or request.user.role == 'top-manager' or request.user.role == 'delivery-manager' %}
+        <!-- Missions -->
         <div class="col-md-6 col-lg-3">
             <a href="{% url 'missions_list' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
                 <div class="card-body text-center p-4 rounded-3 bg-white">
                     <i class="fas fa-rocket fa-3x text-danger mb-3"></i>
                     <h5 class="card-title fw-bold text-dark">Missions</h5>
-                    <p class="text-danger small fw-bold">Dispatch Center</p>
+                    <p class="text-muted small mt-2">Dispatch Center – assign urgent tasks and missions to employees.</p>
                 </div>
             </a>
         </div>
         {% endif %}
 
+        <!-- Scheduled -->
         <div class="col-md-6 col-lg-3">
             <a href="{% url 'scheduled_timesheet' 'scheduled' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
                 <div class="card-body text-center p-4">
                     <i class="fas fa-calendar-alt fa-3x text-secondary mb-3"></i>
                     <h5 class="card-title fw-bold text-dark">Scheduled</h5>
+                    <p class="text-muted small mt-2">View and manage all future planned tasks across the team.</p>
                 </div>
             </a>
         </div>
 
+        <!-- Reports -->
         <div class="col-md-6 col-lg-3">
             <a href="{% url 'reports_dashboard' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
                 <div class="card-body text-center p-4">
                     <i class="fas fa-chart-pie fa-3x text-info mb-3"></i>
                     <h5 class="card-title fw-bold text-dark">Reports</h5>
+                    <p class="text-muted small mt-2">Generate detailed timesheet, productivity and KPI reports.</p>
                 </div>
             </a>
         </div>
 
         {% if request.user.role != 'leader' %}
+        <!-- Backup -->
         <div class="col-md-6 col-lg-3">
             <a href="{% url 'download_sqlite' %}" class="card text-decoration-none shadow-lg border-0 h-100 admin-card-link">
                 <div class="card-body text-center p-4">
                     <i class="fas fa-database fa-3x text-danger mb-3"></i>
                     <h5 class="card-title fw-bold text-dark">Backup</h5>
+                    <p class="text-muted small mt-2">Download full database backup for safety and archiving.</p>
                 </div>
             </a>
         </div>
         {% endif %}
+
+        <!-- Vacation Request -->
+        <div class="col-md-6 col-lg-3">
+            <a href="{%url 'vacation_requests' %}" class="card text-decoration-none shadow border-0 h-100 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-plane-departure fa-3x text-info mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">Vacation Request</h5>
+                    <p class="text-muted small mt-2">Submit your leave request, choose dates, and track approval status from management.</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- Settings -->
+        <div class="col-md-6 col-lg-3">
+            <a href="{%url 'settings' %}" class="card text-decoration-none shadow border-0 h-100 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-cog fa-3x text-warning mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">Settings</h5>
+                    <p class="text-muted small mt-2">Customize your account preferences, notifications, and system display options.</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- View My Profile -->
+        <div class="col-md-6 col-lg-3">
+            <a href="{%url 'employee_profile'%}" class="card text-decoration-none shadow border-0 h-100 admin-card-link">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-id-card fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title fw-bold text-dark">View My Profile</h5>
+                    <p class="text-muted small mt-2">See your personal details, contact info, role, and update your profile picture.</p>
+                </div>
+            </a>
+        </div>
+
     </div>
         
     <hr class="my-5">
@@ -239,6 +333,7 @@
                 <div class="card-body p-4">
                     <h5 class="card-title text-muted"><i class="fas fa-calendar-day me-2"></i> Entries Today</h5>
                     <p class="card-text fs-2 fw-bold text-primary">{{ entries_today_count|default:"0" }}</p>
+                    <p class="text-muted small mt-2">Total timesheet entries submitted today by all users.</p>
                 </div>
             </div>
         </div>
@@ -247,6 +342,7 @@
                 <div class="card-body p-4">
                     <h5 class="card-title text-muted"><i class="fas fa-user-check me-2"></i> Active Users</h5>
                     <p class="card-text fs-2 fw-bold text-success">{{ active_users_count|default:"0" }}</p>
+                    <p class="text-muted small mt-2">Number of users who logged in or submitted entries today.</p>
                 </div>
             </div>
         </div>
@@ -257,7 +353,7 @@
 <style>
     .admin-card-link {
         transition: all 0.3s cubic-bezier(.25,.8,.25,1);
-        background-color: #ffffff; /* Explicit white background */
+        background-color: #ffffff;
     }
     
     .admin-card-link:hover {
@@ -266,16 +362,16 @@
     }
     
     .row.g-4 .card {
-        min-height: 180px;
+        min-height: 210px;
         display: flex;
         flex-direction: column;
         justify-content: center;
     }
 
-    /* Animation overrides to ensure they appear together */
     .animate__animated {
         animation-duration: 0.8s;
         animation-fill-mode: both;
     }
 </style>
+
 {% endblock %}

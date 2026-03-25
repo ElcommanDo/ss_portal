@@ -16,6 +16,8 @@
                     <thead class="bg-light">
                         <tr>
                             <th class="ps-4">Category</th>
+                            <th class="ps-4">Source</th>
+                            
                             <th style="width: 30%;">Description</th>
                             <th style="width: 20%;">Way of Measure</th>
                             <th class="text-center">Default</th>
@@ -28,6 +30,8 @@
                         {% for template in object_list %}
                         <tr>
                             <td class="ps-4 fw-bold text-muted">{{ template.category.name }}</td>
+                            <td class="ps-4  text-muted">{{ template.source }}</td>
+                            
                             <td>
                                 <div class="description-text">
                                     {{ template.description|truncatewords:12 }}
