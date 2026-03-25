@@ -3083,7 +3083,11 @@ class EmployeeKPIDetailView(LoginRequiredMixin, AdminRequiredMixin, DetailView):
         employee = self.object
         
         # 1. Ensure records exist
-        templates = KPITemplate.objects.filter(Q(source="General")|Q(source=employee.team.title))
+        if employee.team.title == "PMO":
+            templates = KPITemplate.objects.filter(Q(source="PMO"))
+        else:
+            templates = KPITemplate.objects.filter(Q(source="General")|Q(source=employee.team.title))
+
         print(templates)
         for template in templates:
             EmployeeKPI.objects.get_or_create(
