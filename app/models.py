@@ -259,6 +259,7 @@ class KPITemplate(models.Model):
         ('SDM', 'SDM'),
         ('Top_mgmt', 'Top_mgmt'),
         ('General', 'General'),
+        ('Leader', 'Leader')
               ]
     source = models.CharField(max_length=50, choices=SOURCE, default='General')
     category = models.ForeignKey(KPICategory, on_delete=models.PROTECT, related_name='kpis')

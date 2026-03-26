@@ -3085,6 +3085,9 @@ class EmployeeKPIDetailView(LoginRequiredMixin, AdminRequiredMixin, DetailView):
         # 1. Ensure records exist
         if employee.team.title == "PMO":
             templates = KPITemplate.objects.filter(Q(source="PMO"))
+        elif employee.role == "leader":
+            templates = KPITemplate.objects.filter(Q(source="General")|Q(source="Leader"))
+
         else:
             templates = KPITemplate.objects.filter(Q(source="General")|Q(source=employee.team.title))
 
