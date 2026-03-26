@@ -116,7 +116,7 @@
                 <a href="#skills" class="hover:text-blue-600 transition-colors">Skills</a>
                 <a href="#certificates" class="hover:text-blue-600 transition-colors">Certificates</a>
                 <a href="#experience" class="hover:text-blue-600 transition-colors">Experience</a>
-                <button onclick="window.location.href='{{user.profile.cv.url}}'" class="px-6 py-2.5 bg-blue-600 text-white text-sm rounded-3xl font-semibold hover:bg-blue-700 transition-all flex items-center gap-x-2">
+                <button onclick="window.location.href='{%if user.profile.cv %}{{user.profile.cv.url}}{%else%}# {%endif%}'" class="px-6 py-2.5 bg-blue-600 text-white text-sm rounded-3xl font-semibold hover:bg-blue-700 transition-all flex items-center gap-x-2">
                     <i class="fa-solid fa-download"></i> CV
                 </button>
             </div>

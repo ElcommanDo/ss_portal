@@ -3415,7 +3415,7 @@ def add_vacations(request):
             subject,
             "", 
             settings.DEFAULT_FROM_EMAIL,
-            ['amustafa@smartsystemeg.com', 'semad@smartsystemeg.com'],
+            ['semad@smartsystemeg.com'],
             html_message=html_message,
             fail_silently=False,
         )

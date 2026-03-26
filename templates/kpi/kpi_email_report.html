@@ -47,6 +47,10 @@
                     <thead>
                         <tr>
                             <th>Category</th>
+                            <th>Description</th>
+
+                            <th>Grade</th>
+                            
                             <th style="text-align: right;">Score</th>
                         </tr>
                     </thead>
@@ -54,6 +58,10 @@
                         {% for kpi in kpis %}
                         <tr>
                             <td>{{ kpi.kpi_template.category.name }}</td>
+                            <td>{{ kpi.kpi_template.description }}</td>
+                            <td>
+                                <span style="{%if kpi.grade < 10 %}color:red;{%else%}color:green;{%endif%}"> {{ kpi.grade }} </span>/ {{ kpi.kpi_template.default_grade }} </td>
+                            
                             <td style="text-align: right; font-weight: bold;">{{ kpi.score }}%</td>
                         </tr>
                         {% endfor %}
