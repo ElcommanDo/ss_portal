@@ -3410,12 +3410,15 @@ def add_vacations(request):
                 'vacation': obj,
                 'vacation_url': vacation_url              
             })
-
+        if obj.user.role in ['delivery-manager', 'top-manager']:
+            sent_to = "afarouk@smartsystemeg.com"
+        else:
+            sent_to = "semad@smartsystemeg.com" 
         send_mail(
             subject,
             "", 
             settings.DEFAULT_FROM_EMAIL,
-            ['semad@smartsystemeg.com'],
+            [sent_to],
             html_message=html_message,
             fail_silently=False,
         )
