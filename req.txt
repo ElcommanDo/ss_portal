@@ -108,7 +108,7 @@ Markdown
 markdown-it-py
 MarkupPy
 MarkupSafe
-matplotlib
+matplotlib>=3.8
 mdurl
 mediapipe
 ml_dtypes
