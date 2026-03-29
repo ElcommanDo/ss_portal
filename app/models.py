@@ -297,8 +297,9 @@ class EmployeeKPI(models.Model):
         return f"{self.employee.username} - {self.kpi_template.description[:20]}... ({self.year}-{self.month:02d})"
     class Meta:
         unique_together = ['employee', 'kpi_template', 'year', 'month']
-        ordering = ['-year', '-month', 'kpi_template__category', 'kpi_template']
+        ordering = ['-year', '-month', '-kpi_template__category', 'kpi_template']
         verbose_name_plural = "Employee KPIs"
+
 
 
 # Optional: For semi-automation, add a Complaint/Feedback model to track issues
