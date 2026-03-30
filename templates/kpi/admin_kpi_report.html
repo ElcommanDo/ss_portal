@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SmartSystem - KPI Performance Report</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 1.5cm;
+            @top-center {
+                content: "SmartSystem KPI Report - {{ year }} - {{ month_name }}";
+                font-size: 10px;
+                color: #555;
+            }
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #1f2937;
+            background: #fff;
+            margin: 0;
+            padding: 0;
+        }
+
+        .report-container {
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* HEADER */
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 4px solid #0a2540;
+            padding-bottom: 15px;
+        }
+
+        .company-name {
+            font-size: 32px;
+            font-weight: 700;
+            color: #0a2540; /* little dark blue as requested */
+            letter-spacing: -1px;
+            margin: 0;
+        }
+
+        .report-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 8px 0 4px;
+        }
+
+        .report-meta {
+            font-size: 13px;
+            color: #4b5563;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* WATERMARK */
+        .watermark {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-42deg);
+            font-size: 92px;
+            font-weight: 700;
+            color: #0a2540;
+            opacity: 0.08;
+            pointer-events: none;
+            z-index: -1;
+            white-space: nowrap;
+            letter-spacing: 12px;
+            text-transform: uppercase;
+            user-select: none;
+            -webkit-print-color-adjust: exact;
+        }
+
+        /* TABLE */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            background: #fff;
+        }
+
+        th {
+            background: #0a2540;
+            color: #fff;
+            font-weight: 600;
+            text-align: left;
+            padding: 14px 12px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: middle;
+        }
+
+        tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        .employee-name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .username {
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .total-score {
+            font-size: 18px;
+            font-weight: 700;
+            text-align: center;
+            width: 110px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        /* Score color ranges (as requested) */
+        .score-high {      /* ≥ 90 */
+            background: #10b981;
+            color: #fff;
+        }
+        .score-good {      /* 80 - 89.99 */
+            background: #3b82f6;
+            color: #fff;
+        }
+        .score-satisfactory { /* 70 - 79.99 */
+            background: #eab308;
+            color: #1f2937;
+        }
+        .score-needs-improvement { /* < 70 */
+            background: #ef4444;
+            color: #fff;
+        }
+
+        /* SIGNATURES */
+        .signatures {
+            margin-top: 80px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            page-break-inside: avoid;
+        }
+
+        .signature-box {
+            text-align: center;
+            width: 42%;
+        }
+
+        .signature-box.left {
+            text-align: left;
+        }
+
+        .signature-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .signature-line {
+            border-top: 2px solid #1f2937;
+            width: 260px;
+            margin: 0 auto 6px;
+        }
+
+        .signature-name {
+            font-size: 12px;
+            color: #4b5563;
+        }
+
+        /* FOOTER */
+        .footer {
+            margin-top: 60px;
+            font-size: 10px;
+            color: #64748b;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 12px;
+        }
+
+        /* Print optimizations for WeasyPrint */
+        @media print {
+            .watermark {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .total-score {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+
+        <!-- HEADER -->
+        <div class="header">
+            <h1 class="company-name">SmartSystem</h1>
+            <h2 class="report-title">KPI Performance Report</h2>
+            <div class="report-meta">
+                <div>
+                    <strong>Period:</strong> 
+                    {{ month_name|default:"March" }} {{ year|default:"2026" }}
+                </div>
+                <div>
+                    <strong>Date of Record:</strong> 
+                    {{ report_date|date:"d F Y" }}
+                </div>
+                <div>
+                    <strong>Generated by:</strong> SmartSystem HR System
+                </div>
+            </div>
+        </div>
+
+        <!-- WATERMARK -->
+        <div class="watermark">SmartSystem</div>
+
+        <!-- TABLE -->
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 45%;">Employee Full Name</th>
+                    <th style="width: 30%;">Username</th>
+                    <th style="width: 25%; text-align: center;">Total KPI Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for employee in employees %}
+                <tr>
+                    <td>
+                        <div class="employee-name">{{ employee.full_name }}</div>
+                    </td>
+                    <td>
+                        <span class="username">@{{ employee.username }}</span>
+                    </td>
+                    <td style="text-align: center;">
+                        {% with score=employee.total_score|floatformat:2 %}
+                            {% if score >= 90 %}
+                                <span class="total-score score-high">{{ score }} %</span>
+                            {% elif score >= 80 %}
+                                <span class="total-score score-good">{{ score }} %</span>
+                            {% elif score >= 70 %}
+                                <span class="total-score score-satisfactory">{{ score }} %</span>
+                            {% else %}
+                                <span class="total-score score-needs-improvement">{{ score }} %</span>
+                            {% endif %}
+                        {% endwith %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" style="text-align:center; padding:40px; color:#64748b;">
+                        No KPI data available for this period.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- SIGNATURES -->
+        <div class="signatures">
+            <!-- Top Management - LEFT -->
+            <div class="signature-box left">
+                <div class="signature-title">Signature of Top Management</div>
+                <div class="signature-line"></div>
+                <div class="signature-name">______________________________</div>
+                <div style="font-size:11px; margin-top:4px;">Date: ________________</div>
+            </div>
+
+            <!-- CEO - RIGHT (float right as requested) -->
+            <div class="signature-box" style="text-align:right;">
+                <div class="signature-title">Signature of CEO</div>
+                <div class="signature-line"></div>
+                <div class="signature-name">______________________________</div>
+                <div style="font-size:11px; margin-top:4px;">Date: ________________</div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            Confidential • SmartSystem Internal Use Only • Generated on {{ report_date|date:"d M Y H:i" }}
+        </div>
+
+    </div>
+</body>
+</html>

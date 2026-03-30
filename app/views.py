@@ -3067,6 +3067,43 @@ class EmployeeKPIListView(LoginRequiredMixin, ManagementRequiredMixin, ListView)
         context["current_month"] = datetime.now().month
         return context
 
+from django.views.generic import View
+
+class KPIReportPDFView(LoginRequiredMixin, ManagementRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        year = int(request.GET.get('year', datetime.now().year))
+        month = int(request.GET.get('month', datetime.now().month))
+        month_name = datetime(year, month, 1).strftime('%B')
+
+        # Aggregate total score per employee for the selected period
+        employees = CustomUser.objects.filter(
+            kpis__year=year,
+            kpis__month=month
+        ).distinct().annotate(
+            total_score=Sum('kpis__score')
+        ).order_by('full_name')
+
+        context = {
+            'year': year,
+            'month_name': month_name,
+            'report_date': datetime.now(),
+            'employees': [
+                {
+                    'full_name': emp.full_name or emp.username,
+                    'username': emp.username,
+                    'total_score': emp.total_score or 0
+                } for emp in employees
+            ]
+        }
+
+        html_string = render_to_string('kpi/admin_kpi_report.html', context)
+        pdf = HTML(string=html_string).write_pdf()
+
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="KPI_Report_{month_name}_{year}.pdf"'
+        return response
+    
+
 class EmployeeKPIDetailView(LoginRequiredMixin, AdminRequiredMixin, DetailView):
     model = CustomUser
     template_name = 'kpi/employee_kpi_detail.html'

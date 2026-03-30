@@ -68,7 +68,8 @@ urlpatterns = [
     path('vacation-requests/', views.vacation_requests, name='vacation_requests'),
     path('add-vacation/', views.add_vacations, name='add_vacations'),
     path('process-vacation/', views.process_vacation, name='process_vacation'),
-    path('settings/',views.employee_settings, name='settings')
+    path('settings/',views.employee_settings, name='settings'),
+    path('kpi-report/', views.KPIReportPDFView.as_view(), name='kpi_report_pdf'),
     
 
 ]
