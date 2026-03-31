@@ -238,6 +238,8 @@ class Assignement(models.Model):
                                    related_name="created_assignements")
     deadline = models.DateTimeField()
 
+    class Meta:
+        ordering = ['-deadline']
 
 class KPICategory(models.Model):
     name = models.CharField(max_length=100, unique=True)  # e.g., 'Project/Services Based KPIs', 'Personal KPIs', 'Business Contribution KPIs'

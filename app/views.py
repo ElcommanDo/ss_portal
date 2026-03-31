@@ -2824,11 +2824,13 @@ def assignement_create(request):
             assignment =Assignement.objects.create(employee=CustomUser.objects.get(id=data.get("employee")),
                                        body=data.get("body"),
                                        status="Pending",
-                                       project=Project.objects.get(id=data.get("project")),
                                        created_by=request.user,
                                        priority=data.get("priority"),
                                        deadline=data.get("deadline")
                                        )
+            if data.get("project"):
+                assignment.project=Project.objects.get(id=data.get("project")),
+                assignment.save()
             subject = f"🚀 New Mission Assigned: {assignment.project.name if assignment.project else 'General Task'}"
 
             accept_url = request.build_absolute_uri(
@@ -2885,13 +2887,15 @@ def missions_list(request):
             assignment =Assignement.objects.create(employee=CustomUser.objects.get(id=data.get("employee")),
                                        body=data.get("body"),
                                        status="Pending",
-                                       project=Project.objects.get(id=data.get("project")),
                                        created_by=request.user,
                                        priority=data.get("priority"),
                                        deadline=data.get("deadline")
                                        )
             subject = f"🚀 New Mission Assigned: {assignment.project.name if assignment.project else 'General Task'}"
-
+            if data.get("project"):
+                assignment.project=Project.objects.get(id=data.get("project")),
+                assignment.save()
+            
             accept_url = request.build_absolute_uri(
                 reverse('accept_mission', kwargs={'pk': assignment.pk})
             )
@@ -3091,8 +3095,8 @@ class KPIReportPDFView(LoginRequiredMixin, ManagementRequiredMixin, View):
                 {
                     'full_name': emp.full_name or emp.username,
                     'username': emp.username,
-                    'total_score': emp.total_score or 0
-                } for emp in employees
+                    'total_score': round(emp.total_score,2) or 0
+                } for emp in employees if emp.username not in ['semad', 'm.mohamed']
             ]
         }
 
@@ -3100,7 +3104,7 @@ class KPIReportPDFView(LoginRequiredMixin, ManagementRequiredMixin, View):
         pdf = HTML(string=html_string).write_pdf()
 
         response = HttpResponse(pdf, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="KPI_Report_{month_name}_{year}.pdf"'
+        response['Content-Disposition'] = f'Inline; filename="KPI_Report_{month_name}_{year}.pdf"'
         return response
     
 

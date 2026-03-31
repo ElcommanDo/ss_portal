@@ -251,7 +251,7 @@
                         <span class="username">@{{ employee.username }}</span>
                     </td>
                     <td style="text-align: center;">
-                        {% with score=employee.total_score|floatformat:2 %}
+                        {% with score=employee.total_score %}
                             {% if score >= 90 %}
                                 <span class="total-score score-high">{{ score }} %</span>
                             {% elif score >= 80 %}
