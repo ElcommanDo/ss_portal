@@ -214,7 +214,6 @@ tzdata
 unittest2
 uritemplate
 urllib3
-
 vboxapi
 waitress
 wasabi
