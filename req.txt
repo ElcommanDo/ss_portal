@@ -172,7 +172,7 @@ pyserial==3.5
 python-dateutil==2.9.0.post0
 python-multipart==0.0.10
 pytz==2022.7.1
-PyYAML==6.0
+PyYAML
 referencing==0.37.0
 regex==2026.4.4
 requests==2.32.3
