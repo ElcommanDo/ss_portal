@@ -226,10 +226,11 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-9">
                 <!-- 1 -->
+             {%for skill in request.user.profile.skills%}
                 <div class="fade-in">
                     <div class="flex justify-between mb-2 text-xs">
                         <div class="flex items-center gap-x-2">
-                            <span class="font-medium">Tailwind CSS &amp; Modern Styling</span>
+                            <span class="font-medium">{{skill}}</span>
                             <i class="fa-solid fa-circle-check text-emerald-500"></i>
                         </div>
                         <span class="font-mono font-semibold text-blue-600">98%</span>
@@ -238,71 +239,7 @@
                         <div class="skill-bar" data-width="98"></div>
                     </div>
                 </div>
-                <!-- 2 -->
-                <div class="fade-in">
-                    <div class="flex justify-between mb-2 text-xs">
-                        <div class="flex items-center gap-x-2">
-                            <span class="font-medium">React &amp; Next.js 15</span>
-                            <i class="fa-solid fa-circle-check text-emerald-500"></i>
-                        </div>
-                        <span class="font-mono font-semibold text-blue-600">95%</span>
-                    </div>
-                    <div class="bg-zinc-200 h-1.5 rounded-full">
-                        <div class="skill-bar" data-width="95"></div>
-                    </div>
-                </div>
-                <!-- 3 -->
-                <div class="fade-in">
-                    <div class="flex justify-between mb-2 text-xs">
-                        <div class="flex items-center gap-x-2">
-                            <span class="font-medium">TypeScript</span>
-                            <i class="fa-solid fa-circle-check text-emerald-500"></i>
-                        </div>
-                        <span class="font-mono font-semibold text-blue-600">93%</span>
-                    </div>
-                    <div class="bg-zinc-200 h-1.5 rounded-full">
-                        <div class="skill-bar" data-width="93"></div>
-                    </div>
-                </div>
-                <!-- 4 -->
-                <div class="fade-in">
-                    <div class="flex justify-between mb-2 text-xs">
-                        <div class="flex items-center gap-x-2">
-                            <span class="font-medium">UI/UX Design Systems (Figma)</span>
-                            <i class="fa-solid fa-circle-check text-emerald-500"></i>
-                        </div>
-                        <span class="font-mono font-semibold text-blue-600">90%</span>
-                    </div>
-                    <div class="bg-zinc-200 h-1.5 rounded-full">
-                        <div class="skill-bar" data-width="90"></div>
-                    </div>
-                </div>
-                <!-- 5 -->
-                <div class="fade-in">
-                    <div class="flex justify-between mb-2 text-xs">
-                        <div class="flex items-center gap-x-2">
-                            <span class="font-medium">Framer Motion Animations</span>
-                            <i class="fa-solid fa-circle-check text-emerald-500"></i>
-                        </div>
-                        <span class="font-mono font-semibold text-blue-600">88%</span>
-                    </div>
-                    <div class="bg-zinc-200 h-1.5 rounded-full">
-                        <div class="skill-bar" data-width="88"></div>
-                    </div>
-                </div>
-                <!-- 6 -->
-                <div class="fade-in">
-                    <div class="flex justify-between mb-2 text-xs">
-                        <div class="flex items-center gap-x-2">
-                            <span class="font-medium">Performance Optimization</span>
-                            <i class="fa-solid fa-circle-check text-emerald-500"></i>
-                        </div>
-                        <span class="font-mono font-semibold text-blue-600">92%</span>
-                    </div>
-                    <div class="bg-zinc-200 h-1.5 rounded-full">
-                        <div class="skill-bar" data-width="92"></div>
-                    </div>
-                </div>
+                {%endfor%}             
             </div>
         </div>
     </section>

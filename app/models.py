@@ -101,9 +101,10 @@ class employeeProfile(models.Model):
     bio = models.TextField(default=' ')
     linkedin = models.URLField(default='https://Example.linkedin.com/profile')
     cv = models.FileField(upload_to="CVs", null=True, blank=True)
+    skills = models.JSONField(default=list, blank=True, null=True)   # This stores the extracted skills
+    cv_uploaded_at = models.DateTimeField(null=True, blank=True)    
 
 class Skill(models.Model):
-    profile = models.ForeignKey(employeeProfile, on_delete=models.CASCADE, related_name='skills')
     title = models.CharField(max_length=220)
     level = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)])
 

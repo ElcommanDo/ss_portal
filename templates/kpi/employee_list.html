@@ -1,6 +1,15 @@
 {% extends 'base.html' %}
 
 {% block content %}
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message|safe }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
 <div class="container-fluid px-4 py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -30,7 +39,7 @@
         </div>
     </div>
 
-    <!-- ==================== NEW DOWNLOAD BUTTON SECTION ==================== -->
+    <!-- ==================== NEW DOWNLOAD / SHARE BUTTON SECTION ==================== -->
     <div class="d-flex justify-content-start align-items-center mb-4 gap-3">
         
         <!-- Existing KPI Templates button (kept as-is) -->
@@ -40,19 +49,20 @@
             </a>
         {% endif %}
 
-        <!-- NEW: Download KPI Report Button -->
+        <!-- UPDATED: Download/Share KPI Report Button now opens modal -->
         {% if user.is_superuser or user.role == "admin" or user.role == "delivery-manager" or user.role == "top-manager" or user.role == "ceo" %}
-            <a href="{% url 'kpi_report_pdf' %}?year={{ current_year }}&month={{ current_month }}"
-               class="btn btn-success shadow-sm px-5 py-2 fw-semibold"
-               target="_blank">
+            <button type="button"
+                    class="btn btn-success shadow-sm px-5 py-2 fw-semibold"
+                    data-bs-toggle="modal"
+                    data-bs-target="#kpiReportModal">
                 <i class="fas fa-file-pdf me-2"></i>
-                Download KPI Report ({{ current_month|date:"F" }} {{ current_year }})
-            </a>
+                Share / Download KPI Report
+            </button>
             
-            <!-- Optional: Small info badge showing the period -->
+            <!-- Optional: Small info badge showing the default period -->
             <span class="badge bg-light text-dark px-3 py-2 d-flex align-items-center">
                 <i class="fas fa-calendar-alt me-1"></i>
-                Period: <strong class="ms-1">{{ current_month|date:"F" }} {{ current_year }}</strong>
+                Default period: <strong class="ms-1">{{ current_month|date:"F" }} {{ current_year }}</strong>
             </span>
         {% endif %}
         
@@ -152,10 +162,131 @@
     {% endif %}
 </div>
 
+<!-- ====================== KPI REPORT MODAL ====================== -->
+<div class="modal fade" id="kpiReportModal" tabindex="-1" aria-labelledby="kpiReportModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="kpiReportModalLabel">
+                    <i class="fas fa-file-pdf text-success me-2"></i>
+                    Share / Download KPI Report
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <!-- FORM NOW WRAPS EVERYTHING THAT NEEDS TO BE SUBMITTED -->
+            <form id="shareKpiForm" method="post" action="{% url 'send_kpi_report_email' %}">
+                {% csrf_token %}
+                
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- Period Selection -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Report Period</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small">Year <span class="text-danger">*</span></label>
+                                    <select id="modal_year" name="year" class="form-select form-select-lg">
+                                        <option value="{{ current_year }}" selected>{{ current_year }} (current)</option>
+                                        <option value="{{ current_year|add:"-1" }}">{{ current_year|add:"-1" }} (last year)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small">Month <span class="text-danger">*</span></label>
+                                    <select id="modal_month" name="month" class="form-select form-select-lg">
+                                        <option value="1"  {% if current_month == 1 %}selected{% endif %}>January</option>
+                                        <option value="2"  {% if current_month == 2 %}selected{% endif %}>February</option>
+                                        <option value="3"  {% if current_month == 3 %}selected{% endif %}>March</option>
+                                        <option value="4"  {% if current_month == 4 %}selected{% endif %}>April</option>
+                                        <option value="5"  {% if current_month == 5 %}selected{% endif %}>May</option>
+                                        <option value="6"  {% if current_month == 6 %}selected{% endif %}>June</option>
+                                        <option value="7"  {% if current_month == 7 %}selected{% endif %}>July</option>
+                                        <option value="8"  {% if current_month == 8 %}selected{% endif %}>August</option>
+                                        <option value="9"  {% if current_month == 9 %}selected{% endif %}>September</option>
+                                        <option value="10" {% if current_month == 10 %}selected{% endif %}>October</option>
+                                        <option value="11" {% if current_month == 11 %}selected{% endif %}>November</option>
+                                        <option value="12" {% if current_month == 12 %}selected{% endif %}>December</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Employees Multi-Select (uses all_employees) -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Employees to receive the report by email</label>
+                            <select id="modal_employees" name="employees" class="form-select" multiple size="8" style="height: 320px;">
+                                {% for employee in all_employees %}
+                                <option value="{{ employee.pk }}">
+                                    {{ employee.full_name|default:employee.username }} 
+                                    (@{{ employee.username }}) 
+                                    — {{ employee.get_role_display|default:"Employee" }}
+                                </option>
+                                {% empty %}
+                                <option disabled>No employees found</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text text-muted mt-1">
+                                <i class="fas fa-info-circle"></i> 
+                                Hold <strong>Ctrl</strong> (Windows) or <strong>Cmd</strong> (Mac) to select multiple employees.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    
+                    <!-- Download PDF (still works independently) -->
+                    <button type="button" onclick="downloadKpiReport()" class="btn btn-info px-4">
+                        <i class="fas fa-download me-1"></i> Download PDF
+                    </button>
+                    
+                    <!-- Send Email -->
+                    <button type="button" onclick="submitShareForm()" class="btn btn-success px-5 fw-semibold">
+                        <i class="fas fa-paper-plane me-2"></i> Send Email Report
+                    </button>
+                </div>
+            </form>
+            <!-- End of FORM -->
+            
+        </div>
+    </div>
+</div>
+
 <style>
     .table-hover tbody tr:hover { background-color: rgba(13, 110, 253, 0.02); transition: 0.2s; }
     .page-link { color: #495057; }
     .page-item.active .page-link { background-color: #0d6efd; border-color: #0d6efd; color: white !important; }
     .form-control:focus { box-shadow: none; border: 1px solid #0d6efd; }
+    #modal_employees option { padding: 8px 12px; }
 </style>
+
+<script>
+    function downloadKpiReport() {
+        const year = document.getElementById('modal_year').value;
+        const month = document.getElementById('modal_month').value;
+        if (!year || !month) {
+            alert('Please select year and month');
+            return;
+        }
+        const url = "{% url 'kpi_report_pdf' %}?year=" + year + "&month=" + month;
+        window.open(url, '_blank');
+    }
+    
+    function submitShareForm() {
+        const employeesSelect = document.getElementById('modal_employees');
+        
+        if (employeesSelect.selectedOptions.length === 0) {
+            if (!confirm('No employees selected.\nDo you want to proceed anyway?')) {
+                return;
+            }
+        }
+        
+        // Submit the form (year, month, and employees are all inside the form now)
+        document.getElementById('shareKpiForm').submit();
+    }
+</script>
 {% endblock %}

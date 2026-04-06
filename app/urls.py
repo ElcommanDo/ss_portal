@@ -70,6 +70,9 @@ urlpatterns = [
     path('process-vacation/', views.process_vacation, name='process_vacation'),
     path('settings/',views.employee_settings, name='settings'),
     path('kpi-report/', views.KPIReportPDFView.as_view(), name='kpi_report_pdf'),
+    path('kpi-report/share-email/', views.SendKPIReportEmailView.as_view(), name='send_kpi_report_email'),
+    path('skills/', views.skills_dashboard, name='skills'),
+    path('skills/re-extract/<int:user_id>/', views.re_extract_skills, name='re_extract_skills'),
+    path('uplaod-cv/', views.upload_cv, name='upload_cv'),
     
-
 ]

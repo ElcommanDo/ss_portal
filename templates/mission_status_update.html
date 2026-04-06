@@ -1,0 +1,81 @@
+<div style="font-family: sans-serif; max-width: 600px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin: 0 auto; background-color: #ffffff;">
+    
+    <!-- Header -->
+    <div style="background-color: #1e2937; padding: 30px; text-align: center; color: white;">
+        <h1 style="margin: 0; font-size: 26px; letter-spacing: 1px;">
+            📊 MISSION STATUS UPDATE
+        </h1>
+    </div>
+
+    <div style="padding: 30px;">
+        
+        <p style="color: #475569; font-size: 16px;">
+            Hello <strong>{{ creator_name }}</strong>,
+        </p>
+        
+        <p style="color: #475569;">
+            The status of the mission assigned to <strong>{{ employee_name }}</strong> has been updated.
+        </p>
+
+        <!-- Mission Details Card -->
+        <div style="background-color: #f8fafc; padding: 25px; border-radius: 12px; border-left: 6px solid #3b82f6; margin: 25px 0;">
+            
+            <h3 style="margin: 0 0 15px 0; color: #1e293b;">Mission Details</h3>
+            
+            <table style="width: 100%; border-collapse: collapse; color: #475569;">
+                <tr>
+                    <td style="padding: 8px 0; width: 140px; font-weight: bold;">Project:</td>
+                    <td style="padding: 8px 0; color: #3b82f6; font-weight: 500;">{{ project_name }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Assigned To:</td>
+                    <td style="padding: 8px 0;">{{ employee_name }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Priority:</td>
+                    <td style="padding: 8px 0;">
+                        <span style="color: {{ priority_color }}; font-weight: bold;">{{ priority }}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Deadline:</td>
+                    <td style="padding: 8px 0;">{{ deadline }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold; vertical-align: top;">New Status:</td>
+                    <td style="padding: 8px 0;">
+                        <span style="background-color: {{ status_color }}; color: white; padding: 6px 14px; border-radius: 9999px; font-weight: bold; font-size: 15px;">
+                            {{ new_status }}
+                        </span>
+                    </td>
+                </tr>
+            </table>
+
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+
+            <p style="margin: 0; color: #1e293b;"><strong>Objectives / Description:</strong></p>
+            <p style="color: #475569; line-height: 1.6; margin-top: 8px;">
+                {{ body }}
+            </p>
+        </div>
+
+        <!-- Status History Note -->
+        <p style="color: #64748b; font-size: 14px; text-align: center; margin: 30px 0;">
+            Updated on: <strong>{{ updated_at }}</strong>
+        </p>
+
+        <div style="text-align: center; margin-top: 35px;">
+            <a href="{{ mission_detail_url }}" 
+               target="_blank"
+               style="background-color: #3b82f6; color: white; padding: 14px 32px; 
+                      text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                View Full Mission Details
+            </a>
+        </div>
+
+        <p style="margin-top: 40px; font-size: 12px; color: #94a3b8; text-align: center;">
+            This is an automated notification from the Smart Systems Command Center.<br>
+            Please do not reply to this email.
+        </p>
+    </div>
+</div>

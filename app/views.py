@@ -579,7 +579,8 @@ def user_create(request):
         user = models.CustomUser.objects.create(
             username = data.get("username"),
             full_name = data.get('full_name'),
-            role = data.get('role')
+            role = data.get('role'),
+            email = data.get('email')
         ) 
         if data.get("team_pk"):
             user.team = models.Team.objects.get(pk = data.get("team_pk")) 
@@ -3011,10 +3012,43 @@ class ManagementRequiredMixin(UserPassesTestMixin):
         return super().handle_no_permission()
 
 # KPI Template Views
+from django.views.generic import ListView
+from .models import KPITemplate, KPICategory
+
 class KPITemplateListView(LoginRequiredMixin, ManagementRequiredMixin, ListView):
     model = KPITemplate
-    template_name = 'kpi/template_list.html'  # HTML: List all templates with edit/delete links
+    template_name = 'kpi/template_list.html'
+    context_object_name = 'object_list'   # optional, but explicit is good
+    paginate_by = 20   # optional: add pagination if you have many templates
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        category_id = self.request.GET.get('category')
+        source = self.request.GET.get('source')
+
+        if category_id:
+            queryset = queryset.filter(category_id=category_id)
+
+        if source:
+            queryset = queryset.filter(source=source)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Pass all categories and sources for the filter dropdowns
+        context['categories'] = KPICategory.objects.all().order_by('name')
+        context['sources'] = KPITemplate.SOURCE  # the choices tuple
+
+        # Preserve current filter values in the form (for selected="selected")
+        context['selected_category'] = self.request.GET.get('category', '')
+        context['selected_source'] = self.request.GET.get('source', '')
+
+        return context
+
+        
 from django.views.generic import CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import KPITemplate, KPICategory
@@ -3069,6 +3103,7 @@ class EmployeeKPIListView(LoginRequiredMixin, ManagementRequiredMixin, ListView)
         context = super().get_context_data(**kwargs)
         context["current_year"] = datetime.now().year
         context["current_month"] = datetime.now().month
+        context['all_employees'] = self.get_queryset().filter(username__in=['abd.mon.sh', 'afarouk', 'semad',  'amustafa']).order_by('full_name')
         return context
 
 from django.views.generic import View
@@ -3106,8 +3141,136 @@ class KPIReportPDFView(LoginRequiredMixin, ManagementRequiredMixin, View):
         response = HttpResponse(pdf, content_type='application/pdf')
         response['Content-Disposition'] = f'Inline; filename="KPI_Report_{month_name}_{year}.pdf"'
         return response
-    
 
+# views.py
+from django.shortcuts import redirect
+from django.contrib import messages
+from django.core.mail import EmailMessage
+from django.conf import settings
+from django.views import View
+from django.template.loader import render_to_string
+from django.db.models import Sum
+from datetime import datetime
+
+# views.py
+from django.shortcuts import redirect
+from django.contrib import messages
+from django.core.mail import EmailMessage
+from django.conf import settings
+from django.views import View
+from django.template.loader import render_to_string
+from django.db.models import Sum
+from datetime import datetime
+
+
+class SendKPIReportEmailView(LoginRequiredMixin, ManagementRequiredMixin, View):
+    """
+    Sends KPI Report PDF + nice HTML email to selected employees.
+    """
+    def post(self, request, *args, **kwargs):
+        year = int(request.POST.get('year', datetime.now().year))
+        month = int(request.POST.get('month', datetime.now().month))
+        employee_ids = request.POST.getlist('employees')   # list of PKs from modal
+
+        if not employee_ids:
+            messages.warning(request, "No employees were selected. Please select at least one employee.")
+            return redirect('employee_kpi_list')
+
+        # Get selected employees
+        selected_employees = CustomUser.objects.filter(pk__in=employee_ids).only(
+            'pk', 'full_name', 'username', 'email'
+        )
+
+        month_name = datetime(year, month, 1).strftime('%B')
+
+        # === Build report data (same as your PDF view) ===
+        employees_for_report = CustomUser.objects.filter(
+            kpis__year=year,
+            kpis__month=month
+        ).distinct().annotate(
+            total_score=Sum('kpis__score')
+        ).order_by('full_name')
+
+        report_context = {
+            'year': year,
+            'month_name': month_name,
+            'report_date': datetime.now(),
+            'employees': [
+                {
+                    'full_name': emp.full_name or emp.username,
+                    'username': emp.username,
+                    'total_score': round(emp.total_score or 0, 2)
+                }
+                for emp in employees_for_report
+                if emp.username not in ['semad', 'm.mohamed']
+            ]
+        }
+
+        # Generate PDF once (same as KPIReportPDFView)
+        html_string = render_to_string('kpi/admin_kpi_report.html', report_context)
+        pdf_bytes = HTML(string=html_string).write_pdf()
+
+        # === Send emails ===
+        subject = f"KPI Report - {month_name} {year}"
+        sent_count = 0
+        skipped_count = 0
+
+        for employee in selected_employees:
+            if not employee.email:
+                skipped_count += 1
+                continue
+
+            # Personalized email context
+            email_context = {
+                'employee': employee,
+                'year': year,
+                'month_name': month_name,
+                'report_date': datetime.now(),
+                'total_employees_in_report': len(report_context['employees']),
+            }
+
+            html_body = render_to_string('kpi/send_kpi_report_to_manager.html', email_context)
+
+            email = EmailMessage(
+                subject=subject,
+                body=html_body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[employee.email],
+            )
+            email.content_subtype = "html"
+
+            email.attach(
+                filename=f"KPI_Report_{month_name}_{year}.pdf",
+                content=pdf_bytes,
+                mimetype='application/pdf'
+            )
+
+            try:
+                email.send(fail_silently=False)
+                sent_count += 1
+            except Exception as e:
+                # In development you will see the error in console
+                print(f"❌ Email failed for {employee.email}: {e}")
+                skipped_count += 1
+
+        # === Better user feedback ===
+        if sent_count > 0:
+            messages.success(
+                request,
+                f"✅ KPI Report for <strong>{month_name} {year}</strong> "
+                f"was successfully sent to {sent_count} employee(s)."
+            )
+        elif skipped_count > 0:
+            messages.warning(
+                request,
+                f"⚠️ No emails were sent. {skipped_count} selected employee(s) "
+                f"do not have an email address configured."
+            )
+        else:
+            messages.error(request, "❌ Something went wrong. No report was sent.")
+
+        return redirect('employee_kpi_list')
+    
 class EmployeeKPIDetailView(LoginRequiredMixin, AdminRequiredMixin, DetailView):
     model = CustomUser
     template_name = 'kpi/employee_kpi_detail.html'
@@ -3356,17 +3519,79 @@ def export_kpi_pdf(request, employee_id, year, month):
     response.write(html.write_pdf())
     return response
 
+# @login_required
+# def mission_update(request, mission_id):
+#     if request.method=="POST":
+#         data = request.POST
+#         mission = Assignement.objects.get(id=mission_id)
+#         if mission.employee == request.user:
+#             mission.status = data.get("status")
+#             mission.save()
+#             send_mail(
+#                 f"Mission Status Changed for employee {mission.employee.username}",
+#                 message,
+#                 settings.DEFAULT_FROM_EMAIL,
+#                 [creator.email],
+#                 fail_silently=False,
+#             )
+
+#             messages.success(request, 'the mission Updated Successffully.')
+#             return redirect('missions_list')
+
+from .utils import get_priority_color, get_status_color
+
 @login_required
 def mission_update(request, mission_id):
-    if request.method=="POST":
-        data = request.POST
-        mission = Assignement.objects.get(id=mission_id)
-        if mission.employee == request.user:
-            mission.status = data.get("status")
-            mission.save()
-            messages.success(request, 'the mission Updated Successffully.')
+    if request.method == "POST":
+        mission = get_object_or_404(Assignement, id=mission_id)
+
+        if mission.employee != request.user:
+            messages.error(request, 'You are not authorized to update this mission.')
             return redirect('missions_list')
 
+        new_status = request.POST.get("status")
+        if not new_status:
+            messages.error(request, 'Status is required.')
+            return redirect('mission_detail', mission_id=mission_id)  # or wherever you came from
+
+        old_status = mission.status
+        mission.status = new_status
+        mission.save()
+
+        context = {
+            'creator_name': mission.created_by.full_name or mission.created_by.username,
+            'employee_name': mission.employee.full_name or mission.employee.username,
+            'project_name': mission.project.name if mission.project else 'No Project',
+            'priority': mission.priority.upper(),
+            'priority_color': get_priority_color(mission.priority),
+            'deadline': mission.deadline.strftime("%d %B %Y, %I:%M %p"),
+            'new_status': new_status.upper(),
+            'status_color': get_status_color(new_status),
+            'body': mission.body,
+            'updated_at': mission.updated_at.strftime("%d %B %Y at %I:%M %p"),
+            'mission_detail_url': request.build_absolute_uri(
+                reverse('missions_list')
+            ),
+        }
+
+        html_message = render_to_string('mission_status_update.html', context)
+        plain_message = strip_tags(html_message)
+
+        subject = f"🚀 Mission Status Updated - {mission.project.name if mission.project else 'General Mission'}"
+
+        send_mail(
+            subject=subject,
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[mission.created_by.email, 'semad@smartsystemeg.com', 'amustafa@smartsystemeg.com'],
+            html_message=html_message,
+            fail_silently=False,
+        )
+
+        messages.success(request, f'Mission status successfully updated to: {new_status}')
+        return redirect('missions_list')
+
+    return redirect('missions_list')
 
 def employee_profile(request, employee_id=None):
     user = None
@@ -3528,5 +3753,113 @@ def employee_settings(request):
     except Exception as e:
         messages.warning(request, f"Error Happen {e}")
         return redirect("settings")
-    
-        
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.utils import timezone
+from .utils import extract_skills_from_pdf
+from .models import employeeProfile   # ← your real model
+
+
+@login_required
+def skills_dashboard(request):
+    context = {
+        'is_admin': request.user.is_staff,
+    }
+
+    if request.user.is_staff:
+        # ==================== ADMIN VIEW ====================
+        profiles = employeeProfile.objects.select_related('user').exclude(user__is_superuser=True)
+
+        users_data = []
+        for profile in profiles:
+            users_data.append({
+                'user': profile.user,
+                'skills': profile.skills or [],      # ← now it's always a list
+                'has_cv': bool(profile.cv),
+            })
+
+        context['users_data'] = users_data
+
+    else:
+        # ==================== EMPLOYEE VIEW ====================
+        try:
+            profile = request.user.profile          # this works because of related_name='profile'
+            context['my_skills'] = profile.skills or []
+        except employeeProfile.DoesNotExist:
+            context['my_skills'] = []
+
+    return render(request, 'skills.html', context)
+from django.contrib import messages
+from django.shortcuts import redirect
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from .utils import extract_skills_from_pdf
+from .models import employeeProfile   # Make sure to import your model
+
+
+@login_required
+def upload_cv(request):
+    if request.method == 'POST' and request.FILES.get('resume'):
+        resume_file = request.FILES['resume']
+
+        # Security: Only allow PDF files
+        if not resume_file.name.lower().endswith('.pdf'):
+            messages.error(request, 'Only PDF files are allowed!')
+            return redirect('skills')
+
+        try:
+            # Get the user's profile
+            profile, created = employeeProfile.objects.get_or_create(user=request.user)
+
+            # 1. Extract skills using your AI utility
+            skills = extract_skills_from_pdf(resume_file)
+
+            # 2. Save the CV file properly
+            profile.cv = resume_file          # ← Direct assignment (this is correct)
+
+            # 3. Save extracted skills and timestamp
+            profile.skills = skills
+            profile.cv_uploaded_at = timezone.now()
+            profile.save()
+
+            messages.success(request, f'CV uploaded successfully! {len(skills)} skills extracted.')
+            return redirect('skills')
+
+        except Exception as e:
+            messages.error(request, f'Error processing CV: {str(e)}')
+            return redirect('skills')
+
+    # If GET request (direct access)
+    messages.warning(request, 'Please upload a CV using the form.')
+    return redirect('skills')
+
+@login_required
+def re_extract_skills(request, user_id):
+   
+    try:
+        profile = employeeProfile.objects.select_related('user').get(user_id=user_id)
+
+        if not profile.cv:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'This user has not uploaded a CV yet.'
+            })
+
+        # Re-extract skills from the saved CV
+        with profile.cv.open('rb') as file_obj:
+            new_skills = extract_skills_from_pdf(file_obj)
+
+        profile.skills = new_skills
+        profile.save()
+
+        return JsonResponse({
+            'status': 'success',
+            'skills': new_skills,
+            'message': f'Successfully re-extracted {len(new_skills)} skills.'
+        })
+
+    except employeeProfile.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Profile not found.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})

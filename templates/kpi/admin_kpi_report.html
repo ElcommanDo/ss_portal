@@ -254,10 +254,6 @@
                         {% with score=employee.total_score %}
                             {% if score >= 90 %}
                                 <span class="total-score score-high">{{ score }} %</span>
-                            {% elif score >= 80 %}
-                                <span class="total-score score-good">{{ score }} %</span>
-                            {% elif score >= 70 %}
-                                <span class="total-score score-satisfactory">{{ score }} %</span>
                             {% else %}
                                 <span class="total-score score-needs-improvement">{{ score }} %</span>
                             {% endif %}

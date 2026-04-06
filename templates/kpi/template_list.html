@@ -9,6 +9,53 @@
         </a>
     </div>
 
+    <!-- === FILTER FORM === -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-muted">Category</label>
+                    <select name="category" class="form-select">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.pk }}" 
+                                {% if selected_category == cat.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-muted">Source</label>
+                    <select name="source" class="form-select">
+                        <option value="">All Sources</option>
+                        {% for value, label in sources %}
+                        <option value="{{ value }}" 
+                                {% if selected_source == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                </div>
+
+                {% if selected_category or selected_source %}
+                <div class="col-12">
+                    <a href="{% url 'kpi_template_list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-times me-1"></i>Clear Filters
+                    </a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
     <div class="card border-0 shadow-sm" style="border-radius: 12px;">
         <div class="card-body p-0">
             <div class="table-responsive">
