@@ -59,8 +59,7 @@ django-stdimage==6.0.1
 django-tinymce==3.4.0
 django-weasyprint==2.4.0
 djangorestframework==3.13.1
-djangorestframework-jwt==1.11.0
-djangorestframework-simplejwt==5.2.0
+
 docker==7.1.0
 docx2txt==0.9
 en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
