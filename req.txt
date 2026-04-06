@@ -192,3 +192,12 @@ xlrd
 xlwt
 zipp
 zopfli
+pyresparser
+spacy
+nltk
+pandas
+python-docx
+pdfminer.six
+xlsxwriter
+chardet
+requests
