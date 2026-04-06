@@ -201,3 +201,4 @@ pdfminer.six
 xlsxwriter
 chardet
 requests
+pdfplumber
