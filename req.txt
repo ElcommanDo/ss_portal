@@ -213,17 +213,3 @@ typing_extensions
 tzdata
 unittest2
 uritemplate
-urllib3
-vboxapi
-waitress
-wasabi
-weasel
-weasyprint
-webencodings
-websockets
-Werkzeug
-wrapt
-xlrd
-xlwt
-zipp
-zopfli
