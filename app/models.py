@@ -283,7 +283,7 @@ class KPITemplate(models.Model):
 
 class EmployeeKPI(models.Model):
     employee = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='kpis')
-    kpi_template = models.ForeignKey(KPITemplate, on_delete=models.PROTECT)
+    kpi_template = models.ForeignKey(KPITemplate, on_delete=models.CASCADE)
     grade = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('10.00'), validators=[MinValueValidator(0)])
     score = models.DecimalField(max_digits=5, decimal_places=2, blank=True, help_text="Automatically calculated as (grade / 10) * weight")
     notes = models.TextField(blank=True)
