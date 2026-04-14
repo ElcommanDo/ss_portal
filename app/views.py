@@ -3863,3 +3863,83 @@ def re_extract_skills(request, user_id):
         return JsonResponse({'status': 'error', 'message': 'Profile not found.'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+from django.shortcuts import render
+from django.http import StreamingHttpResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+from groq import Groq
+import os
+
+# Initialize Groq client
+client = Groq(api_key="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")
+
+
+@csrf_exempt
+def ask_groq(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('message', '').strip()
+
+            if not user_message:
+                return StreamingHttpResponse(
+                    "data: " + json.dumps({"content": "Please type a message."}) + "\n\n",
+                    content_type='text/event-stream'
+                )
+
+            def stream_response():
+                try:
+                    completion = client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=[
+                            {"role": "system", "content": "You are a helpful, friendly, and concise assistant."},
+                            {"role": "user", "content": user_message}
+                        ],
+                        temperature=0.7,
+                        max_tokens=1500,
+                        stream=True,                    # ← This enables real-time streaming
+                    )
+
+                    for chunk in completion:
+                        if chunk.choices[0].delta.content:
+                            content = chunk.choices[0].delta.content
+                            yield f"data: {json.dumps({'content': content})}\n\n"
+
+                    # Send done signal
+                    yield "data: [DONE]\n\n"
+
+                except Exception as e:
+                    yield f"data: {json.dumps({'content': 'Sorry, an error occurred while processing your request.'})}\n\n"
+                    yield "data: [DONE]\n\n"
+
+            return StreamingHttpResponse(
+                stream_response(),
+                content_type='text/event-stream',
+                headers={
+                    'Cache-Control': 'no-cache',
+                    'X-Accel-Buffering': 'no'   # Important for streaming on some servers
+                }
+            )
+
+        except json.JSONDecodeError:
+            return StreamingHttpResponse(
+                "data: " + json.dumps({"content": "Invalid request format."}) + "\n\n",
+                content_type='text/event-stream'
+            )
+        except Exception as e:
+            return StreamingHttpResponse(
+                "data: " + json.dumps({"content": f"Server error: {str(e)}"}) + "\n\n",
+                content_type='text/event-stream'
+            )
+
+    return StreamingHttpResponse(
+        "data: " + json.dumps({"content": "Method not allowed."}) + "\n\n",
+        content_type='text/event-stream'
+    )
+
+def chatbot(request):
+    return render(request, 'askAI.html', {})
+
+
