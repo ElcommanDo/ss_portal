@@ -1,0 +1,459 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Utilization Report - CEO Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- FILTERS -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3" id="filterForm">
+                <div class="col-md-3">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">End Date</label>
+                    <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
+                </div>
+                <div class="col-md-6 d-flex gap-2 align-items-end">
+                    <button type="submit" class="btn btn-primary">Apply Filter</button>
+                    <button type="button" onclick="resetToAll()" class="btn btn-outline-secondary">Show All Data</button>
+                    <button onclick="exportCompanyPDF()" class="btn btn-danger">
+                        <i class="fas fa-file-pdf"></i> Export Company PDF
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SUMMARY CARDS -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <h6>Total Employees</h6>
+                    <h2 id="totalEmp" class="display-4 fw-bold">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <h6>Avg Utilization</h6>
+                    <h2 id="avgUtil" class="display-4 fw-bold">0%</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <h6>Total Hours Logged</h6>
+                    <h2 id="totalHours" class="display-4 fw-bold">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white h-100">
+                <div class="card-body">
+                    <h6>Top Performer</h6>
+                    <h2 id="topPerformer" class="display-4 fw-bold">—</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMPANY CHART -->
+    <div class="card shadow-sm mb-5">
+        <div class="card-header fw-bold d-flex justify-content-between">
+            Company Utilization Overview (Sun–Thu)
+            <button onclick="exportCompanyPDF()" class="btn btn-sm btn-danger">
+                <i class="fas fa-file-pdf"></i> PDF
+            </button>
+        </div>
+        <div class="card-body">
+            <canvas id="companyBarChart" height="110"></canvas>
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between">
+            <span class="fw-bold">Employee Utilization Report</span>
+            <div>
+                <button onclick="exportCSV()" class="btn btn-sm btn-success me-2">
+                    <i class="fas fa-download"></i> CSV
+                </button>
+                <button onclick="exportCompanyPDF()" class="btn btn-sm btn-danger">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <table id="employeeTable" class="table table-hover table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Employee</th>
+                        <th>Team</th>
+                        <th class="text-end">Total Hours</th>
+                        <th class="text-end">Expected</th>
+                        <th class="text-center">Utilization</th>
+                        <th class="text-center">Entries</th>
+                        <th class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 id="modalEmployeeName" class="modal-title"></h5>
+                <div>
+                    <button onclick="exportCurrentEmployeePDF()" class="btn btn-sm btn-danger me-2">
+                        <i class="fas fa-file-pdf"></i> Export PDF
+                    </button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <div id="utilBadge" class="badge fs-1 px-5 py-3 rounded-pill"></div>
+                </div>
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <h5 class="text-center">Hours per Project</h5>
+                        <canvas id="projectPieChart" height="280"></canvas>
+                    </div>
+                    <div class="col-lg-6">
+                        <h5 class="text-center">Hours by Task Type</h5>
+                        <canvas id="taskBarChart" height="280"></canvas>
+                    </div>
+                </div>
+                <h5 class="mt-5">Timesheet Entries</h5>
+                <div class="table-responsive">
+                    <table id="entriesTable" class="table table-sm table-bordered"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+
+<!-- jsPDF + autoTable -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+// MAIN DATA
+let employeesData = {{ employee_json|safe }};
+let companyChart = null;
+let pieChart = null;
+let taskChart = null;
+let currentEmployeeData = null;
+
+// Animate Counter
+function animateCounter(el, target, suffix = '') {
+    let count = 0;
+    const step = () => {
+        count += Math.ceil((target - count) / 8);
+        if (count >= target) count = target;
+        el.textContent = count + suffix;
+        if (count < target) setTimeout(step, 20);
+    };
+    step();
+}
+
+// Build Company Chart
+function buildCompanyChart() {
+    if (companyChart) companyChart.destroy();
+    companyChart = new Chart(document.getElementById('companyBarChart'), {
+        type: 'bar',
+        data: {
+            labels: employeesData.map(e => (e.full_name || e.username).substring(0,18)),
+            datasets: [{
+                label: 'Utilization %',
+                data: employeesData.map(e => e.utilization),
+                backgroundColor: employeesData.map(u => u.utilization > 25 ? '#10b981' : u.utilization > 15 ? '#3b82f6' : '#ef4444')
+            }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true, max: 120 }} }
+    });
+}
+
+// ==================== PDF with Charts + Watermark ====================
+function getHighResImage(canvas, scale = 2) {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width * scale;
+    tempCanvas.height = canvas.height * scale;
+
+    const ctx = tempCanvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.drawImage(canvas, 0, 0);
+
+    return tempCanvas.toDataURL('image/png', 1.0);
+}
+
+async function exportCompanyPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('landscape');
+
+    const start = document.getElementById('start_date').value || 'All Time';
+    const end = document.getElementById('end_date').value || 'All Time';
+    const today = new Date().toLocaleDateString('en-GB');
+
+    doc.setFontSize(20);
+    doc.text('Company Utilization Report', 15, 20);
+
+    doc.setFontSize(11);
+    doc.text(`Period: ${start} – ${end} | Generated: ${today}`, 15, 30);
+
+    // Summary
+    const totalH = employeesData.reduce((sum, e) => sum + e.total_hours, 0);
+
+    doc.autoTable({
+        startY: 40,
+        head: [['Metric', 'Value']],
+        body: [
+            ['Total Employees', {{ total_employees }}],
+            ['Average Utilization', '{{ avg_utilization }}%'],
+            ['Total Hours Logged', totalH.toFixed(1)]
+        ],
+        theme: 'grid'
+    });
+
+    // ✅ High-res Chart
+    const canvas = document.getElementById('companyBarChart');
+    const chartImg = getHighResImage(canvas, 3); // 🔥 scale 3 = very sharp
+
+    // Maintain aspect ratio
+    const imgWidth = 250;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+
+    doc.addImage(
+        chartImg,
+        'PNG',
+        15,
+        doc.lastAutoTable.finalY + 10,
+        imgWidth,
+        imgHeight
+    );
+
+    // Employee Table
+    const tableData = employeesData.map(e => [
+        e.full_name || e.username,
+        e.team,
+        e.total_hours.toFixed(2),
+        e.expected_hours,
+        e.utilization + '%',
+        e.entries_count
+    ]);
+
+    doc.autoTable({
+        startY: doc.lastAutoTable.finalY + imgHeight + 20,
+        head: [['Employee', 'Team', 'Total Hours', 'Expected', 'Utilization', 'Entries']],
+        body: tableData,
+        theme: 'striped',
+        styles: { fontSize: 9 }
+    });
+
+    doc.save(`Company_Utilization_Report_${today}.pdf`);
+}
+async function exportCurrentEmployeePDF() {
+    if (!currentEmployeeData) return;
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const today = new Date().toLocaleDateString('en-GB');
+    const data = currentEmployeeData;
+
+    doc.setFontSize(18);
+    doc.text(`${data.employee_name} - Utilization Report`, 15, 20);
+
+    doc.setFontSize(11);
+    doc.text(
+        `Period: ${document.getElementById('start_date').value || 'All Time'} – ${document.getElementById('end_date').value || 'All Time'}`,
+        15,
+        30
+    );
+    doc.text(`Generated: ${today}`, 15, 38);
+
+    // Utilization
+    doc.setFontSize(14);
+    doc.text(`Utilization: ${data.utilization}%`, 15, 55);
+    doc.text(`Hours: ${data.total_hours} / ${data.expected_hours}`, 15, 65);
+
+    let currentY = 75;
+
+    // ✅ Pie Chart (High-res)
+    if (pieChart) {
+        const pieCanvas = document.getElementById('projectPieChart');
+        const pieImg = getHighResImage(pieCanvas, 3);
+
+        const pieWidth = 80;
+        const pieHeight = pieCanvas.height * pieWidth / pieCanvas.width;
+
+        doc.addImage(pieImg, 'PNG', 15, currentY, pieWidth, pieHeight);
+    }
+
+    // ✅ Bar Chart (High-res)
+    if (taskChart) {
+        const barCanvas = document.getElementById('taskBarChart');
+        const barImg = getHighResImage(barCanvas, 3);
+
+        const barWidth = 90;
+        const barHeight = barCanvas.height * barWidth / barCanvas.width;
+
+        doc.addImage(barImg, 'PNG', 110, currentY, barWidth, barHeight);
+    }
+
+    // Projects Table
+    const projectRows = data.project_data.map(p => [
+        p.project,
+        p.hours.toFixed(2),
+        ((p.hours / data.total_hours) * 100).toFixed(1) + '%'
+    ]);
+
+    doc.autoTable({
+        startY: 170,
+        head: [['Project', 'Hours', '%']],
+        body: projectRows,
+        theme: 'grid'
+    });
+
+    // Entries Table
+    const entryRows = data.entries.map(e => [
+        e.work_date,
+        e.project,
+        e.task_description.substring(0, 50) + '...',
+        e.hours,
+        e.task_type
+    ]);
+
+    doc.autoTable({
+        startY: doc.lastAutoTable.finalY + 15,
+        head: [['Date', 'Project', 'Task', 'Hours', 'Type']],
+        body: entryRows,
+        theme: 'striped',
+        styles: { fontSize: 8 }
+    });
+
+    doc.save(`${data.employee_name.replace(/ /g, '_')}_Utilization_${today}.pdf`);
+}
+// Show Employee Detail
+function showEmployeeDetail(id) {
+    const start = document.getElementById('start_date').value || '2025-02-01';
+    const end = document.getElementById('end_date').value || '2026-04-20';
+
+    fetch(`/reports/employee-detail/${id}/?start_date=${start}&end_date=${end}`)
+        .then(r => r.json())
+        .then(data => {
+            currentEmployeeData = data;
+            document.getElementById('modalEmployeeName').textContent = data.employee_name;
+
+            const badge = document.getElementById('utilBadge');
+            const color = data.utilization > 25 ? 'success' : data.utilization > 15 ? 'primary' : 'warning';
+            badge.className = `badge bg-${color} fs-1 px-5 py-4 rounded-pill`;
+            badge.innerHTML = `${data.utilization}% <small>UTILIZATION</small><br><span class="fs-5">${data.total_hours} / ${data.expected_hours} hrs</span>`;
+
+            // Charts
+            if (pieChart) pieChart.destroy();
+            pieChart = new Chart(document.getElementById('projectPieChart'), {
+                type: 'pie',
+                data: {
+                    labels: data.project_data.map(p => p.project),
+                    datasets: [{ data: data.project_data.map(p => p.hours), backgroundColor: ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'] }]
+                }
+            });
+
+            if (taskChart) taskChart.destroy();
+            taskChart = new Chart(document.getElementById('taskBarChart'), {
+                type: 'bar',
+                data: {
+                    labels: data.task_data.map(t => t.type),
+                    datasets: [{ label: 'Hours', data: data.task_data.map(t => t.hours), backgroundColor: '#3b82f6' }]
+                }
+            });
+
+            // Entries Table
+            let html = `<thead class="table-light" style="text-align:center"><tr>
+                <th>Date</th><th>Project</th><th>Task</th><th class="text-end">Hours</th><th>Type</th>
+            </tr></thead><tbody> style="text-align:center"`;
+            data.entries.forEach(e => {
+                html += `<tr>
+                    <td style="text-align:center">${e.work_date}</td>
+                    <td style="text-align:center"><strong>${e.project}</strong></td>
+                    <td style="text-align:center">${e.task_description}</td>
+                    <td style="text-align:center" class="text-end">${e.hours}</td>
+                    <td style="text-align:center">${e.task_type}</td>
+                  
+                </tr>`;
+            });
+            html += '</tbody>';
+            document.getElementById('entriesTable').innerHTML = html;
+
+            new bootstrap.Modal(document.getElementById('detailModal')).show();
+        });
+}
+
+function exportCSV() {
+    let csv = "Employee,Team,Total Hours,Expected,Utilization,Entries\n";
+    employeesData.forEach(e => {
+        csv += `"${e.full_name || e.username}","${e.team}",${e.total_hours},${e.expected_hours},${e.utilization},${e.entries_count}\n`;
+    });
+    const blob = new Blob([csv], {type: 'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `utilization_report_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+}
+
+function resetToAll() {
+    document.getElementById('start_date').value = '';
+    document.getElementById('end_date').value = '';
+    document.getElementById('filterForm').submit();
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("✅ Data loaded:", employeesData.length, "employees");
+
+    animateCounter(document.getElementById('totalEmp'), {{ total_employees }});
+    animateCounter(document.getElementById('avgUtil'), {{ avg_utilization }}, '%');
+    
+    const totalH = employeesData.reduce((sum, e) => sum + e.total_hours, 0);
+    animateCounter(document.getElementById('totalHours'), Math.round(totalH));
+
+    const top = employeesData.reduce((p, c) => c.utilization > p.utilization ? c : p);
+    document.getElementById('topPerformer').innerHTML = `${top.full_name || top.username} <small>(${top.utilization}%)</small>`;
+
+    $('#employeeTable').DataTable({
+        data: employeesData,
+        columns: [
+            { data: 'full_name' },
+            { data: 'team' },
+            { data: 'total_hours', className: 'text-end' },
+            { data: 'expected_hours', className: 'text-end' },
+            { data: 'utilization', className: 'text-center', render: d => `<span class="badge bg-${d>25?'success':d>15?'primary':'warning'}">${d}%</span>` },
+            { data: 'entries_count', className: 'text-center' },
+            { data: null, className: 'text-center', render: row => `<button class="btn btn-sm btn-primary" onclick="showEmployeeDetail(${row.id})">View</button>` }
+        ],
+        order: [[4, 'desc']]
+    });
+
+    buildCompanyChart();
+});
+</script>
+{% endblock %}

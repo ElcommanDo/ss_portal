@@ -76,6 +76,8 @@ urlpatterns = [
     path('uplaod-cv/', views.upload_cv, name='upload_cv'),
     path('ChatBot/', views.chatbot, name='chatbot'),
     path('ask/', views.ask_groq, name='ask_groq'),
-    
+    path('reports/utilization/', views.utilization_report, name='utilization_report'),
+    path('reports/employee-detail/<int:employee_id>/', views.employee_utilization_detail, name='employee_utilization_detail'),
+
     
 ]

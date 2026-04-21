@@ -83,7 +83,6 @@ def home(request):
 def timesheet_update(request, pk):
    
     if request.method =="POST":
-        print("Work")
         data = request.POST
         ts = TimesheetEntry.objects.get(pk=pk)
         ts.task_description = data.get("task_description", ts.task_description)
@@ -91,7 +90,6 @@ def timesheet_update(request, pk):
         ts.time_end = data.get("time_end", ts.time_end)
         ts.task_type = data.get("task_type", ts.task_type)
         if ts.project.name != data.get("project_name"):
-            print("im in")
             project = get_object_or_404(Project, name=data.get("project_name"))
             ts.project = project
         
@@ -1284,7 +1282,7 @@ def my_timesheet_entries(request, pk):
         'status_choices': models.TimesheetEntry.STATUS_CHOICES,
         'projects': Project.objects.all()
     }
-    print(context['projects'])
+    
     return render(request, 'mytime_sheets.html', context)
 
 
@@ -2855,7 +2853,7 @@ def assignement_create(request):
                 html_message=html_message,
                 fail_silently=False,
             )
-            print(accept_url)
+            
             messages.success(request, "The Assignement Created Successfully..")
             return redirect('assign_task')
 
@@ -2918,7 +2916,7 @@ def missions_list(request):
                 html_message=html_message,
                 fail_silently=False,
             )
-            print(accept_url)
+            
             messages.success(request, "The Assignement Created Successfully..")
             return redirect('missions_list')
 
@@ -3002,7 +3000,7 @@ class ManagementRequiredMixin(UserPassesTestMixin):
     def test_func(self):
         user = self.request.user
         is_admin = user.is_superuser or user.role == "admin"
-        is_manager = user.role in ["delivery-manager", "top-manager", "ceo"]
+        is_manager = user.role in ["delivery-manager", "top-manager", "ceo", "leader"]
         
         return user.is_authenticated and (is_admin or is_manager)
 
@@ -3090,6 +3088,8 @@ class EmployeeKPIListView(LoginRequiredMixin, ManagementRequiredMixin, ListView)
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        if self.request.user.role == "leader":
+            queryset = queryset.filter(team__team_lead=self.request.user.full_name).exclude(username=self.request.user.username)
         search_query = self.request.GET.get('search', '')
         if search_query:
             # Filters by username OR full_name (case-insensitive)
@@ -3295,7 +3295,7 @@ class EmployeeKPIDetailView(LoginRequiredMixin, AdminRequiredMixin, DetailView):
         else:
             templates = KPITemplate.objects.filter(Q(source="General")|Q(source=employee.team.title))
 
-        print(templates)
+        
         for template in templates:
             EmployeeKPI.objects.get_or_create(
                 employee=employee,
@@ -3943,3 +3943,141 @@ def chatbot(request):
     return render(request, 'askAI.html', {})
 
 
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.db.models import Sum, Min
+from datetime import datetime, timedelta
+from decimal import Decimal
+from collections import defaultdict
+
+from .models import CustomUser, TimesheetEntry, Vacation
+
+
+def get_workdays(start_date, end_date, user=None):
+    """Egypt work schedule: Sunday → Thursday are workdays (Fri + Sat = weekend)"""
+    if start_date > end_date:
+        return 0
+    
+    workdays = 0
+    current = start_date
+    while current <= end_date:
+        # Sunday(6), Monday(0), Tuesday(1), Wednesday(2), Thursday(3) = workdays
+        if current.weekday() in [6, 0, 1, 2, 3]:
+            workdays += 1
+        current += timedelta(days=1)
+
+    # Subtract approved vacations
+    if user:
+        vacations = Vacation.objects.filter(
+            user=user,
+            date__range=[start_date, end_date],
+            status='approved'
+        )
+        vacation_days = sum(v.duration for v in vacations)
+        workdays = max(0, workdays - vacation_days)
+
+    return workdays
+
+
+def utilization_report(request):
+    """CEO Utilization Report - Shows ALL data by default"""
+    end_date = datetime.now().date()
+
+    # ==================== DEFAULT = ALL DATA (first load) ====================
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+
+    if start_date_str and end_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    else:
+        # FIRST LOAD → show ALL historical data automatically
+        min_date = TimesheetEntry.objects.aggregate(min_date=Min('work_date'))['min_date']
+        start_date = min_date if min_date else (end_date - timedelta(days=365))  # fallback 1 year
+
+    # Get all active employees
+    employees = CustomUser.objects.filter(is_active=True).exclude(Q(role__in=["top-manager","project-manager", "admin","ceo", "delivery-manager"]) | Q(team__title__in=["PMO"])).select_related('team').order_by('username')
+
+    employee_data = []
+    for emp in employees:
+        # Filter entries (exclude drafts)
+        entries_qs = TimesheetEntry.objects.filter(
+            user=emp,
+            work_date__range=[start_date, end_date]
+        ).exclude(status='DRAFT')
+
+        total_hours = entries_qs.aggregate(total=Sum('hours'))['total'] or Decimal('0.00')
+        workdays = get_workdays(start_date, end_date, emp)
+        expected_hours = workdays * 8
+        utilization = (float(total_hours) / expected_hours * 100) if expected_hours > 0 else 0
+
+        employee_data.append({
+            'id': emp.id,
+            'username': emp.username,
+            'full_name': emp.full_name or emp.username,
+            'team': emp.team.title if emp.team else 'No Team',
+            'total_hours': round(float(total_hours), 2),
+            'expected_hours': expected_hours,
+            'utilization': round(utilization, 2),
+            'entries_count': entries_qs.count(),
+        })
+
+    context = {
+        'start_date': start_date.strftime('%Y-%m-%d'),
+        'end_date': end_date.strftime('%Y-%m-%d'),
+        'employee_json': json.dumps(employee_data),   # ← important for JS
+        'total_employees': len(employee_data),
+        'avg_utilization': round(sum(e['utilization'] for e in employee_data) / len(employee_data), 1) if employee_data else 0,
+    }
+    
+    return render(request, 'utilization.html', context)
+
+
+def employee_utilization_detail(request, employee_id):
+    """Ajax detail for modal (same Egypt logic)"""
+    start_str = request.GET.get('start_date')
+    end_str = request.GET.get('end_date')
+
+    start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+
+    emp = CustomUser.objects.get(id=employee_id)
+
+    entries = TimesheetEntry.objects.filter(
+        user=emp,
+        work_date__range=[start_date, end_date]
+    ).exclude(status='DRAFT').select_related('project').order_by('-work_date')
+
+    total_hours = entries.aggregate(total=Sum('hours'))['total'] or Decimal('0')
+    workdays = get_workdays(start_date, end_date, emp)
+    expected_hours = workdays * 8
+    utilization = (float(total_hours) / expected_hours * 100) if expected_hours > 0 else 0
+
+    # Project breakdown for pie
+    project_hours = defaultdict(float)
+    for entry in entries:
+        project_hours[entry.project.name] += float(entry.hours)
+
+    # Task type breakdown
+    task_hours = defaultdict(float)
+    for entry in entries:
+        task_hours[entry.task_type] += float(entry.hours)
+
+    entries_list = [{
+        'work_date': e.work_date.strftime('%Y-%m-%d'),
+        'project': e.project.name,
+        'task_description': e.task_description[:120] + '...' if len(e.task_description) > 120 else e.task_description,
+        'hours': float(e.hours),
+        'status': e.status,
+        'task_type': e.task_type,
+    } for e in entries]
+
+    return JsonResponse({
+        'employee_name': emp.full_name or emp.username,
+        'utilization': round(utilization, 2),
+        'total_hours': round(float(total_hours), 2),
+        'expected_hours': expected_hours,
+        'project_data': [{'project': p, 'hours': round(h, 2)} for p, h in project_hours.items()],
+        'task_data': [{'type': t, 'hours': round(h, 2)} for t, h in task_hours.items()],
+        'entries': entries_list,
+    })
