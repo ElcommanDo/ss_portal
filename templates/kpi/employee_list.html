@@ -39,17 +39,14 @@
         </div>
     </div>
 
-    <!-- ==================== NEW DOWNLOAD / SHARE BUTTON SECTION ==================== -->
     <div class="d-flex justify-content-start align-items-center mb-4 gap-3">
         
-        <!-- Existing KPI Templates button (kept as-is) -->
         {% if user.is_superuser or user.role == "admin" or user.role == "delivery-manager" or user.role == "top-manager" or user.role == "ceo" %}
             <a href="{% url 'kpi_template_list' %}" class="btn btn-dark shadow-sm px-4">
                 <i class="fas fa-list-ul me-2 text-primary"></i> KPI Templates List
             </a>
         {% endif %}
 
-        <!-- UPDATED: Download/Share KPI Report Button now opens modal -->
         {% if user.is_superuser or user.role == "admin" or user.role == "delivery-manager" or user.role == "top-manager" or user.role == "ceo" %}
             <button type="button"
                     class="btn btn-success shadow-sm px-5 py-2 fw-semibold"
@@ -59,16 +56,13 @@
                 Share / Download KPI Report
             </button>
             
-            <!-- Optional: Small info badge showing the default period -->
             <span class="badge bg-light text-dark px-3 py-2 d-flex align-items-center">
                 <i class="fas fa-calendar-alt me-1"></i>
-                Default period: <strong class="ms-1">{{ current_month|date:"F" }} {{ current_year }}</strong>
+                Current Target Quarter Month: <strong class="ms-1">{{ current_quarter_month }} — {{ current_year }}</strong>
             </span>
         {% endif %}
         
     </div>
-    <!-- ==================================================================== -->
-
     <div class="card border-0 shadow-sm" style="border-radius: 12px;">
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -90,7 +84,6 @@
                             </td>
                             <td>{{ employee.full_name }}</td>
                             <td>
-                                {# Dynamic Role Colors #}
                                 {% with role=employee.get_role_display %}
                                 <span class="badge px-3 py-2 
                                     {% if 'Admin' in role %}bg-danger
@@ -108,7 +101,7 @@
                                 </div>
                             </td>
                             <td class="text-end pe-4">
-                                <a href="{% url 'employee_kpi_detail' employee.pk current_year current_month %}" class="btn btn-primary btn-sm px-3 rounded-pill">
+                                <a href="{% url 'employee_kpi_detail' employee.pk current_year current_quarter_month %}" class="btn btn-primary btn-sm px-3 rounded-pill">
                                     <i class="fas fa-chart-line me-1"></i> View/Edit KPIs
                                 </a>
                             </td>
@@ -162,7 +155,6 @@
     {% endif %}
 </div>
 
-<!-- ====================== KPI REPORT MODAL ====================== -->
 <div class="modal fade" id="kpiReportModal" tabindex="-1" aria-labelledby="kpiReportModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -175,15 +167,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             
-            <!-- FORM NOW WRAPS EVERYTHING THAT NEEDS TO BE SUBMITTED -->
             <form id="shareKpiForm" method="post" action="{% url 'send_kpi_report_email' %}">
                 {% csrf_token %}
                 
                 <div class="modal-body">
                     <div class="row g-3">
-                        <!-- Period Selection -->
                         <div class="col-12">
-                            <label class="form-label fw-semibold">Report Period</label>
+                            <label class="form-label fw-semibold">Report Period (Quarterly)</label>
                             <div class="row">
                                 <div class="col-md-6">
                                     <label class="form-label text-muted small">Year <span class="text-danger">*</span></label>
@@ -193,26 +183,17 @@
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label text-muted small">Month <span class="text-danger">*</span></label>
-                                    <select id="modal_month" name="month" class="form-select form-select-lg">
-                                        <option value="1"  {% if current_month == 1 %}selected{% endif %}>January</option>
-                                        <option value="2"  {% if current_month == 2 %}selected{% endif %}>February</option>
-                                        <option value="3"  {% if current_month == 3 %}selected{% endif %}>March</option>
-                                        <option value="4"  {% if current_month == 4 %}selected{% endif %}>April</option>
-                                        <option value="5"  {% if current_month == 5 %}selected{% endif %}>May</option>
-                                        <option value="6"  {% if current_month == 6 %}selected{% endif %}>June</option>
-                                        <option value="7"  {% if current_month == 7 %}selected{% endif %}>July</option>
-                                        <option value="8"  {% if current_month == 8 %}selected{% endif %}>August</option>
-                                        <option value="9"  {% if current_month == 9 %}selected{% endif %}>September</option>
-                                        <option value="10" {% if current_month == 10 %}selected{% endif %}>October</option>
-                                        <option value="11" {% if current_month == 11 %}selected{% endif %}>November</option>
-                                        <option value="12" {% if current_month == 12 %}selected{% endif %}>December</option>
+                                    <label class="form-label text-muted small">Quarter <span class="text-danger">*</span></label>
+                                    <select id="modal_quarter_month" name="quarter_month" class="form-select form-select-lg">
+                                        <option value="3"  {% if current_quarter_month == 3 %}selected{% endif %}>Quarter 1 (Ends March 31)</option>
+                                        <option value="6"  {% if current_quarter_month == 6 %}selected{% endif %}>Quarter 2 (Ends June 30)</option>
+                                        <option value="9"  {% if current_quarter_month == 9 %}selected{% endif %}>Quarter 3 (Ends September 30)</option>
+                                        <option value="12" {% if current_quarter_month == 12 %}selected{% endif %}>Quarter 4 (Ends December 31)</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Employees Multi-Select (uses all_employees) -->
                         <div class="col-12">
                             <label class="form-label fw-semibold">Employees to receive the report by email</label>
                             <select id="modal_employees" name="employees" class="form-select" multiple size="8" style="height: 320px;">
@@ -239,18 +220,15 @@
                         Cancel
                     </button>
                     
-                    <!-- Download PDF (still works independently) -->
                     <button type="button" onclick="downloadKpiReport()" class="btn btn-info px-4">
                         <i class="fas fa-download me-1"></i> Download PDF
                     </button>
                     
-                    <!-- Send Email -->
                     <button type="button" onclick="submitShareForm()" class="btn btn-success px-5 fw-semibold">
                         <i class="fas fa-paper-plane me-2"></i> Send Email Report
                     </button>
                 </div>
             </form>
-            <!-- End of FORM -->
             
         </div>
     </div>
@@ -267,12 +245,14 @@
 <script>
     function downloadKpiReport() {
         const year = document.getElementById('modal_year').value;
-        const month = document.getElementById('modal_month').value;
-        if (!year || !month) {
-            alert('Please select year and month');
+        // جلب الـ quarter_month بدلاً من الـ month القديم
+        const quarterMonth = document.getElementById('modal_quarter_month').value;
+        if (!year || !quarterMonth) {
+            alert('Please select year and quarter');
             return;
         }
-        const url = "{% url 'kpi_report_pdf' %}?year=" + year + "&month=" + month;
+        // تعديل البارامتر المرسل للـ URL ليصبح quarter_month
+        const url = "{% url 'kpi_report_pdf' %}?year=" + year + "&quarter_month=" + quarterMonth;
         window.open(url, '_blank');
     }
     
@@ -285,7 +265,6 @@
             }
         }
         
-        // Submit the form (year, month, and employees are all inside the form now)
         document.getElementById('shareKpiForm').submit();
     }
 </script>

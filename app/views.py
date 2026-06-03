@@ -2977,82 +2977,565 @@ def send_mission_reminder(request, task_id):
 def update_task_status(request, task_id):
     user = request.user
 
-# In views.py (use Django generic views for CRUD)
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
+# # In views.py (use Django generic views for CRUD)
+# from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
+# from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+# from django.shortcuts import get_object_or_404, redirect
+# from django.db.models import Sum
+# from .models import KPITemplate, EmployeeKPI, KPIFeedback, CustomUser
+# from .forms import KPITemplateForm, EmployeeKPIFormSet
+
+# # Admin check mixin
+# class AdminRequiredMixin(UserPassesTestMixin):
+#     def test_func(self):
+#         return self.request.user.is_staff  # Assuming staff are admins as per your CustomUser save method
+
+# from django.contrib.auth.mixins import UserPassesTestMixin
+# from django.core.exceptions import PermissionDenied
+
+# class ManagementRequiredMixin(UserPassesTestMixin):
+#     """
+#     Allows access only to Admins, Delivery Managers, Top Managers, or CEOs.
+#     """
+#     def test_func(self):
+#         user = self.request.user
+#         is_admin = user.is_superuser or user.role == "admin"
+#         is_manager = user.role in ["delivery-manager", "top-manager", "ceo", "leader"]
+        
+#         return user.is_authenticated and (is_admin or is_manager)
+
+#     def handle_no_permission(self):
+#         if self.request.user.is_authenticated:
+#             raise PermissionDenied  # Shows 403 Forbidden
+#         return super().handle_no_permission()
+
+# # KPI Template Views
+# from django.views.generic import ListView
+# from .models import KPITemplate, KPICategory
+
+# class KPITemplateListView(LoginRequiredMixin, ManagementRequiredMixin, ListView):
+#     model = KPITemplate
+#     template_name = 'kpi/template_list.html'
+#     context_object_name = 'object_list'   # optional, but explicit is good
+#     paginate_by = 20   # optional: add pagination if you have many templates
+
+#     def get_queryset(self):
+#         queryset = super().get_queryset()
+
+#         category_id = self.request.GET.get('category')
+#         source = self.request.GET.get('source')
+
+#         if category_id:
+#             queryset = queryset.filter(category_id=category_id)
+
+#         if source:
+#             queryset = queryset.filter(source=source)
+
+#         return queryset
+
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+
+#         # Pass all categories and sources for the filter dropdowns
+#         context['categories'] = KPICategory.objects.all().order_by('name')
+#         context['sources'] = KPITemplate.SOURCE  # the choices tuple
+
+#         # Preserve current filter values in the form (for selected="selected")
+#         context['selected_category'] = self.request.GET.get('category', '')
+#         context['selected_source'] = self.request.GET.get('source', '')
+
+#         return context
+
+        
+# from django.views.generic import CreateView
+# from django.contrib.auth.mixins import LoginRequiredMixin
+# from .models import KPITemplate, KPICategory
+# from .forms import KPITemplateForm
+# from django.http import JsonResponse
+# from .models import KPICategory
+
+# def ajax_create_category(request):
+#     if request.method == 'POST':
+#         name = request.POST.get('name', '').strip()
+#         if name:
+#             category, created = KPICategory.objects.get_or_create(name=name)
+#             return JsonResponse({'id': category.id, 'name': category.name})
+#     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+# class KPITemplateCreateView(LoginRequiredMixin, ManagementRequiredMixin, CreateView):
+#     model = KPITemplate
+#     form_class = KPITemplateForm
+#     template_name = 'kpi/template_form.html'
+#     success_url = '/kpi/templates/'
+
+
+# class KPITemplateUpdateView(LoginRequiredMixin, ManagementRequiredMixin, UpdateView):
+#     model = KPITemplate
+#     form_class = KPITemplateForm
+#     template_name = 'kpi/template_form.html'
+#     success_url = '/kpi/templates/'
+
+# class KPITemplateDeleteView(LoginRequiredMixin, ManagementRequiredMixin, DeleteView):
+#     model = KPITemplate
+#     template_name = 'kpi/template_confirm_delete.html'  # HTML: Confirm delete
+#     success_url = '/kpi/templates/'
+
+    
+# class EmployeeKPIListView(LoginRequiredMixin, ManagementRequiredMixin, ListView):
+#     model = CustomUser
+#     template_name = 'kpi/employee_list.html'
+#     paginate_by = 10
+
+#     def get_queryset(self):
+#         queryset = super().get_queryset()
+#         if self.request.user.role == "leader":
+#             queryset = queryset.filter(team__team_lead=self.request.user.full_name).exclude(username=self.request.user.username)
+#         search_query = self.request.GET.get('search', '')
+#         if search_query:
+#             # Filters by username OR full_name (case-insensitive)
+#             queryset = queryset.filter(
+#                 Q(username__icontains=search_query) | 
+#                 Q(full_name__icontains=search_query)
+#             )
+#         return queryset
+
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context["current_year"] = datetime.now().year
+#         context["current_month"] = datetime.now().month
+#         context['all_employees'] = self.get_queryset().filter(username__in=['abd.mon.sh', 'afarouk', 'semad',  'amustafa']).order_by('full_name')
+#         return context
+
+# from django.views.generic import View
+
+# class KPIReportPDFView(LoginRequiredMixin, ManagementRequiredMixin, View):
+#     def get(self, request, *args, **kwargs):
+#         year = int(request.GET.get('year', datetime.now().year))
+#         month = int(request.GET.get('month', datetime.now().month))
+#         month_name = datetime(year, month, 1).strftime('%B')
+
+#         # Aggregate total score per employee for the selected period
+#         employees = CustomUser.objects.filter(
+#             kpis__year=year,
+#             kpis__month=month
+#         ).distinct().annotate(
+#             total_score=Sum('kpis__score')
+#         ).order_by('full_name')
+
+#         context = {
+#             'year': year,
+#             'month_name': month_name,
+#             'report_date': datetime.now(),
+#             'employees': [
+#                 {
+#                     'full_name': emp.full_name or emp.username,
+#                     'username': emp.username,
+#                     'total_score': round(emp.total_score,2) or 0
+#                 } for emp in employees if emp.username not in ['semad', 'm.mohamed']
+#             ]
+#         }
+
+#         html_string = render_to_string('kpi/admin_kpi_report.html', context)
+#         pdf = HTML(string=html_string).write_pdf()
+
+#         response = HttpResponse(pdf, content_type='application/pdf')
+#         response['Content-Disposition'] = f'Inline; filename="KPI_Report_{month_name}_{year}.pdf"'
+#         return response
+
+# # views.py
+# from django.shortcuts import redirect
+# from django.contrib import messages
+# from django.core.mail import EmailMessage
+# from django.conf import settings
+# from django.views import View
+# from django.template.loader import render_to_string
+# from django.db.models import Sum
+# from datetime import datetime
+
+# # views.py
+# from django.shortcuts import redirect
+# from django.contrib import messages
+# from django.core.mail import EmailMessage
+# from django.conf import settings
+# from django.views import View
+# from django.template.loader import render_to_string
+# from django.db.models import Sum
+# from datetime import datetime
+
+
+# class SendKPIReportEmailView(LoginRequiredMixin, ManagementRequiredMixin, View):
+#     """
+#     Sends KPI Report PDF + nice HTML email to selected employees.
+#     """
+#     def post(self, request, *args, **kwargs):
+#         year = int(request.POST.get('year', datetime.now().year))
+#         month = int(request.POST.get('month', datetime.now().month))
+#         employee_ids = request.POST.getlist('employees')   # list of PKs from modal
+
+#         if not employee_ids:
+#             messages.warning(request, "No employees were selected. Please select at least one employee.")
+#             return redirect('employee_kpi_list')
+
+#         # Get selected employees
+#         selected_employees = CustomUser.objects.filter(pk__in=employee_ids).only(
+#             'pk', 'full_name', 'username', 'email'
+#         )
+
+#         month_name = datetime(year, month, 1).strftime('%B')
+
+#         # === Build report data (same as your PDF view) ===
+#         employees_for_report = CustomUser.objects.filter(
+#             kpis__year=year,
+#             kpis__month=month
+#         ).distinct().annotate(
+#             total_score=Sum('kpis__score')
+#         ).order_by('full_name')
+
+#         report_context = {
+#             'year': year,
+#             'month_name': month_name,
+#             'report_date': datetime.now(),
+#             'employees': [
+#                 {
+#                     'full_name': emp.full_name or emp.username,
+#                     'username': emp.username,
+#                     'total_score': round(emp.total_score or 0, 2)
+#                 }
+#                 for emp in employees_for_report
+#                 if emp.username not in ['semad', 'm.mohamed']
+#             ]
+#         }
+
+#         # Generate PDF once (same as KPIReportPDFView)
+#         html_string = render_to_string('kpi/admin_kpi_report.html', report_context)
+#         pdf_bytes = HTML(string=html_string).write_pdf()
+
+#         # === Send emails ===
+#         subject = f"KPI Report - {month_name} {year}"
+#         sent_count = 0
+#         skipped_count = 0
+
+#         for employee in selected_employees:
+#             if not employee.email:
+#                 skipped_count += 1
+#                 continue
+
+#             # Personalized email context
+#             email_context = {
+#                 'employee': employee,
+#                 'year': year,
+#                 'month_name': month_name,
+#                 'report_date': datetime.now(),
+#                 'total_employees_in_report': len(report_context['employees']),
+#             }
+
+#             html_body = render_to_string('kpi/send_kpi_report_to_manager.html', email_context)
+
+#             email = EmailMessage(
+#                 subject=subject,
+#                 body=html_body,
+#                 from_email=settings.DEFAULT_FROM_EMAIL,
+#                 to=[employee.email],
+#             )
+#             email.content_subtype = "html"
+
+#             email.attach(
+#                 filename=f"KPI_Report_{month_name}_{year}.pdf",
+#                 content=pdf_bytes,
+#                 mimetype='application/pdf'
+#             )
+
+#             try:
+#                 email.send(fail_silently=False)
+#                 sent_count += 1
+#             except Exception as e:
+#                 # In development you will see the error in console
+#                 print(f"❌ Email failed for {employee.email}: {e}")
+#                 skipped_count += 1
+
+#         # === Better user feedback ===
+#         if sent_count > 0:
+#             messages.success(
+#                 request,
+#                 f"✅ KPI Report for <strong>{month_name} {year}</strong> "
+#                 f"was successfully sent to {sent_count} employee(s)."
+#             )
+#         elif skipped_count > 0:
+#             messages.warning(
+#                 request,
+#                 f"⚠️ No emails were sent. {skipped_count} selected employee(s) "
+#                 f"do not have an email address configured."
+#             )
+#         else:
+#             messages.error(request, "❌ Something went wrong. No report was sent.")
+
+#         return redirect('employee_kpi_list')
+    
+# class EmployeeKPIDetailView(LoginRequiredMixin, AdminRequiredMixin, DetailView):
+#     model = CustomUser
+#     template_name = 'kpi/employee_kpi_detail.html'
+#     pk_url_kwarg = 'employee_id'
+
+#     def dispatch(self, request, *args, **kwargs):
+#         today = date.today()
+#         self.year = kwargs.get('year', today.year)
+#         self.month = kwargs.get('month', today.month)
+#         return super().dispatch(request, *args, **kwargs)
+
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         employee = self.object
+        
+#         # 1. Ensure records exist
+#         if employee.team.title == "PMO":
+#             templates = KPITemplate.objects.filter(Q(source="PMO"))
+#         elif employee.role == "leader":
+#             templates = KPITemplate.objects.filter(Q(source="General")|Q(source="Leader"))
+
+#         else:
+#             templates = KPITemplate.objects.filter(Q(source="General")|Q(source=employee.team.title))
+
+        
+#         for template in templates:
+#             EmployeeKPI.objects.get_or_create(
+#                 employee=employee,
+#                 kpi_template=template,
+#                 year=self.year,
+#                 month=self.month,
+#                 defaults={'grade': template.default_grade}
+#             )
+        
+#         # 2. Fetch records ordered by category for a better UI
+#         kpis = EmployeeKPI.objects.filter(employee=employee, year=self.year, month=self.month).select_related('kpi_template', 'kpi_template__category')
+#         total_score = round(kpis.aggregate(Sum('score'))['score__sum'] or Decimal('0.00'), 2)
+        
+#         # 3. Formset setup
+#         EmployeeKPIFormSet = modelformset_factory(EmployeeKPI, fields=('grade', 'notes'), extra=0)
+        
+#         # If we are returning from a failed POST, the formset is already in context
+#         if 'formset' not in context:
+#             context['formset'] = EmployeeKPIFormSet(queryset=kpis)
+            
+#         context['total_score'] = total_score
+#         context['year'] = self.year
+#         context['month'] = self.month
+#         context['month_choices'] = self.get_month_choices()
+#         return context
+    
+#     def get_month_choices(self):
+#         today = date.today()
+#         choices = []
+#         for i in range(12):
+#             y = today.year if today.month > i else today.year - 1
+#             m = (today.month - i - 1) % 12 + 1
+            
+#             # We pass: (year_int, month_int, "year-month_string", "label_string")
+#             choices.append((y, m, f"{y}-{m}", f"{y}-{m:02d}"))
+#         return choices
+    
+#     def post(self, request, *args, **kwargs):
+#         self.object = self.get_object()
+#         employee = self.object
+        
+#         kpis = EmployeeKPI.objects.filter(
+#             employee=employee, year=self.year, month=self.month
+#         )
+        
+#         EmployeeKPIFormSet = modelformset_factory(EmployeeKPI, fields=('grade', 'notes'), extra=0)
+#         formset = EmployeeKPIFormSet(request.POST, queryset=kpis)
+        
+#         if formset.is_valid():
+#             formset.save()
+#             messages.success(request, f"KPIs for {employee.full_name} ({self.year}-{self.month:02d}) have been updated successfully!")
+#             return redirect('employee_kpi_detail', employee_id=employee.id, year=self.year, month=self.month)
+#         else:
+#             messages.error(request, "There was an error updating the grades. Please check the values.")
+#             return self.render_to_response(self.get_context_data(formset=formset))
+                
+
+
+# class MyKPIView(LoginRequiredMixin, ListView):
+#     template_name = 'kpi/my_kpi.html'  
+    
+#     def dispatch(self, request, *args, **kwargs):
+#         today = date.today()
+#         self.year = kwargs.get('year', today.year)
+#         self.month = kwargs.get('month', today.month)
+#         return super().dispatch(request, *args, **kwargs)
+    
+#     def get_queryset(self):
+#         return EmployeeKPI.objects.filter(
+#             employee=self.request.user, year=self.year, month=self.month
+#         )
+    
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         total_score = round(self.get_queryset().aggregate(Sum('score'))['score__sum'] or Decimal('0.00'), 2)
+#         context['total_score'] = total_score
+#         context['year'] = self.year
+#         context['month'] = self.month
+#         # Add month choices similar to detail view
+#         context['month_choices'] = self.get_month_choices()  # Reuse method if refactored
+#         return context
+
+#     def get_month_choices(self):
+#         today = date.today()
+#         choices = []
+#         for i in range(12):
+#             y = today.year if today.month > i else today.year - 1
+#             m = (today.month - i - 1) % 12 + 1
+            
+#             # We pass: (year_int, month_int, "year-month_string", "label_string")
+#             choices.append((y, m, f"{y}-{m}", f"{y}-{m:02d}"))
+#         return choices
+    
+# # Feedback Create (for admins to log complaints/issues)
+# class KPIFeedbackCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
+#     model = KPIFeedback
+#     fields = ['employee', 'kpi_template', 'feedback_type', 'description', 'date', 'value']
+#     template_name = 'kpi/feedback_form.html'
+#     success_url = '/kpi/employees/'  
+
+# from django.template.loader import render_to_string
+# from django.core.mail import EmailMultiAlternatives
+# from django.utils.html import strip_tags
+# from django.conf import settings
+# from django.contrib import messages
+# from django.shortcuts import get_object_or_404, redirect
+# from .models import  EmployeeKPI
+
+# def send_kpi_feedback(request, employee_id):
+#     if request.method == "POST":
+#         employee = get_object_or_404(CustomUser, id=employee_id) 
+#         year = request.POST.get('year')
+#         month = request.POST.get('month')
+#         overall_notes = request.POST.get('message')
+#         kpis = EmployeeKPI.objects.filter(
+#             employee=employee, 
+#             year=year, 
+#             month=month
+#         )
+
+#         total_score = sum(kpi.score for kpi in kpis) if kpis.exists() else 0
+        
+#         if total_score >= 90: achievement_level = "Outstanding Performance"
+#         elif total_score >= 80: achievement_level = "Excellent Achievement"
+#         elif total_score >= 70: achievement_level = "Good Progress"
+#         else: achievement_level = "Improvement Required"
+
+#         # 4. Prepare Email Content
+#         subject = f"🚀 Performance Report: {employee.full_name} ({month}/{year})"
+        
+#         context = {
+#             'employee': employee,
+#             'month': month,
+#             'year': year,
+#             'total_score': round(total_score, 1),
+#             'achievement_level': achievement_level,
+#             'overall_notes': overall_notes,
+#             'kpis': kpis,
+#             'logo_url': request.build_absolute_uri(settings.STATIC_URL + 'img/Smart-System-Logo.webp') # Ensure your logo path is correct
+#         }
+
+#         html_content = render_to_string('kpi/kpi_email_report.html', context)
+#         text_content = strip_tags(html_content) 
+
+#         # 5. Send Email
+#         try:
+#             email = EmailMultiAlternatives(
+#                 subject,
+#                 text_content,
+#                 settings.DEFAULT_FROM_EMAIL,
+#                 [employee.email]
+#             )
+#             email.attach_alternative(html_content, "text/html")
+#             email.send()
+            
+#             messages.success(request, f"Report sent successfully to {employee.email}")
+#         except Exception as e:
+#             messages.error(request, f"Failed to send email: {str(e)}")
+
+#     return redirect(request.META.get('HTTP_REFERER', 'employee_kpi_list'))
+
+
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, View
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.shortcuts import get_object_or_404, redirect
-from django.db.models import Sum
-from .models import KPITemplate, EmployeeKPI, KPIFeedback, CustomUser
-from .forms import KPITemplateForm, EmployeeKPIFormSet
+from django.db.models import Sum, Q
+from django.http import JsonResponse, HttpResponse
+from django.forms import modelformset_factory
+from django.contrib import messages
+from django.core.mail import EmailMessage, EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.conf import settings
+from decimal import Decimal
+from datetime import date, datetime
 
-# Admin check mixin
+from .models import KPITemplate, EmployeeKPI, KPIFeedback, CustomUser, KPICategory
+from .forms import KPITemplateForm
+
+# واجهة Weasyprint لطباعة الـ PDF (تأكد من تثبيتها واستيرادها كما كنت تفعل)
+# from weasyprint import HTML 
+
 class AdminRequiredMixin(UserPassesTestMixin):
     def test_func(self):
-        return self.request.user.is_staff  # Assuming staff are admins as per your CustomUser save method
-
-from django.contrib.auth.mixins import UserPassesTestMixin
-from django.core.exceptions import PermissionDenied
+        return self.request.user.is_staff
 
 class ManagementRequiredMixin(UserPassesTestMixin):
-    """
-    Allows access only to Admins, Delivery Managers, Top Managers, or CEOs.
-    """
     def test_func(self):
         user = self.request.user
         is_admin = user.is_superuser or user.role == "admin"
         is_manager = user.role in ["delivery-manager", "top-manager", "ceo", "leader"]
-        
         return user.is_authenticated and (is_admin or is_manager)
 
     def handle_no_permission(self):
+        from django.core.exceptions import PermissionDenied
         if self.request.user.is_authenticated:
-            raise PermissionDenied  # Shows 403 Forbidden
+            raise PermissionDenied
         return super().handle_no_permission()
 
-# KPI Template Views
-from django.views.generic import ListView
-from .models import KPITemplate, KPICategory
+# Helper function لمعرفة ربع السنة الحالي بناءً على تاريخ اليوم
+def get_current_quarter_month():
+    today = date.today()
+    if today.month in [1, 2, 3]:
+        return 3
+    elif today.month in [4, 5, 6]:
+        return 6
+    elif today.month in [7, 8, 9]:
+        return 9
+    else:
+        return 12
 
+# Helper function لتحويل رقم الربع السنوي لاسم نصي واضح في التقارير
+def get_quarter_label(qm):
+    mapping = {3: "31/3 (Q1)", 6: "30/6 (Q2)", 9: "30/9 (Q3)", 12: "31/12 (Q4)"}
+    return mapping.get(qm, f"Period {qm}")
+
+# KPI Template Views
 class KPITemplateListView(LoginRequiredMixin, ManagementRequiredMixin, ListView):
     model = KPITemplate
     template_name = 'kpi/template_list.html'
-    context_object_name = 'object_list'   # optional, but explicit is good
-    paginate_by = 20   # optional: add pagination if you have many templates
+    context_object_name = 'object_list'
+    paginate_by = 20
 
     def get_queryset(self):
         queryset = super().get_queryset()
-
         category_id = self.request.GET.get('category')
         source = self.request.GET.get('source')
-
         if category_id:
             queryset = queryset.filter(category_id=category_id)
-
         if source:
             queryset = queryset.filter(source=source)
-
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
-        # Pass all categories and sources for the filter dropdowns
         context['categories'] = KPICategory.objects.all().order_by('name')
-        context['sources'] = KPITemplate.SOURCE  # the choices tuple
-
-        # Preserve current filter values in the form (for selected="selected")
+        context['sources'] = KPITemplate.SOURCE
         context['selected_category'] = self.request.GET.get('category', '')
         context['selected_source'] = self.request.GET.get('source', '')
-
         return context
-
-        
-from django.views.generic import CreateView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import KPITemplate, KPICategory
-from .forms import KPITemplateForm
-from django.http import JsonResponse
-from .models import KPICategory
 
 def ajax_create_category(request):
     if request.method == 'POST':
@@ -3068,7 +3551,6 @@ class KPITemplateCreateView(LoginRequiredMixin, ManagementRequiredMixin, CreateV
     template_name = 'kpi/template_form.html'
     success_url = '/kpi/templates/'
 
-
 class KPITemplateUpdateView(LoginRequiredMixin, ManagementRequiredMixin, UpdateView):
     model = KPITemplate
     form_class = KPITemplateForm
@@ -3077,10 +3559,9 @@ class KPITemplateUpdateView(LoginRequiredMixin, ManagementRequiredMixin, UpdateV
 
 class KPITemplateDeleteView(LoginRequiredMixin, ManagementRequiredMixin, DeleteView):
     model = KPITemplate
-    template_name = 'kpi/template_confirm_delete.html'  # HTML: Confirm delete
+    template_name = 'kpi/template_confirm_delete.html'
     success_url = '/kpi/templates/'
 
-    
 class EmployeeKPIListView(LoginRequiredMixin, ManagementRequiredMixin, ListView):
     model = CustomUser
     template_name = 'kpi/employee_list.html'
@@ -3092,7 +3573,6 @@ class EmployeeKPIListView(LoginRequiredMixin, ManagementRequiredMixin, ListView)
             queryset = queryset.filter(team__team_lead=self.request.user.full_name).exclude(username=self.request.user.username)
         search_query = self.request.GET.get('search', '')
         if search_query:
-            # Filters by username OR full_name (case-insensitive)
             queryset = queryset.filter(
                 Q(username__icontains=search_query) | 
                 Q(full_name__icontains=search_query)
@@ -3101,117 +3581,82 @@ class EmployeeKPIListView(LoginRequiredMixin, ManagementRequiredMixin, ListView)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["current_year"] = datetime.now().year
-        context["current_month"] = datetime.now().month
-        context['all_employees'] = self.get_queryset().filter(username__in=['abd.mon.sh', 'afarouk', 'semad',  'amustafa']).order_by('full_name')
+        context["current_year"] = date.today().year
+        context["current_quarter_month"] = get_current_quarter_month()
+        context['all_employees'] = self.get_queryset().filter(username__in=['abd.mon.sh', 'afarouk', 'semad', 'amustafa']).order_by('full_name')
         return context
-
-from django.views.generic import View
 
 class KPIReportPDFView(LoginRequiredMixin, ManagementRequiredMixin, View):
     def get(self, request, *args, **kwargs):
-        year = int(request.GET.get('year', datetime.now().year))
-        month = int(request.GET.get('month', datetime.now().month))
-        month_name = datetime(year, month, 1).strftime('%B')
+        year = int(request.GET.get('year', date.today().year))
+        quarter_month = int(request.GET.get('quarter_month', get_current_quarter_month()))
+        quarter_label = get_quarter_label(quarter_month)
 
-        # Aggregate total score per employee for the selected period
         employees = CustomUser.objects.filter(
             kpis__year=year,
-            kpis__month=month
+            kpis__quarter_month=quarter_month
         ).distinct().annotate(
             total_score=Sum('kpis__score')
         ).order_by('full_name')
 
         context = {
             'year': year,
-            'month_name': month_name,
+            'quarter_label': quarter_label,
+            'quarter_month': quarter_month,
             'report_date': datetime.now(),
             'employees': [
                 {
                     'full_name': emp.full_name or emp.username,
                     'username': emp.username,
-                    'total_score': round(emp.total_score,2) or 0
+                    'total_score': round(emp.total_score, 2) if emp.total_score else 0
                 } for emp in employees if emp.username not in ['semad', 'm.mohamed']
             ]
         }
 
         html_string = render_to_string('kpi/admin_kpi_report.html', context)
         pdf = HTML(string=html_string).write_pdf()
-
         response = HttpResponse(pdf, content_type='application/pdf')
-        response['Content-Disposition'] = f'Inline; filename="KPI_Report_{month_name}_{year}.pdf"'
+        response['Content-Disposition'] = f'inline; filename="KPI_Report_{quarter_month}_{year}.pdf"'
         return response
-
-# views.py
-from django.shortcuts import redirect
-from django.contrib import messages
-from django.core.mail import EmailMessage
-from django.conf import settings
-from django.views import View
-from django.template.loader import render_to_string
-from django.db.models import Sum
-from datetime import datetime
-
-# views.py
-from django.shortcuts import redirect
-from django.contrib import messages
-from django.core.mail import EmailMessage
-from django.conf import settings
-from django.views import View
-from django.template.loader import render_to_string
-from django.db.models import Sum
-from datetime import datetime
-
-
+       
 class SendKPIReportEmailView(LoginRequiredMixin, ManagementRequiredMixin, View):
-    """
-    Sends KPI Report PDF + nice HTML email to selected employees.
-    """
     def post(self, request, *args, **kwargs):
-        year = int(request.POST.get('year', datetime.now().year))
-        month = int(request.POST.get('month', datetime.now().month))
-        employee_ids = request.POST.getlist('employees')   # list of PKs from modal
+        year = int(request.POST.get('year', date.today().year))
+        quarter_month = int(request.POST.get('quarter_month', get_current_quarter_month()))
+        employee_ids = request.POST.getlist('employees')
 
         if not employee_ids:
             messages.warning(request, "No employees were selected. Please select at least one employee.")
             return redirect('employee_kpi_list')
 
-        # Get selected employees
-        selected_employees = CustomUser.objects.filter(pk__in=employee_ids).only(
-            'pk', 'full_name', 'username', 'email'
-        )
+        selected_employees = CustomUser.objects.filter(pk__in=employee_ids).only('pk', 'full_name', 'username', 'email')
+        quarter_label = get_quarter_label(quarter_month)
 
-        month_name = datetime(year, month, 1).strftime('%B')
-
-        # === Build report data (same as your PDF view) ===
         employees_for_report = CustomUser.objects.filter(
             kpis__year=year,
-            kpis__month=month
+            kpis__quarter_month=quarter_month
         ).distinct().annotate(
             total_score=Sum('kpis__score')
         ).order_by('full_name')
 
         report_context = {
             'year': year,
-            'month_name': month_name,
+            'quarter_label': quarter_label,
+            'quarter_month': quarter_month,
             'report_date': datetime.now(),
             'employees': [
                 {
                     'full_name': emp.full_name or emp.username,
                     'username': emp.username,
                     'total_score': round(emp.total_score or 0, 2)
-                }
-                for emp in employees_for_report
-                if emp.username not in ['semad', 'm.mohamed']
+                } for emp in employees_for_report if emp.username not in ['semad', 'm.mohamed']
             ]
         }
 
-        # Generate PDF once (same as KPIReportPDFView)
         html_string = render_to_string('kpi/admin_kpi_report.html', report_context)
-        pdf_bytes = HTML(string=html_string).write_pdf()
+        pdf_bytes = HTML(string=html_string).write_pdf() # فك التعليق عند استخدام weasyprint
 
-        # === Send emails ===
-        subject = f"KPI Report - {month_name} {year}"
+        subject = f"KPI Report - Period Ending {quarter_label} {year}"
         sent_count = 0
         skipped_count = 0
 
@@ -3220,11 +3665,10 @@ class SendKPIReportEmailView(LoginRequiredMixin, ManagementRequiredMixin, View):
                 skipped_count += 1
                 continue
 
-            # Personalized email context
             email_context = {
                 'employee': employee,
                 'year': year,
-                'month_name': month_name,
+                'quarter_label': quarter_label,
                 'report_date': datetime.now(),
                 'total_employees_in_report': len(report_context['employees']),
             }
@@ -3238,184 +3682,139 @@ class SendKPIReportEmailView(LoginRequiredMixin, ManagementRequiredMixin, View):
                 to=[employee.email],
             )
             email.content_subtype = "html"
-
-            email.attach(
-                filename=f"KPI_Report_{month_name}_{year}.pdf",
-                content=pdf_bytes,
-                mimetype='application/pdf'
-            )
+            # فك التعليق لإرفاق الـ PDF عند توفير مكتبة الطباعة:
+            email.attach(filename=f"KPI_Report_{quarter_month}_{year}.pdf", content=pdf_bytes, mimetype='application/pdf')
 
             try:
                 email.send(fail_silently=False)
                 sent_count += 1
             except Exception as e:
-                # In development you will see the error in console
                 print(f"❌ Email failed for {employee.email}: {e}")
                 skipped_count += 1
 
-        # === Better user feedback ===
         if sent_count > 0:
-            messages.success(
-                request,
-                f"✅ KPI Report for <strong>{month_name} {year}</strong> "
-                f"was successfully sent to {sent_count} employee(s)."
-            )
+            messages.success(request, f"✅ KPI Report for Period Ending <strong>{quarter_label} {year}</strong> sent to {sent_count} employee(s).")
         elif skipped_count > 0:
-            messages.warning(
-                request,
-                f"⚠️ No emails were sent. {skipped_count} selected employee(s) "
-                f"do not have an email address configured."
-            )
-        else:
-            messages.error(request, "❌ Something went wrong. No report was sent.")
-
+            messages.warning(request, f"⚠️ {skipped_count} employee(s) skipped due to missing email settings.")
         return redirect('employee_kpi_list')
-    
+
 class EmployeeKPIDetailView(LoginRequiredMixin, AdminRequiredMixin, DetailView):
     model = CustomUser
     template_name = 'kpi/employee_kpi_detail.html'
     pk_url_kwarg = 'employee_id'
 
     def dispatch(self, request, *args, **kwargs):
-        today = date.today()
-        self.year = kwargs.get('year', today.year)
-        self.month = kwargs.get('month', today.month)
+        self.year = kwargs.get('year', date.today().year)
+        self.quarter_month = kwargs.get('quarter_month', get_current_quarter_month())
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         employee = self.object
         
-        # 1. Ensure records exist
         if employee.team.title == "PMO":
             templates = KPITemplate.objects.filter(Q(source="PMO"))
         elif employee.role == "leader":
             templates = KPITemplate.objects.filter(Q(source="General")|Q(source="Leader"))
-
         else:
             templates = KPITemplate.objects.filter(Q(source="General")|Q(source=employee.team.title))
 
-        
         for template in templates:
             EmployeeKPI.objects.get_or_create(
                 employee=employee,
                 kpi_template=template,
                 year=self.year,
-                month=self.month,
+                quarter_month=self.quarter_month,
                 defaults={'grade': template.default_grade}
             )
         
-        # 2. Fetch records ordered by category for a better UI
-        kpis = EmployeeKPI.objects.filter(employee=employee, year=self.year, month=self.month).select_related('kpi_template', 'kpi_template__category')
+        kpis = EmployeeKPI.objects.filter(
+            employee=employee, year=self.year, quarter_month=self.quarter_month
+        ).select_related('kpi_template', 'kpi_template__category')
+        
         total_score = round(kpis.aggregate(Sum('score'))['score__sum'] or Decimal('0.00'), 2)
         
-        # 3. Formset setup
         EmployeeKPIFormSet = modelformset_factory(EmployeeKPI, fields=('grade', 'notes'), extra=0)
         
-        # If we are returning from a failed POST, the formset is already in context
         if 'formset' not in context:
             context['formset'] = EmployeeKPIFormSet(queryset=kpis)
             
         context['total_score'] = total_score
         context['year'] = self.year
-        context['month'] = self.month
-        context['month_choices'] = self.get_month_choices()
+        context['quarter_month'] = self.quarter_month
+        context['quarter_choices'] = self.get_quarter_choices()
         return context
     
-    def get_month_choices(self):
-        today = date.today()
+    def get_quarter_choices(self):
+        # بناء قائمة بالـ 4 ربع سنويات الأخيرة المتاحة للفلترة بشكل منسق مرن
         choices = []
-        for i in range(12):
-            y = today.year if today.month > i else today.year - 1
-            m = (today.month - i - 1) % 12 + 1
-            
-            # We pass: (year_int, month_int, "year-month_string", "label_string")
-            choices.append((y, m, f"{y}-{m}", f"{y}-{m:02d}"))
-        return choices
+        current_y = date.today().year
+        quarters = [3, 6, 9, 12]
+        
+        for y in [current_y, current_y - 1]:
+            for qm in sorted(quarters, reverse=True):
+                label = f"Year {y} - Period Ending 31/{qm}" if qm in [3,12] else f"Year {y} - Period Ending 30/{qm}"
+                choices.append((y, qm, f"{y}-{qm}", label))
+        return choices[:6] # إرجاع أحدث 6 أرباع فقط
     
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         employee = self.object
-        
-        kpis = EmployeeKPI.objects.filter(
-            employee=employee, year=self.year, month=self.month
-        )
+        kpis = EmployeeKPI.objects.filter(employee=employee, year=self.year, quarter_month=self.quarter_month)
         
         EmployeeKPIFormSet = modelformset_factory(EmployeeKPI, fields=('grade', 'notes'), extra=0)
         formset = EmployeeKPIFormSet(request.POST, queryset=kpis)
         
         if formset.is_valid():
             formset.save()
-            messages.success(request, f"KPIs for {employee.full_name} ({self.year}-{self.month:02d}) have been updated successfully!")
-            return redirect('employee_kpi_detail', employee_id=employee.id, year=self.year, month=self.month)
+            messages.success(request, f"KPIs for {employee.full_name} ({self.year}-Period Ending {self.quarter_month}) updated successfully!")
+            return redirect('employee_kpi_detail', employee_id=employee.id, year=self.year, quarter_month=self.quarter_month)
         else:
             messages.error(request, "There was an error updating the grades. Please check the values.")
             return self.render_to_response(self.get_context_data(formset=formset))
-                
-
 
 class MyKPIView(LoginRequiredMixin, ListView):
-    template_name = 'kpi/my_kpi.html'  
+    template_name = 'kpi/my_kpi.html'
     
     def dispatch(self, request, *args, **kwargs):
-        today = date.today()
-        self.year = kwargs.get('year', today.year)
-        self.month = kwargs.get('month', today.month)
+        self.year = kwargs.get('year', date.today().year)
+        self.quarter_month = kwargs.get('quarter_month', get_current_quarter_month())
         return super().dispatch(request, *args, **kwargs)
     
     def get_queryset(self):
-        return EmployeeKPI.objects.filter(
-            employee=self.request.user, year=self.year, month=self.month
-        )
+        return EmployeeKPI.objects.filter(employee=self.request.user, year=self.year, quarter_month=self.quarter_month)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         total_score = round(self.get_queryset().aggregate(Sum('score'))['score__sum'] or Decimal('0.00'), 2)
         context['total_score'] = total_score
-        context['year'] = self.year
-        context['month'] = self.month
-        # Add month choices similar to detail view
-        context['month_choices'] = self.get_month_choices()  # Reuse method if refactored
+        context['year'] = int(self.year)
+        context['quarter_month'] = int(self.quarter_month)
+        
+        # بناء مصفوفة الخيارات ربع السنوية يدوياً لتتوافق مع الـ Loop في الـ HTML
+        # كل عنصر يحتوي على: (السنة، شهر الربع، القيمة المدمجة للـ JS، الاسم المقروء)
+        context['month_choices'] = [
+            (self.year, 3, f"{self.year}-3", f"Quarter 1 (Ends March)"),
+            (self.year, 6, f"{self.year}-6", f"Quarter 2 (Ends June)"),
+            (self.year, 9, f"{self.year}-9", f"Quarter 3 (Ends September)"),
+            (self.year, 12, f"{self.year}-12", f"Quarter 4 (Ends December)"),
+        ]
         return context
 
-    def get_month_choices(self):
-        today = date.today()
-        choices = []
-        for i in range(12):
-            y = today.year if today.month > i else today.year - 1
-            m = (today.month - i - 1) % 12 + 1
-            
-            # We pass: (year_int, month_int, "year-month_string", "label_string")
-            choices.append((y, m, f"{y}-{m}", f"{y}-{m:02d}"))
-        return choices
-    
-# Feedback Create (for admins to log complaints/issues)
 class KPIFeedbackCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
     model = KPIFeedback
     fields = ['employee', 'kpi_template', 'feedback_type', 'description', 'date', 'value']
     template_name = 'kpi/feedback_form.html'
-    success_url = '/kpi/employees/'  
-
-from django.template.loader import render_to_string
-from django.core.mail import EmailMultiAlternatives
-from django.utils.html import strip_tags
-from django.conf import settings
-from django.contrib import messages
-from django.shortcuts import get_object_or_404, redirect
-from .models import  EmployeeKPI
+    success_url = '/kpi/employees/'
 
 def send_kpi_feedback(request, employee_id):
     if request.method == "POST":
         employee = get_object_or_404(CustomUser, id=employee_id) 
         year = request.POST.get('year')
-        month = request.POST.get('month')
+        quarter_month = request.POST.get('quarter_month')
         overall_notes = request.POST.get('message')
-        kpis = EmployeeKPI.objects.filter(
-            employee=employee, 
-            year=year, 
-            month=month
-        )
-
+        
+        kpis = EmployeeKPI.objects.filter(employee=employee, year=year, quarter_month=quarter_month)
         total_score = sum(kpi.score for kpi in kpis) if kpis.exists() else 0
         
         if total_score >= 90: achievement_level = "Outstanding Performance"
@@ -3423,34 +3822,28 @@ def send_kpi_feedback(request, employee_id):
         elif total_score >= 70: achievement_level = "Good Progress"
         else: achievement_level = "Improvement Required"
 
-        # 4. Prepare Email Content
-        subject = f"🚀 Performance Report: {employee.full_name} ({month}/{year})"
+        quarter_label = get_quarter_label(int(quarter_month))
+        subject = f"🚀 Performance Report: {employee.full_name} (Period Ending {quarter_label}/{year})"
         
         context = {
             'employee': employee,
-            'month': month,
+            'quarter_month': quarter_month,
+            'quarter_label': quarter_label,
             'year': year,
             'total_score': round(total_score, 1),
             'achievement_level': achievement_level,
             'overall_notes': overall_notes,
             'kpis': kpis,
-            'logo_url': request.build_absolute_uri(settings.STATIC_URL + 'img/Smart-System-Logo.webp') # Ensure your logo path is correct
+            'logo_url': request.build_absolute_uri(settings.STATIC_URL + 'img/Smart-System-Logo.webp')
         }
 
         html_content = render_to_string('kpi/kpi_email_report.html', context)
         text_content = strip_tags(html_content) 
 
-        # 5. Send Email
         try:
-            email = EmailMultiAlternatives(
-                subject,
-                text_content,
-                settings.DEFAULT_FROM_EMAIL,
-                [employee.email]
-            )
+            email = EmailMultiAlternatives(subject, text_content, settings.DEFAULT_FROM_EMAIL, [employee.email])
             email.attach_alternative(html_content, "text/html")
             email.send()
-            
             messages.success(request, f"Report sent successfully to {employee.email}")
         except Exception as e:
             messages.error(request, f"Failed to send email: {str(e)}")
@@ -3496,27 +3889,47 @@ def custom_404_view(request, exception):
     return render(request, '404.html', status=404)
 
 from django.utils import timezone
+from django.db.models import Sum
+from django.utils import timezone
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+# تأكد من استيراد الـ HTML الخاص بـ WeasyPrint أو المكتبة المستخدمة لديك
+from weasyprint import HTML 
 
-def export_kpi_pdf(request, employee_id, year, month):
+def export_kpi_pdf(request, employee_id, year, quarter_month):
+    # 1. جلب الموظف بناءً على الـ ID
     employee = get_object_or_404(CustomUser, id=employee_id)
+    
+    # 2. تحديث الفلتر ليعتمد على quarter_month بدلاً من month
     kpis = EmployeeKPI.objects.filter(
-        employee=employee, year=year, month=month
+        employee=employee, 
+        year=year, 
+        quarter_month=quarter_month
     ).select_related('kpi_template', 'kpi_template__category')
     
+    # 3. حساب إجمالي النقاط
     total_score = kpis.aggregate(Sum('score'))['score__sum'] or 0
 
+    # 4. تحويل رقم الربع النصي إلى صيغة مقروءة داخل الـ PDF (مثل Q1, Q2, Q3, Q4)
+    quarter_mapping = {3: 'Q1', 6: 'Q2', 9: 'Q3', 12: 'Q4'}
+    quarter_label = quarter_mapping.get(int(quarter_month), f"Month {quarter_month}")
+
+    # 5. بناء محتوى الـ HTML وإرسال المتغيرات المحدثة للقالب
     html_string = render_to_string('kpi/kpi_performance_template_report.html', {
         'object': employee,
         'kpis': kpis,
         'total_score': round(total_score, 2),
-        'report_date': timezone.now(), # For the "Created On" field
-        'label': f"{year}-{month:02d}",
+        'report_date': timezone.now(), 
+        'label': f"{year} - {quarter_label}",  # ستظهر بشكل منسق مثل: 2026 - Q2
     })
 
+    # 6. توليد الـ PDF وإرجاعه كملف للتحميل
     html = HTML(string=html_string, base_url=request.build_absolute_uri())
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="SmartSystem_Report_{employee.full_name}.pdf"'
     response.write(html.write_pdf())
+    
     return response
 
 # @login_required

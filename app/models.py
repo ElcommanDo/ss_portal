@@ -282,31 +282,34 @@ class KPITemplate(models.Model):
 
 
 class EmployeeKPI(models.Model):
+    QUARTER_MONTH_CHOICES = [
+        (3, '31/3 (Q1 End)'),
+        (6, '30/6 (Q2 End)'),
+        (9, '30/9 (Q3 End)'),
+        (12, '31/12 (Q4 End)'),
+    ]
+
     employee = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='kpis')
     kpi_template = models.ForeignKey(KPITemplate, on_delete=models.CASCADE)
     grade = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('10.00'), validators=[MinValueValidator(0)])
-    score = models.DecimalField(max_digits=5, decimal_places=2, blank=True, help_text="Automatically calculated as (grade / 10) * weight")
+    score = models.DecimalField(max_digits=5, decimal_places=2, blank=True)
     notes = models.TextField(blank=True)
     updated_at = models.DateTimeField(auto_now=True)
-    year = models.PositiveIntegerField()  # e.g., 2026
-    month = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])  # 1-12
+    year = models.PositiveIntegerField()
+    month = models.PositiveIntegerField(null=True, blank=True) 
+    quarter_month = models.PositiveIntegerField(choices=QUARTER_MONTH_CHOICES, null=True, blank=True)
+
     def save(self, *args, **kwargs):
-        # Automatic calculation: score = (grade / 10) * weight
-        # This allows overachievement if grade > 10 (e.g., 15 / 10 * weight = 1.5 * weight)
         self.score = (self.grade / Decimal('10')) * self.kpi_template.weight
         super().save(*args, **kwargs)
     
-    def __str__(self):
-        return f"{self.employee.username} - {self.kpi_template.description[:20]}... ({self.year}-{self.month:02d})"
     class Meta:
-        unique_together = ['employee', 'kpi_template', 'year', 'month']
-        ordering = ['-year', '-month', '-kpi_template__category', 'kpi_template']
+        ordering = ['-year', '-quarter_month', '-kpi_template__category', 'kpi_template']
         verbose_name_plural = "Employee KPIs"
 
 
 
-# Optional: For semi-automation, add a Complaint/Feedback model to track issues
-# This can be used to auto-deduct grades for certain KPIs (e.g., complaint-based)
+
 class KPIFeedback(models.Model):
     FEEDBACK_TYPE_CHOICES = [
         ('complaint', 'Complaint'),

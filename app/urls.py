@@ -54,13 +54,15 @@ urlpatterns = [
     path('kpi/templates/<int:pk>/update/', views.KPITemplateUpdateView.as_view(), name='kpi_template_update'),
     path('kpi/templates/<int:pk>/delete/', views.KPITemplateDeleteView.as_view(), name='kpi_template_delete'),
     path('kpi/employees/', views.EmployeeKPIListView.as_view(), name='employee_kpi_list'),  # List all employees' KPIs
-    path('kpi/employees/<int:employee_id>/<int:year>/<int:month>/', views.EmployeeKPIDetailView.as_view(), name='employee_kpi_detail'),
-    path('kpi/my/<int:year>/<int:month>/', views.MyKPIView.as_view(), name='my_kpi'),
+    
+    path('kpi/employees/<int:employee_id>/<int:year>/<int:quarter_month>/', views.EmployeeKPIDetailView.as_view(), name='employee_kpi_detail'),
+    
+    path('kpi/my/<int:year>/<int:quarter_month>/', views.MyKPIView.as_view(), name='my_kpi'),
     path('kpi/feedback/create/', views.KPIFeedbackCreateView.as_view(), name='kpi_feedback_create'),
     path('ajax/category/create/', views.ajax_create_category, name='ajax_create_category'),
     path('employees/<int:employee_id>/send-feedback/', views.send_kpi_feedback, name='send_kpi_feedback'),
     path('missions/accept/<int:pk>/', views.accept_mission, name='accept_mission'),
-    path('employee/<int:employee_id>/pdf/<int:year>/<int:month>/', 
+    path('employee/<int:employee_id>/pdf/<int:year>/<int:quarter_month>/', 
      views.export_kpi_pdf, name='export_kpi_pdf'),
     path('missions/update/<int:mission_id>/', views.mission_update,name="mission_update" ),
     path('employee-profile/', views.employee_profile, name='employee_profile'),

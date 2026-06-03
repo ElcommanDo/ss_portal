@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from . import models
 from .models import CustomUser, TimesheetEntry, Project, Assignement, Timesheet, ProjectCost, Team
 
-admin.site.register([ProjectCost, Assignement, models.KPITemplate, models.KPICategory, models.EmployeeKPI, models.KPIFeedback])
+admin.site.register([ProjectCost, Assignement, models.KPITemplate, models.KPICategory,  models.KPIFeedback])
 from import_export.admin import ImportExportModelAdmin
 from .resources import (
     TeamResource,
@@ -58,3 +58,7 @@ class TimeSheetEntryAdmin(admin.ModelAdmin):
 @admin.register(Project)
 class ProjectAdmin(ImportExportModelAdmin):
     resource_class = ProjectResource
+
+@admin.register(models.EmployeeKPI)
+class EmployeeKPIAdmin(admin.ModelAdmin):
+    list_filter = ['employee']

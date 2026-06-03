@@ -8,7 +8,8 @@
             size: A4 portrait;
             margin: 1.5cm;
             @top-center {
-                content: "SmartSystem KPI Report - {{ year }} - {{ month_name }}";
+                /* تعديل: استبدال اسم الشهر بالربع السنوي المستهدف */
+                content: "SmartSystem KPI Report - {{ year }} - Q{{ quarter_number }} End";
                 font-size: 10px;
                 color: #555;
             }
@@ -40,7 +41,7 @@
         .company-name {
             font-size: 32px;
             font-weight: 700;
-            color: #0a2540; /* little dark blue as requested */
+            color: #0a2540;
             letter-spacing: -1px;
             margin: 0;
         }
@@ -130,7 +131,7 @@
             display: inline-block;
         }
 
-        /* Score color ranges (as requested) */
+        /* Score color ranges */
         .score-high {      /* ≥ 90 */
             background: #10b981;
             color: #fff;
@@ -210,14 +211,13 @@
 <body>
     <div class="report-container">
 
-        <!-- HEADER -->
         <div class="header">
             <h1 class="company-name">SmartSystem</h1>
-            <h2 class="report-title">KPI Performance Report</h2>
+            <h2 class="report-title">Quarterly KPI Performance Report</h2>
             <div class="report-meta">
                 <div>
                     <strong>Period:</strong> 
-                    {{ month_name|default:"March" }} {{ year|default:"2026" }}
+                    Quarter {{ quarter_number|default:"1" }} End (31/{{ quarter_month|default:"3" }}) — {{ year|default:"2026" }}
                 </div>
                 <div>
                     <strong>Date of Record:</strong> 
@@ -229,10 +229,8 @@
             </div>
         </div>
 
-        <!-- WATERMARK -->
         <div class="watermark">SmartSystem</div>
 
-        <!-- TABLE -->
         <table>
             <thead>
                 <tr>
@@ -254,6 +252,10 @@
                         {% with score=employee.total_score %}
                             {% if score >= 90 %}
                                 <span class="total-score score-high">{{ score }} %</span>
+                            {% elif score >= 80 %}
+                                <span class="total-score score-good">{{ score }} %</span>
+                            {% elif score >= 70 %}
+                                <span class="total-score score-satisfactory">{{ score }} %</span>
                             {% else %}
                                 <span class="total-score score-needs-improvement">{{ score }} %</span>
                             {% endif %}
@@ -263,16 +265,14 @@
                 {% empty %}
                 <tr>
                     <td colspan="3" style="text-align:center; padding:40px; color:#64748b;">
-                        No KPI data available for this period.
+                        No KPI data available for this quarter.
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
 
-        <!-- SIGNATURES -->
         <div class="signatures">
-            <!-- Top Management - LEFT -->
             <div class="signature-box left">
                 <div class="signature-title">Signature of Top Management</div>
                 <div class="signature-line"></div>
@@ -280,7 +280,6 @@
                 <div style="font-size:11px; margin-top:4px;">Date: ________________</div>
             </div>
 
-            <!-- CEO - RIGHT (float right as requested) -->
             <div class="signature-box" style="text-align:right;">
                 <div class="signature-title">Signature of CEO</div>
                 <div class="signature-line"></div>
@@ -289,7 +288,6 @@
             </div>
         </div>
 
-        <!-- FOOTER -->
         <div class="footer">
             Confidential • SmartSystem Internal Use Only • Generated on {{ report_date|date:"d M Y H:i" }}
         </div>

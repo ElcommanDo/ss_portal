@@ -62,54 +62,65 @@
                 <th>Hours</th>
                 <th>Task Type</th>
                 <th>Description</th>
-                <th>Onsite Abroad</th>
-                <th>Onsite Egypt Offices</th>
-              
+                <th class="text-center">Onsite Abroad</th>
+                <th class="text-center">Onsite Egypt Offices</th>
                 <th class="text-center">Actions</th>
             </tr>
         </thead>
         <tbody>
-    {% for entry in page_obj.object_list %}
-    <tr>
-        <td>{{ entry.work_date|date:"M d, Y" }}</td>
-        <td>{{ entry.project.name }}</td>
-        <td><small class="text-muted">{{ entry.time_start }} - {{ entry.time_end }}</small></td>
-        <td class="fw-bold text-primary">{{ entry.hours }}h</td>
-        <td><span class="badge {% if entry.task_type == 'Delivery' %}bg-primary{% else %}bg-secondary{% endif %}">{{ entry.task_type }}</span></td>
-        <td>{{ entry.task_description|truncatechars:30 }}</td>
-        
-        <td class="text-center">
-            {% if entry.onsite_abroad%}
-                <i class="fas fa-check-circle text-success fs-5"></i>
-            {% else %}
-                <i class="fas fa-times-circle text-danger opacity-25"></i>
-            {% endif %}
-        </td>
+            {% for entry in page_obj.object_list %}
+            <tr>
+                <td>{{ entry.work_date|date:"M d, Y" }}</td>
+                <td>{{ entry.project.name }}</td>
+                <td><small class="text-muted">{{ entry.time_start }} - {{ entry.time_end }}</small></td>
+                <td class="fw-bold text-primary">{{ entry.hours }}h</td>
+                <td><span class="badge {% if entry.task_type == 'Delivery' %}bg-primary{% else %}bg-secondary{% endif %}">{{ entry.task_type }}</span></td>
+                
+                <!-- TOP PLACEMENT POPOVER -->
+                <td>
+                    <span style="cursor: help;" 
+                          class="text-decoration-underline text-secondary-emphasis fw-medium"
+                          data-bs-toggle="popover" 
+                          data-bs-trigger="hover focus" 
+                          data-bs-placement="top"
+                          data-bs-html="true"
+                          title="Full Description" 
+                          data-bs-content="<div style='white-space: pre-wrap; font-size: 0.85rem;'>{{ entry.task_description|escapejs }}</div>">
+                        {{ entry.task_description|truncatechars:30 }}
+                    </span>
+                </td>
+                
+                <td class="text-center">
+                    {% if entry.onsite_abroad %}
+                        <i class="fas fa-check-circle text-success fs-5"></i>
+                    {% else %}
+                        <i class="fas fa-times-circle text-danger opacity-25"></i>
+                    {% endif %}
+                </td>
 
-        <td class="text-center">
-            {% if entry.onsite_Egypt %}
-                <i class="fas fa-check-circle text-success fs-5"></i>
-            {% else %}
-                <i class="fas fa-times-circle text-danger opacity-25"></i>
-            {% endif %}
-        </td>
+                <td class="text-center">
+                    {% if entry.onsite_Egypt %}
+                        <i class="fas fa-check-circle text-success fs-5"></i>
+                    {% else %}
+                        <i class="fas fa-times-circle text-danger opacity-25"></i>
+                    {% endif %}
+                </td>
 
-       
-        <td class="text-center">
-            <div class="btn-group">
-                <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#updateModal{{ entry.pk }}">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ entry.pk }}">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        </td>
-    </tr>
-    {% empty %}
-    <tr><td colspan="10" class="text-center py-4">No tasks found.</td></tr>
-    {% endfor %}
-</tbody>
+                <td class="text-center">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#updateModal{{ entry.pk }}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ entry.pk }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9" class="text-center py-4">No tasks found.</td></tr>
+            {% endfor %}
+        </tbody>
     </table>
 </div>
 
@@ -126,6 +137,7 @@
 {% endif %}
 
 {% for entry in page_obj.object_list %}
+    <!-- Update Modal -->
     <div class="modal fade" id="updateModal{{ entry.pk }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -173,6 +185,7 @@
         </div>
     </div>
 
+    <!-- Delete Modal -->
     <div class="modal fade" id="deleteModal{{ entry.pk }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -188,8 +201,7 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Keep it</button>
                     <form action="{% url 'timesheet_delete' entry.pk %}" method="POST">
                         {% csrf_token %}
-                          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                  
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
                         <button type="submit" class="btn btn-danger">Yes, Delete</button>
                     </form>
                 </div>
@@ -198,4 +210,16 @@
     </div>
 {% endfor %}
 
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl, {
+                animation: true,
+                // Delay 100ms on show to prevent flickering, 0ms on hide for instant vanish
+                delay: { "show": 100, "hide": 0 } 
+            })
+        })
+    });
+</script>
 {% endblock %}

@@ -15,30 +15,30 @@
 
         body { font-family: 'Inter', 'Helvetica', sans-serif; color: #0f172a; margin: 0; position: relative; z-index: 1;}
 
-     /* Optimized for PDF generation */
-.watermark-wrapper {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    z-index: -1000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    pointer-events: none;
-}
+        /* Optimized for PDF generation */
+        .watermark-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            z-index: -1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        }
 
-.watermark-text {
-    /* Use 'pt' for PDF instead of 'vw' */
-    font-size: 90pt; 
-    font-weight: 900;
-    color: #e2e8f0; /* Use a static light grey */
-    opacity: 0.5;
-    transform: rotate(-45deg);
-    white-space: nowrap;
-    font-family: Arial, sans-serif;
-}
+        .watermark-text {
+            font-size: 90pt; 
+            font-weight: 900;
+            color: #e2e8f0; 
+            opacity: 0.5;
+            transform: rotate(-45deg);
+            white-space: nowrap;
+            font-family: Arial, sans-serif;
+        }
+        
         /* CORPORATE HEADER */
         .header-container {
             display: flex;
@@ -92,12 +92,14 @@
 <body>
 
     <div class="watermark-wrapper">
-    <div class="watermark-text">SMART SYSTEM</div>
-</div>
+        <div class="watermark-text">SMART SYSTEM</div>
+    </div>
+    
     <div class="header-container">
         <div class="brand-name">SMART SYSTEM</div>
         <div class="creation-date">
-            <strong>REPORT ID:</strong> #{{ object.id }}-{{ year }}{{ month }}<br>
+            <!-- تعديل توليد الـ ID ليعتمد على الـ quarter_month الممرر بدلاً من الشهر القديم -->
+            <strong>REPORT ID:</strong> #{{ object.id }}-{{ year }}{{ quarter_month }}<br>
             <strong>CREATED ON:</strong> {{ report_date|date:"d M Y" }}
         </div>
     </div>

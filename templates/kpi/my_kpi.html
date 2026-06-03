@@ -22,18 +22,24 @@
         </div>
     </div>
 
-    <div class="mb-4">
+   <div class="mb-4">
         <form method="get" class="d-flex align-items-center gap-3">
-            <select name="month_selector" class="form-select w-auto">
-                {% for y_choice, m_choice, val_string, label in month_choices %}
-                    <option value="{{ val_string }}" 
-                        {% if month == m_choice and year == y_choice %}selected{% endif %}>
-                        {{ label }}
-                    </option>
-                {% endfor %}
-            </select>
+            <div class="input-group" style="max-width: 280px;">
+                <span class="input-group-text bg-white border-end-0 text-muted">
+                    <i class="fas fa-calendar-alt"></i>
+                </span>
+                <select name="quarter_selector" class="form-select border-start-0 shadow-sm fw-medium text-dark">
+                    {% for y_choice, m_choice, val_string, label in month_choices %}
+                        <option value="{{ val_string }}" 
+                            {% if quarter_month == m_choice and year == y_choice %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
         </form>
     </div>
+    
     <div class="mb-4">
         <a href="{%url 'employee_kpi_list' %}" class="btn btn-primary">team Kpi NewCommers</a>
     </div>
@@ -170,19 +176,18 @@
             })
         });
 
-        // 2. Handle Dropdown Navigation
-        const selector = document.querySelector('select[name="month_selector"]');
+        // 2. Handle Dropdown Navigation (Quarterly Context)
+        const selector = document.querySelector('select[name="quarter_selector"]');
         if (selector) {
             selector.addEventListener('change', function() {
-                const selectedValue = this.value; // "2026-3"
+                const selectedValue = this.value; 
                 const parts = selectedValue.split('-');
                 const newYear = parts[0];
-                const newMonth = parts[1];
+                const newQuarterMonth = parts[1];
 
-                // Check if we are on the "My KPI" page or "Employee Detail" page
-                // We use a dummy URL for replacement. Adjust 'my_kpi' to your actual URL name if different.
-                let url = "{% url 'my_kpi' year=9999 month=8888 %}";
-                url = url.replace('9999', newYear).replace('8888', newMonth);
+                // استدعاء رابط الـ URL المحدث المبني على بارامتر الربع السنوي الجديد
+                let url = "{% url 'my_kpi' year=9999 quarter_month=8888 %}";
+                url = url.replace('9999', newYear).replace('8888', newQuarterMonth);
 
                 window.location.href = url;
             });
