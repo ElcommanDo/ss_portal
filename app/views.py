@@ -1009,6 +1009,13 @@ def timesheet(request, scheduled=None):
         ),
     ).distinct().order_by('-date', 'user__full_name')
 
+    export_queryset = models.Timesheet.objects.filter(
+    id__in=queryset.values_list('id', flat=True)
+        )
+    if request.method == "POST":
+        if "export_csv" in request.POST:
+            return export_timesheets_csv(export_queryset)
+    
     # 6. Pagination & Parameter Cleanup
     paginator = Paginator(queryset, 20)
     page = request.GET.get('page', 1)
@@ -1156,6 +1163,66 @@ def timesheet_detail_entries(request, pk):
     
     return render(request, 'timesheet_detail_entries.html', context)
 
+import csv
+from django.http import HttpResponse
+def export_timesheets_csv(queryset):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="timesheets.csv"'
+
+    writer = csv.writer(response)
+
+    writer.writerow([
+        'Timesheet ID',
+        'User',
+        'Timesheet Date',
+        'Entry ID',
+        'Project',
+        'Task Type',
+        'Task Description',
+        'Hours',
+        'Work Date',
+        'Status',
+        'Scheduled',
+        'Start Time',
+        'End Time',
+        'Onsite Abroad',
+        'Onsite Egypt',
+        'Created At'
+    ])
+
+    for timesheet in queryset.prefetch_related('tasks', 'tasks__project'):
+        tasks = timesheet.tasks.all()
+
+        if not tasks.exists():
+            writer.writerow([
+                timesheet.id,
+                timesheet.user.username,
+                timesheet.date,
+                '', '', '', '', '', '', '', '', '', '', '', '', ''
+            ])
+            continue
+
+        for entry in tasks:
+            writer.writerow([
+                timesheet.id,
+                timesheet.user.username,
+                timesheet.date,
+                entry.id,
+                entry.project.name if entry.project else '',
+                entry.task_type,
+                entry.task_description,
+                entry.hours,
+                entry.work_date,
+                entry.status,
+                entry.is_scheduled,
+                entry.time_start,
+                entry.time_end,
+                entry.onsite_abroad,
+                entry.onsite_Egypt,
+                entry.created_at,
+            ])
+
+    return response
 
 @login_required
 def user_timesheets(request, scheduled=None):
@@ -1207,6 +1274,13 @@ def user_timesheets(request, scheduled=None):
     
     # Apply filters and ensure distinct results for the paginator
     queryset = queryset.filter(filters).distinct().order_by('-date')
+    export_queryset = models.Timesheet.objects.filter(
+    id__in=queryset.values_list('id', flat=True)
+        )
+    if request.method == "POST":
+        if "export_csv" in request.POST:
+            return export_timesheets_csv(export_queryset)
+    
 
     # 4. Pagination Logic
     paginator = Paginator(queryset, 20) 

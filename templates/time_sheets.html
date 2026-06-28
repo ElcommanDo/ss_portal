@@ -105,6 +105,15 @@
                 <th>Onsite (EG / AB)</th>
                 <th>Filtered Tasks/Projects</th>
                 <th>Actions</th>
+                <th >
+                   <form method="post">
+    {% csrf_token %}
+    <button  type="submit" name="export_csv" class="btn btn-success d-flex align-items-center gap-2">
+        <i class="bi bi-file-earmark-spreadsheet"></i>
+        Export CSV
+    </button>
+</form>
+                </th>
             </tr>
         </thead>
         <tbody>
