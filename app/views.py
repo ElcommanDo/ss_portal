@@ -3669,7 +3669,7 @@ class KPIReportPDFView(LoginRequiredMixin, ManagementRequiredMixin, View):
         employees = CustomUser.objects.filter(
             kpis__year=year,
             kpis__quarter_month=quarter_month
-        ).distinct().annotate(
+        ).exclude(username__in=['Aziz', 'abd.mon.sh', 'afarouk', 'semad']).distinct().annotate(
             total_score=Sum('kpis__score')
         ).order_by('full_name')
 
@@ -3709,7 +3709,7 @@ class SendKPIReportEmailView(LoginRequiredMixin, ManagementRequiredMixin, View):
         employees_for_report = CustomUser.objects.filter(
             kpis__year=year,
             kpis__quarter_month=quarter_month
-        ).distinct().annotate(
+        ).exclude(username__in=['Aziz', 'abd.mon.sh', 'afarouk', 'semad']).distinct().annotate(
             total_score=Sum('kpis__score')
         ).order_by('full_name')
 
