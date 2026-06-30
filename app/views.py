@@ -3651,14 +3651,14 @@ class EmployeeKPIListView(LoginRequiredMixin, ManagementRequiredMixin, ListView)
                 Q(username__icontains=search_query) | 
                 Q(full_name__icontains=search_query)
             )
-        queryset= queryset.exclude(username__in=['Aziz', 'abd.mon.sh', 'afarouk', 'semad'])
+        queryset = queryset.exclude(username__in=['Aziz', 'abd.mon.sh', 'afarouk', 'semad'])
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["current_year"] = date.today().year
         context["current_quarter_month"] = get_current_quarter_month()
-        context['all_employees'] = self.get_queryset().filter(username__in=['abd.mon.sh', 'afarouk', 'semad', 'amustafa']).order_by('full_name')
+        context['all_employees'] = CustomUser.objects.filter(username__in=['abd.mon.sh', 'afarouk', 'semad', 'amustafa']).order_by('full_name')
         return context
 
 class KPIReportPDFView(LoginRequiredMixin, ManagementRequiredMixin, View):
