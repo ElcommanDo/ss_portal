@@ -3594,7 +3594,7 @@ class KPITemplateListView(LoginRequiredMixin, ManagementRequiredMixin, ListView)
     paginate_by = 20
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().exclude(username__in=['Aziz', 'abd.mon.sh', 'afarouk', 'semad'])
         category_id = self.request.GET.get('category')
         source = self.request.GET.get('source')
         if category_id:
@@ -3651,6 +3651,7 @@ class EmployeeKPIListView(LoginRequiredMixin, ManagementRequiredMixin, ListView)
                 Q(username__icontains=search_query) | 
                 Q(full_name__icontains=search_query)
             )
+        queryset= queryset.exclude(username__in=['Aziz', 'abd.mon.sh', 'afarouk', 'semad'])
         return queryset
 
     def get_context_data(self, **kwargs):
