@@ -12,7 +12,7 @@ def load_skill_model():
         snapshot_download("amjad-awad/skill-extractor", local_dir=MODEL_DIR)
     return spacy.load(MODEL_DIR)
 
-nlp = None
+nlp = load_skill_model()
 
 def extract_skills_from_pdf(file_obj):
     text = ""
