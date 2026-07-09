@@ -80,6 +80,7 @@ urlpatterns = [
     path('ask/', views.ask_groq, name='ask_groq'),
     path('reports/utilization/', views.utilization_report, name='utilization_report'),
     path('reports/employee-detail/<int:employee_id>/', views.employee_utilization_detail, name='employee_utilization_detail'),
-
+    path('skills/add/', views.add_manual_skill, name='add_skill'),
+    path('skills/delete/', views.delete_single_skill, name='delete_skill'),
     
 ]

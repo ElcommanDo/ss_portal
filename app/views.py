@@ -4276,7 +4276,7 @@ def skills_dashboard(request):
             context['my_skills'] = profile.skills or []
         except employeeProfile.DoesNotExist:
             context['my_skills'] = []
-
+    
     return render(request, 'skills.html', context)
 from django.contrib import messages
 from django.shortcuts import redirect
@@ -4284,6 +4284,54 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from .utils import extract_skills_from_pdf
 from .models import employeeProfile   # Make sure to import your model
+
+
+import json
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import User
+@login_required
+def add_manual_skill(request, user_id=None): # user_id fallback if your URL pattern still includes it
+    if request.method == "POST":
+        # Look directly into request.POST instead of parsing request.body
+        new_skill = request.POST.get('skill', '').strip()
+        
+        if not new_skill or new_skill.lower() == 'none':
+            return JsonResponse({'status': 'error', 'message': 'Invalid skill name provided'})
+            
+        current_user = request.user
+        
+        # --- YOUR SAVING LOGIC HERE ---
+        # Example if using a profile system:
+        profile = current_user.profile
+        if new_skill not in profile.skills:
+            profile.skills.append(new_skill)
+            profile.save()
+        
+        return JsonResponse({'status': 'success', 'message': 'Skill added successfully!'})
+        
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+
+@login_required
+def delete_single_skill(request, user_id=None):
+    if request.method == "POST":
+        # Look directly into request.POST
+        target_skill = request.POST.get('skill', '').strip()
+        current_user = request.user
+        
+        if target_skill:
+            try:
+                profile = current_user.profile
+                # If it's a list string pattern, filter it out directly
+                profile.skills = [s for s in profile.skills if s != target_skill and s is not None and s != 'None' and s != '']
+                profile.save()
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'message': str(e)})
+        
+        return JsonResponse({'status': 'success', 'message': 'Skill removed successfully!'})
+        
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
 
 @login_required

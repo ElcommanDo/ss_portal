@@ -9,6 +9,10 @@
             <i class="fas fa-brain me-3 text-primary"></i>
             Skills Management
         </h1>
+        <!-- Add Skill Button (visible to everyone; backend handles user profiling) -->
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSkillModal">
+            <i class="fas fa-plus me-2"></i>Add Skill
+        </button>
     </div>
 
     <!-- Django Messages -->
@@ -24,7 +28,7 @@
         </div>
     {% endif %}
 
-    <!-- ==================== UPLOAD CV SECTION (Visible to All) ==================== -->
+    <!-- ==================== UPLOAD CV SECTION ==================== -->
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-light py-3">
             <h5 class="mb-0 fw-semibold">
@@ -33,7 +37,7 @@
             </h5>
         </div>
         <div class="card-body">
-            <form id="cvUploadForm" method="post" action="{%url 'upload_cv' %}" enctype="multipart/form-data" class="row g-3 align-items-end">
+            <form id="cvUploadForm" method="post" action="{% url 'upload_cv' %}" enctype="multipart/form-data" class="row g-3 align-items-end">
                 {% csrf_token %}
                 <div class="col-md-8">
                     <label class="form-label fw-medium">Choose PDF File</label>
@@ -43,7 +47,6 @@
                            class="form-control form-control-lg"
                            accept=".pdf"
                            required>
-                  
                 </div>
                 <div class="col-md-4">
                     <button type="submit" id="uploadBtn" class="btn btn-success btn-lg w-100 shadow-sm">
@@ -52,8 +55,6 @@
                     </button>
                 </div>
             </form>
-            
-            <!-- AJAX Status Message -->
             <div id="uploadStatus" class="mt-3"></div>
         </div>
     </div>
@@ -72,7 +73,7 @@
                     <table class="table table-hover mb-0 align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th width="28%">Employee</th>
+                                <th width="25%">Employee</th>
                                 <th>Extracted Skills</th>
                                 <th width="130px" class="text-center">CV Status</th>
                                 <th width="100px" class="text-center">Actions</th>
@@ -97,7 +98,15 @@
                                     {% if entry.skills %}
                                         <div class="d-flex flex-wrap gap-2">
                                             {% for skill in entry.skills %}
-                                                <span class="badge bg-info text-dark px-3 py-1 fs-6">{{ skill }}</span>
+                                                <span class="badge bg-info text-dark px-3 py-1 fs-6 d-inline-flex align-items-center">
+                                                    {{ skill|default:"None" }}
+                                                    <!-- Admin views can still delete elements belonging to their own request.user context -->
+                                                    {% if entry.user == request.user %}
+                                                    <button type="button" class="btn-close ms-2 fs-7 trigger-delete-skill" 
+                                                            data-skill-name="{{ skill }}" 
+                                                            aria-label="Remove skill"></button>
+                                                    {% endif %}
+                                                </span>
                                             {% endfor %}
                                         </div>
                                         <small class="text-muted mt-2 d-block">
@@ -142,109 +151,212 @@
             <div class="card-body text-center py-5">
                 <i class="fas fa-file-pdf fa-5x text-primary mb-4 opacity-75"></i>
                 <h3 class="fw-bold mb-3">Your Professional Skills</h3>
-                <p class="text-muted mb-4">Automatically extracted from your uploaded CV using AI</p>
+                <p class="text-muted mb-4">Automatically extracted from your uploaded CV using AI or managed manually</p>
 
                 {% if my_skills %}
                     <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
                         {% for skill in my_skills %}
-                            <span class="badge bg-primary fs-5 px-4 py-2 rounded-pill shadow-sm">
-                                {{ skill }}
+                            <span class="badge bg-primary fs-5 px-4 py-2 rounded-pill shadow-sm d-inline-flex align-items-center">
+                                {{ skill|default:"None" }}
+                                <button type="button" class="btn-close btn-close-white ms-3 fs-6 trigger-delete-skill" 
+                                        data-skill-name="{{ skill }}" 
+                                        aria-label="Remove skill"></button>
                             </span>
                         {% endfor %}
                     </div>
 
                     <div class="alert alert-success d-inline-flex align-items-center px-4 py-3">
                         <i class="fas fa-check-circle me-2"></i>
-                        <strong>{{ my_skills|length }}</strong> skills extracted successfully
+                        <strong>{{ my_skills|length }}</strong> skills processed
                     </div>
-
                 {% else %}
                     <div class="py-5">
                         <i class="fas fa-file-pdf fa-6x text-muted mb-4"></i>
                         <h5 class="text-muted">No skills extracted yet</h5>
-                        <p class="text-muted mb-4">Upload your CV above to automatically extract your skills.</p>
+                        <p class="text-muted mb-4">Upload your CV above or click "Add Skill" to build your profile.</p>
                     </div>
                 {% endif %}
             </div>
         </div>
     {% endif %}
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<!-- ==================== MODALS ==================== -->
+
+<!-- Add Skill Modal -->
+<div class="modal fade" id="addSkillModal" tabindex="-1" aria-labelledby="addSkillModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addSkillModalLabel"><i class="fas fa-brain text-primary me-2"></i>Add New Skill</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="addSkillForm">
+                <div class="modal-body">
+                    <!-- Hidden user ID inputs completely removed -->
+                    <div class="mb-3">
+                        <label for="skillNameInput" class="form-label fw-medium">Skill Name</label>
+                        <input type="text" class="form-control" id="skillNameInput" name="skill" required placeholder="e.g., Python, Project Management">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveSkillBtn">Add Skill</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteSkillModal" tabindex="-1" aria-labelledby="deleteSkillModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger" id="deleteSkillModalLabel"><i class="fas fa-exclamation-triangle me-2"></i>Confirm Removal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to remove <strong id="deleteSkillTargetName" class="text-primary"></strong> from your profile? This strictly deletes this keyword without affecting other structural elements.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteSkillBtn">Delete Skill</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-// ==================== CV UPLOAD HANDLER ====================
 document.addEventListener('DOMContentLoaded', function () {
+    let skillToDelete = '';
+    const deleteModalEl = document.getElementById('deleteSkillModal');
+    const bsDeleteModal = new bootstrap.Modal(deleteModalEl);
+
+    // ==================== CV UPLOAD ====================
     const form = document.getElementById('cvUploadForm');
-    const uploadBtn = document.getElementById('uploadBtn');
-    const statusDiv = document.getElementById('uploadStatus');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const uploadBtn = document.getElementById('uploadBtn');
+            const statusDiv = document.getElementById('uploadStatus');
+            const formData = new FormData(form);
+            const originalBtnText = uploadBtn.innerHTML;
 
-    form.addEventListener('submit', function(e) {
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+            uploadBtn.disabled = true;
+
+            fetch("{% url 'upload_cv' %}", {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    statusDiv.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Success!</div>`;
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    statusDiv.innerHTML = `<div class="alert alert-danger">${data.message || 'Error occurred.'}</div>`;
+                }
+            })
+            .catch(() => { statusDiv.innerHTML = `<div class="alert alert-danger">Network Error</div>`; })
+            .finally(() => {
+                uploadBtn.innerHTML = originalBtnText;
+                uploadBtn.disabled = false;
+            });
+        });
+    }
+
+    // ==================== ADD MANUAL SKILL HANDLER ====================
+    document.getElementById('addSkillForm').addEventListener('submit', function (e) {
         e.preventDefault();
+        const skillName = document.getElementById('skillNameInput').value.trim();
+        const saveBtn = document.getElementById('saveSkillBtn');
 
-        const formData = new FormData(form);
-        const originalBtnText = uploadBtn.innerHTML;
+        if(!skillName) return;
 
-        // Show loading
-        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
-        uploadBtn.disabled = true;
-        statusDiv.innerHTML = '';
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Adding...';
 
-        fetch("{% url 'upload_cv' %}", {
+        let payload = new FormData();
+        payload.append('skill', skillName);
+
+        // Submitting to standard Django URL template path (uses request.user internally)
+        fetch("{% url 'add_skill' %}", {
             method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}'
-            }
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            body: payload
         })
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                statusDiv.innerHTML = `
-                    <div class="alert alert-success alert-dismissible fade show">
-                        <i class="fas fa-check-circle me-2"></i>
-                        ${data.message || 'CV uploaded and skills extracted successfully!'}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                `;
-                // Auto refresh to show updated skills
-                setTimeout(() => window.location.reload(), 1800);
+                window.location.reload();
             } else {
-                statusDiv.innerHTML = `
-                    <div class="alert alert-danger alert-dismissible fade show">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        ${data.message || 'Upload failed. Please try again.'}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                `;
+                alert('❌ ' + (data.message || 'Could not add skill'));
+                saveBtn.disabled = false;
+                saveBtn.innerText = 'Add Skill';
             }
         })
         .catch(() => {
-            statusDiv.innerHTML = `
-                <div class="alert alert-danger alert-dismissible fade show">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    Network error occurred. Please check your connection and try again.
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            `;
-        })
-        .finally(() => {
-            uploadBtn.innerHTML = originalBtnText;
-            uploadBtn.disabled = false;
+            alert('❌ Network error occurred.');
+            saveBtn.disabled = false;
+            saveBtn.innerText = 'Add Skill';
         });
     });
 
-    // ==================== Re-extract button for Admin ====================
+    // ==================== DELETE SKILL CONTEXT BINDING ====================
+    document.addEventListener('click', function (e) {
+        const targetBtn = e.target.closest('.trigger-delete-skill');
+        if (targetBtn) {
+            skillToDelete = targetBtn.getAttribute('data-skill-name') || "";
+            
+            document.getElementById('deleteSkillTargetName').innerText = skillToDelete ? skillToDelete : "Unassigned (None)";
+            bsDeleteModal.show();
+        }
+    });
+
+    document.getElementById('confirmDeleteSkillBtn').addEventListener('click', function () {
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
+
+        let payload = new FormData();
+        payload.append('skill', skillToDelete);
+
+        // Submitting to standard Django URL template path (uses request.user internally)
+        fetch("{% url 'delete_skill' %}", {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            body: payload
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.reload();
+            } else {
+                alert('❌ ' + (data.message || 'Failed to remove skill'));
+                this.disabled = false;
+                this.innerText = 'Delete Skill';
+            }
+        })
+        .catch(() => {
+            alert('❌ Network error occurred.');
+            this.disabled = false;
+            this.innerText = 'Delete Skill';
+        });
+    });
+
+    // ==================== RE-EXTRACT SKILLS HANDLER (Admin Only) ====================
     const reExtractButtons = document.querySelectorAll('.re-extract-btn');
-    
     reExtractButtons.forEach(btn => {
         btn.addEventListener('click', function () {
             const userId = this.getAttribute('data-user-id');
             const originalHTML = this.innerHTML;
             
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            this.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
             this.disabled = true;
 
+            // Notice: URL string interpolation format kept specifically for Admin tools targeting distinct users
             fetch(`/skills/re-extract/${userId}/`, {
                 method: 'POST',
                 headers: {
@@ -255,7 +367,6 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    alert('✅ Skills re-extracted successfully for this user!');
                     window.location.reload();
                 } else {
                     alert('❌ ' + (data.message || 'Failed to re-extract skills'));
@@ -270,4 +381,5 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+
 {% endblock %}
