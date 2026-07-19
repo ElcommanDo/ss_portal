@@ -4617,3 +4617,9 @@ def employee_utilization_detail(request, employee_id):
         'task_data': [{'type': t, 'hours': round(h, 2)} for t, h in task_hours.items()],
         'entries': entries_list,
     })
+
+
+def landing_page(request):
+    return render(request, 'landing_page.html', {
+        
+    })
