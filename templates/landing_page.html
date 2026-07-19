@@ -1,0 +1,534 @@
+{%load static%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart System | Enterprise Technology &amp; Digital Transformation Partner</title>
+<meta name="description" content="Smart System is a leading enterprise IT partner delivering AI, cloud infrastructure, cybersecurity, networking, ERP and managed services across Egypt, Saudi Arabia and the UAE.">
+<meta name="keywords" content="Smart System, enterprise IT, digital transformation, artificial intelligence, cloud infrastructure, cybersecurity, networking, ERP, managed services">
+<meta property="og:title" content="Smart System | Partner in Performance">
+<meta property="og:description" content="Transforming businesses through smart technology — enterprise IT, AI, cloud, cybersecurity and digital transformation.">
+<meta property="og:type" content="website">
+<link rel="icon" href="{%static 'landing/images/logo.webp'%}" type="image/webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{%static 'landing/css/style.css'%}">
+<link rel="stylesheet" href="{%static 'landing/css/animations.css'%}">
+<link rel="stylesheet" href="{%static 'landing/css/responsive.css'%}">
+</head>
+<body>
+
+<!-- ============ PAGE LOADER ============ -->
+<div class="page-loader" id="pageLoader" aria-hidden="true"><div class="loader-mark"></div></div>
+
+<!-- ============ HEADER ============ -->
+<header class="site-header" id="siteHeader">
+  <div class="header-inner">
+    <a href="#home" class="brand" aria-label="Smart System home">
+      <img src="{%static 'landing/images/logo.webp'%}" alt="Smart System logo">
+    </a>
+
+    <nav class="main-nav" aria-label="Primary navigation">
+      <ul>
+        <li><a href="#home" class="nav-link">Home</a></li>
+        <li><a href="#about" class="nav-link">About Us</a></li>
+        <li class="has-mega">
+          <a href="#services" class="nav-link">Solutions
+            <svg class="nav-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </a>
+          <div class="mega-menu" id="solutionsMega">
+            <div class="mega-menu-inner">
+              <div class="mega-grid" id="solutionsMegaGrid"></div>
+            </div>
+          </div>
+        </li>
+        <li class="has-mega">
+          <a href="#partners" class="nav-link">Partners
+            <svg class="nav-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </a>
+          <div class="mega-menu" id="partnersMega">
+            <div class="mega-menu-inner">
+              <div class="partners-grid" id="partnersMegaGrid"></div>
+            </div>
+          </div>
+        </li>
+        <li><a href="#projects" class="nav-link">Projects</a></li>
+        <li><a href="#team" class="nav-link">Team</a></li>
+        <li><a href="#certifications" class="nav-link">Certifications</a></li>
+        <li><a href="#careers" class="nav-link">Careers</a></li>
+        <li><a href="#contact" class="nav-link">Contact</a></li>
+      </ul>
+    </nav>
+
+    <div class="header-actions">
+      <a href="#contact" class="btn btn-primary btn-sm">Contact Sales</a>
+      <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNav">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ============ MOBILE NAV ============ -->
+<nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
+  <ul>
+    <li><a href="#home">Home</a></li>
+    <li><a href="#about">About Us</a></li>
+    <li><a href="#services">Solutions</a></li>
+    <li><a href="#partners">Partners</a></li>
+    <li><a href="#projects">Projects</a></li>
+    <li><a href="#team">Team</a></li>
+    <li><a href="#certifications">Certifications</a></li>
+    <li><a href="#careers">Careers</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<main id="home">
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="hero-noise" aria-hidden="true"></div>
+    <svg id="hero-network" aria-hidden="true"></svg>
+    <div class="floating-shape s1" aria-hidden="true"></div>
+    <div class="floating-shape s2" aria-hidden="true"></div>
+    <div class="floating-shape s3" aria-hidden="true"></div>
+    <div class="floating-shape s4" aria-hidden="true"></div>
+
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <span class="eyebrow">Enterprise IT &amp; Digital Transformation</span>
+        <h1>Transforming Businesses Through <span class="accent">Smart Technology</span></h1>
+        <p>Smart System partners with governments, enterprises and growing organizations to design, build and manage the technology that powers performance — from AI and cloud infrastructure to cybersecurity and ERP.</p>
+        <div class="hero-actions">
+          <a href="#services" class="btn btn-primary">Explore Services
+            <svg class="btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#contact" class="btn btn-outline">Contact Sales</a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat"><b data-count="16">0</b><span>Years Experience</span></div>
+          <div class="stat"><b data-count="420">0</b><span>Projects Delivered</span></div>
+          <div class="stat"><b data-count="180">0</b><span>Enterprise Clients</span></div>
+          <div class="stat"><b data-count="3">0</b><span>Countries Served</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scroll-indicator"><span>SCROLL</span><div class="mouse"></div></div>
+  </section>
+
+  <!-- ============ ABOUT ============ -->
+  <section class="about section-pad" id="about">
+    <div class="container about-grid">
+      <div class="about-visual reveal-scale">
+        <div class="frame"><span class="ph-label">[ Image placeholder — Smart System headquarters / team at work — replace with office photography ]</span></div>
+        <div class="float-card">
+          <b>16+</b>
+          <span>Years building enterprise technology across the region</span>
+        </div>
+      </div>
+      <div class="about-copy reveal">
+        <span class="eyebrow">About Smart System</span>
+        <h2>An enterprise technology partner built for performance</h2>
+        <p>Smart System is a regional systems integrator and managed services provider delivering enterprise-grade technology to governments, financial institutions, industrial groups and large private enterprises across Egypt, Saudi Arabia and the United Arab Emirates. We design infrastructure, build software, secure networks and manage operations so our clients can focus on their core business.</p>
+        <h3>Our Mission</h3>
+        <p>To engineer resilient, secure and intelligent technology foundations that accelerate our clients' digital transformation and long-term performance.</p>
+        <h3>Our Vision</h3>
+        <p>To be the most trusted enterprise technology partner in the region — recognized for engineering rigor, certified expertise and measurable business outcomes.</p>
+        <div class="values-grid">
+          <div class="value-chip"><b>Integrity</b><span>We deliver what we commit to, every time.</span></div>
+          <div class="value-chip"><b>Excellence</b><span>Certified engineering, held to enterprise standard.</span></div>
+          <div class="value-chip"><b>Partnership</b><span>Long-term relationships over one-off projects.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="stats-strip reveal">
+        <div class="stat-item"><span class="count" data-count="16">0</span><label>Years Experience</label></div>
+        <div class="stat-item"><span class="count" data-count="420">0</span><label>Projects Delivered</label></div>
+        <div class="stat-item"><span class="count" data-count="180">0</span><label>Enterprise Clients</label></div>
+        <div class="stat-item"><span class="count" data-count="3">0</span><label>Countries Served</label></div>
+        <div class="stat-item"><span class="count" data-count="65">0</span><label>Certified Engineers</label></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHY CHOOSE US ============ -->
+  <section class="why section-pad" id="why">
+    <div class="container">
+      <div class="section-head center reveal">
+        <span class="eyebrow" style="justify-content:center">Why Smart System</span>
+        <h2>Enterprise trust, engineered in</h2>
+        <p style="margin-inline:auto">Every engagement is backed by certified engineers, proven delivery methodology and round-the-clock support.</p>
+      </div>
+      <div class="why-grid" id="whyGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ SERVICES ============ -->
+  <section class="services section-pad" id="services">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Solutions</span>
+        <h2>Services built for enterprise scale</h2>
+        <p>From strategy to implementation and 24/7 operations, Smart System covers the full technology stack.</p>
+      </div>
+      <div class="services-grid" id="servicesGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ PROJECTS ============ -->
+  <section class="projects section-pad" id="projects">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Featured Work</span>
+        <h2>Projects delivered across the region</h2>
+        <p>A selection of engagements across government, finance, industry and healthcare.</p>
+      </div>
+      <div class="filter-bar" id="projectFilters"></div>
+      <div class="projects-grid" id="projectsGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ INDUSTRIES ============ -->
+  <section class="industries section-pad" id="industries" style="background:var(--gray-50)">
+    <div class="container">
+      <div class="section-head center reveal">
+        <span class="eyebrow" style="justify-content:center">Industries We Serve</span>
+        <h2>Deep expertise across critical sectors</h2>
+      </div>
+      <div class="industries-grid" id="industriesGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ CEO SECTION ============ -->
+  <section class="ceo-section section-pad" id="leadership">
+    <div class="container ceo-grid">
+      <div class="ceo-photo-wrap reveal-scale">
+        <div class="ceo-photo"><span class="ph-label">[ CEO photo placeholder ]</span></div>
+      </div>
+      <div class="ceo-copy reveal">
+        <span class="eyebrow">A Message From Our CEO</span>
+        <h2>Ahmed El-Sayed</h2>
+        <span class="ceo-title">Founder &amp; Chief Executive Officer, Smart System</span>
+        <p>Since founding Smart System, our purpose has never changed: build technology foundations that our clients can depend on, in the moments that matter most.</p>
+        <blockquote class="ceo-quote">"Performance isn't a promise we make in a proposal — it's a standard we hold on every project, every day."</blockquote>
+        <p>Today Smart System operates across three countries, serving governments and enterprises that trust us with their most critical infrastructure. As the region accelerates its digital transformation, we remain committed to engineering excellence, certified expertise, and partnerships built on integrity.</p>
+        <div class="ceo-signature">Ahmed El-Sayed</div>
+        <a href="#" class="btn btn-outline btn-sm">Connect on LinkedIn
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BOARD OF DIRECTORS ============ -->
+  <section class="board section-pad" id="board">
+    <div class="container">
+      <div class="section-head center reveal">
+        <span class="eyebrow" style="justify-content:center">Governance</span>
+        <h2>Board of Directors</h2>
+        <p style="margin-inline:auto">Strategic leadership guiding Smart System's long-term direction.</p>
+      </div>
+      <div class="board-grid" id="boardGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ TEAM ============ -->
+  <section class="team section-pad" id="team" style="background:var(--gray-50)">
+    <div class="container">
+      <div class="section-head center reveal">
+        <span class="eyebrow" style="justify-content:center">Our People</span>
+        <h2>The engineers behind every deployment</h2>
+        <p style="margin-inline:auto">Certified, experienced, and organized around the technologies our clients depend on.</p>
+      </div>
+      <div class="team-grid" id="teamGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ CERTIFICATIONS ============ -->
+  <section class="certifications section-pad" id="certifications">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Certifications</span>
+        <h2>Formal recognition from our technology partners</h2>
+      </div>
+      <div class="certs-grid" id="certsGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ EMPLOYEE BADGES ============ -->
+  <section class="badges section-pad" id="badges" style="background:var(--gray-50)">
+    <div class="container">
+      <div class="section-head center reveal">
+        <span class="eyebrow" style="justify-content:center">Employee Badges</span>
+        <h2>Individually certified, collectively capable</h2>
+      </div>
+      <div class="badges-wall" id="badgesWall"></div>
+    </div>
+  </section>
+
+  <!-- ============ TECHNOLOGY PARTNERS CAROUSEL ============ -->
+  <section class="tech-partners section-pad" id="partners" style="padding-block:var(--space-xl)">
+    <div class="container">
+      <div class="section-head center reveal">
+        <span class="eyebrow" style="justify-content:center">Technology Partners</span>
+        <h2>Backed by the world's leading technology vendors</h2>
+      </div>
+    </div>
+    <div class="logo-track-wrap">
+      <div class="logo-track" id="partnersTrack"></div>
+    </div>
+  </section>
+
+  <!-- ============ CLIENTS / TESTIMONIALS ============ -->
+  <section class="clients section-pad" id="clients" style="background:var(--gray-50)">
+    <div class="container">
+      <div class="section-head center reveal">
+        <span class="eyebrow" style="justify-content:center">Trusted By</span>
+        <h2>What our clients say</h2>
+      </div>
+      <div class="logo-track-wrap">
+        <div class="logo-track" id="clientsTrack"></div>
+      </div>
+      <div class="testimonials-grid" id="testimonialsGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ COMPANY TIMELINE ============ -->
+  <section class="company-timeline section-pad" id="timeline">
+    <div class="container">
+      <div class="section-head center reveal">
+        <span class="eyebrow" style="justify-content:center">Our Journey</span>
+        <h2>Company Timeline</h2>
+      </div>
+      <div class="timeline" id="timelineList"></div>
+    </div>
+  </section>
+
+  <!-- ============ ACHIEVEMENTS ============ -->
+  <section class="achievements section-pad">
+    <div class="container">
+      <div class="section-head center reveal" style="max-width:680px">
+        <span class="eyebrow" style="justify-content:center;color:var(--cyan-400)">Company Achievements</span>
+        <h2 style="color:#fff">Numbers that reflect our commitment</h2>
+      </div>
+      <div class="achieve-grid" id="achieveGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ GALLERY ============ -->
+  <section class="gallery section-pad" id="gallery">
+    <div class="container">
+      <div class="section-head center reveal">
+        <span class="eyebrow" style="justify-content:center">Gallery</span>
+        <h2>Life at Smart System</h2>
+      </div>
+      <div class="gallery-tabs" id="galleryTabs"></div>
+      <div class="gallery-grid" id="galleryGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ CAREERS TEASER ============ -->
+  <section class="careers section-pad" id="careers" style="background:var(--gradient-dark)">
+    <div class="container" style="text-align:center;color:#fff;max-width:700px;margin-inline:auto">
+      <span class="eyebrow" style="justify-content:center;color:var(--cyan-400)">Careers</span>
+      <h2 style="color:#fff;margin-bottom:1rem">Build your career on real enterprise infrastructure</h2>
+      <p style="color:var(--gray-300,#c9d2e0);margin-bottom:2rem">We're always looking for certified engineers and consultants who want to work on the systems that matter most to our clients.</p>
+      <a href="#contact" class="btn btn-primary">View Open Roles</a>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section class="faq section-pad" id="faq">
+    <div class="container">
+      <div class="section-head center reveal">
+        <span class="eyebrow" style="justify-content:center">FAQ</span>
+        <h2>Frequently asked questions</h2>
+      </div>
+      <div class="faq-list" id="faqList"></div>
+    </div>
+  </section>
+
+  <!-- ============ CONTACT ============ -->
+  <section class="contact section-pad" id="contact">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Get In Touch</span>
+        <h2>Let's talk about your next project</h2>
+        <p>Reach our regional offices directly, or send our sales team the details below.</p>
+      </div>
+
+      <div class="contact-grid">
+        <div class="office-cards" id="officeCards"></div>
+
+        <div class="contact-form-card reveal">
+          <form id="salesForm" novalidate>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="fullName">Full Name *</label>
+                <input type="text" id="fullName" name="fullName" required>
+                <span class="field-error"></span>
+              </div>
+              <div class="form-group">
+                <label for="companyName">Company Name *</label>
+                <input type="text" id="companyName" name="companyName" required>
+                <span class="field-error"></span>
+              </div>
+              <div class="form-group">
+                <label for="jobTitle">Job Title</label>
+                <input type="text" id="jobTitle" name="jobTitle">
+                <span class="field-error"></span>
+              </div>
+              <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input type="email" id="email" name="email" required>
+                <span class="field-error"></span>
+              </div>
+              <div class="form-group">
+                <label for="phone">Phone Number *</label>
+                <input type="tel" id="phone" name="phone" required>
+                <span class="field-error"></span>
+              </div>
+              <div class="form-group">
+                <label for="country">Country</label>
+                <select id="country" name="country">
+                  <option value="">Select country</option>
+                  <option>Egypt</option>
+                  <option>Saudi Arabia</option>
+                  <option>United Arab Emirates</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="service">Service Required</label>
+                <select id="service" name="service">
+                  <option value="">Select service</option>
+                  <option>Artificial Intelligence</option>
+                  <option>Cloud Infrastructure</option>
+                  <option>Cybersecurity</option>
+                  <option>Networking</option>
+                  <option>ERP Solutions</option>
+                  <option>Managed Services</option>
+                  <option>Digital Transformation</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="budget">Estimated Budget</label>
+                <select id="budget" name="budget">
+                  <option value="">Select range</option>
+                  <option>Under $25,000</option>
+                  <option>$25,000 – $100,000</option>
+                  <option>$100,000 – $500,000</option>
+                  <option>$500,000+</option>
+                </select>
+              </div>
+              <div class="form-group full">
+                <label for="timeline">Project Timeline</label>
+                <input type="text" id="timeline" name="timeline" placeholder="e.g. Q4 2026, 3 months, immediate">
+              </div>
+              <div class="form-group full">
+                <label for="message">Message *</label>
+                <textarea id="message" name="message" rows="4" required></textarea>
+                <span class="field-error"></span>
+              </div>
+              <label class="form-checkbox">
+                <input type="checkbox" id="privacy" name="privacy" required>
+                I agree to the <a href="#" style="color:var(--royal-600);font-weight:600">Privacy Policy</a>.
+                <span class="field-error"></span>
+              </label>
+              <div class="form-submit">
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                  <span class="btn-text">Send Message</span>
+                  <span class="spinner"></span>
+                </button>
+                <span class="form-status" id="formStatus"></span>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="map-wrap reveal">
+        <span class="ph-label">[ Interactive map placeholder — embed Google Maps with office markers ]</span>
+        <div class="map-pin" data-label="Egypt HQ" style="top:42%;left:58%"></div>
+        <div class="map-pin" data-label="Saudi Arabia" style="top:55%;left:66%"></div>
+        <div class="map-pin" data-label="UAE" style="top:52%;left:74%"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="site-footer">
+  <div class="container footer-top">
+    <div class="footer-brand">
+      <img src="{%static 'landing/images/logo.webp'%}" alt="Smart System logo">
+      <p>Smart System is an enterprise technology partner delivering AI, cloud, cybersecurity, networking, ERP and managed services across Egypt, Saudi Arabia and the UAE.</p>
+      <div class="footer-social" id="footerSocial"></div>
+    </div>
+    <div class="footer-col">
+      <h5>Solutions</h5>
+      <ul>
+        <li><a href="#services">Business Solutions</a></li>
+        <li><a href="#services">Cloud &amp; Virtualization</a></li>
+        <li><a href="#services">Network &amp; Security</a></li>
+        <li><a href="#services">Data Centers</a></li>
+        <li><a href="#services">Backup &amp; Recovery</a></li>
+        <li><a href="#services">Collaboration Solutions</a></li>
+        <li><a href="#services">Light Current Systems</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h5>Quick Links</h5>
+      <ul>
+        <li><a href="#about">About</a></li>
+        <li><a href="#projects">Projects</a></li>
+        <li><a href="#partners">Partners</a></li>
+        <li><a href="#team">Team</a></li>
+        <li><a href="#careers">Careers</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h5>Offices</h5>
+      <ul>
+        <li>Egypt — New Cairo</li>
+        <li>Saudi Arabia — Riyadh</li>
+        <li>United Arab Emirates — RAK</li>
+      </ul>
+      <h5 style="margin-top:1.4rem">Email</h5>
+      <ul><li><a href="mailto:info@smartsystemit.com">info@smartsystemit.com</a></li></ul>
+    </div>
+    <div class="footer-col">
+      <h5>Newsletter</h5>
+      <p style="font-size:.84rem">Get technology insights from Smart System.</p>
+      <form class="newsletter-form" id="newsletterForm">
+        <input type="email" placeholder="Your email" required aria-label="Newsletter email">
+        <button type="submit" aria-label="Subscribe">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="container footer-bottom">
+    <span>&copy; <span id="year"></span> Smart System. All rights reserved.</span>
+    <div class="legal-links">
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms of Service</a>
+    </div>
+  </div>
+</footer>
+
+<button class="back-to-top" id="backToTop" aria-label="Back to top">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+</button>
+
+<script src="{%static 'landing/js/main.js'%}"></script>
+</body>
+</html>

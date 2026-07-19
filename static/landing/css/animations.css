@@ -1,0 +1,105 @@
+/* ==========================================================================
+   SMART SYSTEM — ANIMATIONS
+   ========================================================================== */
+
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+@keyframes floatY{0%,100%{transform:translateY(0);}50%{transform:translateY(-14px);}}
+@keyframes floatX{0%,100%{transform:translateX(0);}50%{transform:translateX(10px);}}
+@keyframes pulseGlow{
+  0%,100%{box-shadow:0 0 0 0 rgba(23,184,217,.35);}
+  50%{box-shadow:0 0 0 14px rgba(23,184,217,0);}
+}
+@keyframes shimmer{
+  0%{background-position:-200% 0;}
+  100%{background-position:200% 0;}
+}
+@keyframes ripple{
+  to{transform:scale(3.2);opacity:0;}
+}
+
+/* ---- Hero entrance sequence ---- */
+.hero-copy .eyebrow{animation:slideUp .8s ease .1s both;}
+.hero-copy h1{animation:slideUp .9s ease .25s both;}
+.hero-copy p{animation:slideUp .9s ease .4s both;}
+.hero-actions{animation:slideUp .9s ease .55s both;}
+.hero-stats{animation:slideUp .9s ease .7s both;}
+
+/* ---- Floating decorative shapes ---- */
+.floating-shape{
+  position:absolute;
+  border-radius:50%;
+  filter:blur(2px);
+  opacity:.5;
+  pointer-events:none;
+}
+.floating-shape.s1{width:10px;height:10px;background:var(--cyan-400);top:22%;left:14%;animation:floatY 6s ease-in-out infinite;}
+.floating-shape.s2{width:6px;height:6px;background:var(--royal-500);top:64%;left:72%;animation:floatY 8s ease-in-out infinite 1s;}
+.floating-shape.s3{width:14px;height:14px;background:rgba(62,210,238,.5);top:38%;left:82%;animation:floatX 7s ease-in-out infinite;}
+.floating-shape.s4{width:8px;height:8px;background:rgba(30,79,217,.6);top:78%;left:24%;animation:floatY 9s ease-in-out infinite .6s;}
+
+/* ---- Ripple buttons ---- */
+.btn{position:relative;}
+.ripple-effect{
+  position:absolute;
+  border-radius:50%;
+  background:rgba(255,255,255,.45);
+  transform:scale(0);
+  animation:ripple .6s ease-out forwards;
+  pointer-events:none;
+}
+
+/* ---- Card glow on hover ---- */
+.service-card,.why-card,.project-card,.person-card,.cert-card{
+  will-change:transform;
+}
+.glow-hover{position:relative;}
+.glow-hover::before{
+  content:"";
+  position:absolute;inset:-1px;
+  border-radius:inherit;
+  padding:1px;
+  background:var(--gradient-primary);
+  opacity:0;
+  transition:opacity .4s ease;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+  pointer-events:none;
+}
+.glow-hover:hover::before{opacity:1;}
+
+/* ---- Loading screen ---- */
+.page-loader{
+  position:fixed;inset:0;z-index:3000;
+  background:var(--navy-950);
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .6s ease,visibility .6s ease;
+}
+.page-loader.hidden{opacity:0;visibility:hidden;}
+.loader-mark{
+  width:64px;height:64px;
+  border-radius:16px;
+  border:2px solid rgba(255,255,255,.12);
+  border-top-color:var(--cyan-400);
+  animation:spin 1s linear infinite;
+}
+
+/* ---- Typing effect ---- */
+.typing-cursor{
+  display:inline-block;
+  width:2px;
+  background:var(--cyan-400);
+  margin-left:2px;
+  animation:blink 1s step-end infinite;
+}
+@keyframes blink{50%{opacity:0;}}
+
+/* ---- Scroll reveal stagger helper ---- */
+.reveal-stagger > *{transition-delay:calc(var(--i,0) * 90ms);}
+
+/* ---- Counter number pop ---- */
+.count.counted{animation:fadeIn .5s ease;}
+
+/* ---- Mouse parallax layers ---- */
+[data-parallax]{transition:transform .2s ease-out;}

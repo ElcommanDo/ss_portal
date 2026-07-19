@@ -1,0 +1,70 @@
+/* ==========================================================================
+   SMART SYSTEM — RESPONSIVE RULES
+   ========================================================================== */
+
+/* ---- Laptop (≤1200px) ---- */
+@media (max-width:1200px){
+  .services-grid,.projects-grid{grid-template-columns:repeat(2,1fr);}
+  .board-grid,.team-grid{grid-template-columns:repeat(3,1fr);}
+  .certs-grid{grid-template-columns:repeat(3,1fr);}
+  .industries-grid{grid-template-columns:repeat(4,1fr);}
+  .partners-grid{grid-template-columns:repeat(4,1fr);}
+  .achieve-grid{grid-template-columns:repeat(3,1fr);}
+  .gallery-grid{column-count:3;}
+  .stats-strip{grid-template-columns:repeat(3,1fr);row-gap:1.6rem;}
+}
+
+/* ---- Tablet (≤1024px) ---- */
+@media (max-width:1024px){
+  .main-nav{display:none;}
+  .menu-toggle{display:flex;}
+  .about-grid,.ceo-grid,.contact-grid{grid-template-columns:1fr;}
+  .about-visual{max-width:420px;margin-inline:auto;margin-bottom:2rem;}
+  .ceo-photo-wrap{margin-bottom:1rem;}
+  .why-grid{grid-template-columns:repeat(2,1fr);}
+  .mega-grid{grid-template-columns:repeat(2,1fr);}
+  .timeline::before{left:22px;}
+  .timeline-item,
+  .timeline-item:nth-child(odd),
+  .timeline-item:nth-child(even){
+    width:100%;left:0;text-align:left;padding-left:3.6rem;padding-right:0;
+  }
+  .timeline-item:nth-child(odd) .timeline-dot,
+  .timeline-item:nth-child(even) .timeline-dot{left:15px;right:auto;}
+}
+
+/* ---- Small tablet / large mobile (≤860px) ---- */
+@media (max-width:860px){
+  :root{--space-2xl:5rem;--space-xl:3.4rem;}
+  .services-grid,.projects-grid,.board-grid,.team-grid,.certs-grid{grid-template-columns:repeat(2,1fr);}
+  .industries-grid,.partners-grid{grid-template-columns:repeat(3,1fr);}
+  .achieve-grid{grid-template-columns:repeat(2,1fr);}
+  .gallery-grid{column-count:2;}
+  .footer-top{grid-template-columns:repeat(2,1fr);}
+  .form-grid{grid-template-columns:1fr;}
+}
+
+/* ---- Mobile (≤640px) ---- */
+@media (max-width:640px){
+  :root{--space-2xl:4rem;--space-xl:2.6rem;--header-h:70px;}
+  .hero-copy p{font-size:1rem;}
+  .hero-actions{flex-direction:column;align-items:flex-start;}
+  .hero-stats{gap:1.6rem;}
+  .services-grid,.projects-grid,.board-grid,.team-grid,.certs-grid,.why-grid{grid-template-columns:1fr;}
+  .industries-grid,.partners-grid{grid-template-columns:repeat(2,1fr);}
+  .achieve-grid{grid-template-columns:repeat(2,1fr);}
+  .gallery-grid{column-count:1;}
+  .stats-strip{grid-template-columns:repeat(2,1fr);}
+  .footer-top{grid-template-columns:1fr;gap:2rem;}
+  .footer-bottom{flex-direction:column;align-items:flex-start;}
+  .contact-form-card{padding:1.5rem;}
+  .office-card{flex-direction:column;}
+  .section-pad{padding-block:var(--space-2xl);}
+  .mega-grid{grid-template-columns:1fr;}
+  .back-to-top{bottom:1.2rem;right:1.2rem;width:44px;height:44px;}
+}
+
+/* ---- Landscape phones ---- */
+@media (max-width:900px) and (orientation:landscape){
+  .hero{min-height:auto;padding-block:6rem 3rem;}
+}
