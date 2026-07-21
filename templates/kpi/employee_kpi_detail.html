@@ -23,7 +23,23 @@
                 <i class="fas fa-user-chart text-primary me-2"></i>Performance Review
             </h1>
             <div class="d-flex align-items-center gap-3">
-                <p class="text-muted mb-0">Evaluating: <span class="fw-bold text-dark">{{ object.full_name }}</span></p>
+                        Evaluating:
+                        <form>
+                       <select class="form-select" onchange="if(this.value) window.location.href=this.value;">
+                            <option value="">Select Employee</option>
+
+                            {% for employee in employees %}
+                               <option
+                                    value="{% url 'employee_kpi_detail' employee.id year quarter_month %}"
+                                    {% if employee.id == object.id %}selected{% endif %}>
+                                    {{ employee.full_name }}
+                                </option>
+                            {% empty %}
+                                <option disabled>No employees found.</option>
+                            {% endfor %}
+                        </select>
+                        </form>
+                   
                 <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#feedbackModal">
                     <i class="fas fa-paper-plane me-1"></i> Send Feedback Email
                 </button>

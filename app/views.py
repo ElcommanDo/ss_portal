@@ -3818,6 +3818,8 @@ class EmployeeKPIDetailView(LoginRequiredMixin, AdminRequiredMixin, DetailView):
         context['year'] = self.year
         context['quarter_month'] = self.quarter_month
         context['quarter_choices'] = self.get_quarter_choices()
+        context['employees'] = CustomUser.objects.exclude(username__in=['Aziz', 'abd.mon.sh', 'afarouk', 'semad'])
+        
         return context
     
     def get_quarter_choices(self):
