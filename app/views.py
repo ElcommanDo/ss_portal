@@ -4623,3 +4623,12 @@ def landing_page(request):
     return render(request, 'landing_page.html', {
         
     })
+
+from django.db import transaction
+
+@transaction.atomic
+def erase_notes_from_kpis(request):
+    EmployeeKPI.objects.all(
+    ).update(notes='')
+    return HttpResponse("Done...")
+

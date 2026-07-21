@@ -55,7 +55,7 @@ class Command(BaseCommand):
                     quarter_month=quarter_month,
                     defaults={
                         'grade': template.default_grade,
-                        'notes': f"Opened at the start of the quarter ({today}) for continuous tracking."
+                        'notes': ""
                     }
                 )
                 if created:

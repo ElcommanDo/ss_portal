@@ -83,5 +83,6 @@ urlpatterns = [
     path('skills/add/', views.add_manual_skill, name='add_skill'),
     path('skills/delete/', views.delete_single_skill, name='delete_skill'),
     path('landing-page/', views.landing_page, name='landing_page'),
-   
+    path('erase_notes_from_kpis/',views.erase_notes_from_kpis, name='erase_notes_from_kpis'),
+    
 ]
