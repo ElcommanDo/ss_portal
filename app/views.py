@@ -2505,18 +2505,18 @@ from django.contrib.auth.decorators import login_required
 def timesheet_bulk_upload(request):
     if request.method != 'POST':
         messages.error(request, "Invalid request method.")
-        return redirect('home') 
+        return redirect('user_timesheets') 
 
     if 'bulk_file' not in request.FILES:
         messages.error(request, "No file was uploaded.")
-        return redirect('home')
+        return redirect('user_timesheets')
 
     excel_or_csv_file = request.FILES['bulk_file']
     file_name = excel_or_csv_file.name.lower()
 
     if not file_name.endswith(('.xlsx', '.xls', '.csv')):
         messages.error(request, "Invalid file format. Please upload an Excel (.xlsx/.xls) or CSV (.csv) file.")
-        return redirect('home')
+        return redirect('user_timesheets')
 
     is_csv = file_name.endswith('.csv')
     
@@ -2526,7 +2526,6 @@ def timesheet_bulk_upload(request):
         Q(is_active=True), user_projects_query | public_projects_query
     ).distinct().in_bulk(field_name='name') 
     
-    # 1. Updated mapping to include new fields
     col_map = {
         'date': -1,
         'project_name': -1,
@@ -2535,8 +2534,8 @@ def timesheet_bulk_upload(request):
         'task_type': -1,
         'time_start': -1,
         'time_end': -1,
-        'onsite_abroad': -1,  # New Field
-        'onsite_egypt': -1    # New Field
+        'onsite_abroad': -1,
+        'onsite_egypt': -1
     }
     required_cols = ['date', 'project_name', 'hours']
 
@@ -2564,18 +2563,21 @@ def timesheet_bulk_upload(request):
         if any(col_map[c] == -1 for c in required_cols):
             missing = [c for c in required_cols if col_map[c] == -1]
             messages.error(request, f"Missing required columns: {', '.join(missing)}")
-            return redirect('home')
+            return redirect('user_timesheets')
 
-        # Helper function to convert spreadsheet values to Boolean
         def clean_bool(val):
-            if val is None: return False
+            if val is None:
+                return False
             str_val = str(val).strip().lower()
             return str_val in ['true', '1', 'yes', 'y', 'checked']
 
+        success_count = 0
+        duplicate_rows = []
+
         with transaction.atomic():
-            success_count = 0
             for row_index, row in enumerate(data_rows, start=2):
-                if not any(row): continue
+                if not any(row):
+                    continue
 
                 # Extraction
                 date_val = row[col_map['date']]
@@ -2584,14 +2586,12 @@ def timesheet_bulk_upload(request):
                 description = row[col_map['task_description']] if col_map['task_description'] != -1 else ""
                 task_type = row[col_map['task_type']] if col_map['task_type'] != -1 else 'Other'
                 
-                # 2. Extract and clean the new boolean fields
                 abroad_val = row[col_map['onsite_abroad']] if col_map['onsite_abroad'] != -1 else False
                 egypt_val = row[col_map['onsite_egypt']] if col_map['onsite_egypt'] != -1 else False
                 
                 onsite_abroad = clean_bool(abroad_val)
                 onsite_egypt = clean_bool(egypt_val)
 
-                # Time Parsing
                 time_start_val = row[col_map['time_start']] if col_map['time_start'] != -1 else None
                 time_end_val = row[col_map['time_end']] if col_map['time_end'] != -1 else None
                 time_start = parse_time(time_start_val)
@@ -2609,7 +2609,8 @@ def timesheet_bulk_upload(request):
                         try:
                             work_date = datetime.strptime(date_val.strip(), fmt).date()
                             break
-                        except ValueError: continue
+                        except ValueError:
+                            continue
                 
                 if not work_date:
                     raise ValueError(f"Row {row_index}: Invalid date format '{date_val}'.")
@@ -2617,7 +2618,8 @@ def timesheet_bulk_upload(request):
                 # Validation
                 try:
                     hours = float(hours_val)
-                    if hours <= 0: raise ValueError
+                    if hours <= 0:
+                        raise ValueError
                 except (TypeError, ValueError):
                     raise ValueError(f"Row {row_index}: Hours must be a positive number.")
 
@@ -2625,35 +2627,71 @@ def timesheet_bulk_upload(request):
                 if not project:
                     raise ValueError(f"Row {row_index}: Project '{project_name}' not found or restricted.")
 
-                # Database Operations
+                # Get or create the Timesheet (header)
                 timesheet, _ = models.Timesheet.objects.get_or_create(
                     user=request.user, 
                     date=work_date
                 )
 
-                # 3. Create entry with new fields
-                models.TimesheetEntry.objects.create(
+                # Final description that will be saved
+                final_description = description or f"Bulk uploaded task for {project_name}"
+
+                # ========== EXACT DUPLICATE CHECK (same user only) ==========
+                exists = models.TimesheetEntry.objects.filter(
                     user=request.user,
                     project=project,
                     work_date=work_date,
-                    task_description=description or f"Bulk uploaded task for {project_name}",
+                    task_description=final_description,
                     hours=hours,
                     task_type=task_type,
                     status='Inprogress',
                     time_sheet=timesheet,
                     time_start=time_start,
                     time_end=time_end,
-                    onsite_abroad=onsite_abroad, # Added
-                    onsite_Egypt=onsite_egypt    # Added
+                    onsite_abroad=onsite_abroad,
+                    onsite_Egypt=onsite_egypt,
+                ).exists()
+
+                if exists:
+                    duplicate_rows.append(row_index)
+                    continue   # skip creating this entry
+                # ===========================================================
+
+                models.TimesheetEntry.objects.create(
+                    user=request.user,
+                    project=project,
+                    work_date=work_date,
+                    task_description=final_description,
+                    hours=hours,
+                    task_type=task_type,
+                    status='Inprogress',
+                    time_sheet=timesheet,
+                    time_start=time_start,
+                    time_end=time_end,
+                    onsite_abroad=onsite_abroad,
+                    onsite_Egypt=onsite_egypt
                 )
                 success_count += 1
 
-        messages.success(request, f"Successfully uploaded {success_count} entries.")
+        # Success message
+        if success_count > 0:
+            messages.success(request, f"Successfully uploaded {success_count} entries.")
+
+        # Warning for duplicates (same user)
+        if duplicate_rows:
+            rows_str = ", ".join(map(str, duplicate_rows))
+            messages.warning(
+                request,
+                f"The following row(s) already exist for this user with exactly the same data and were skipped: {rows_str}"
+            )
+
+        if success_count == 0 and not duplicate_rows:
+            messages.info(request, "No new entries were uploaded.")
 
     except Exception as e:
         messages.error(request, f"Upload Failed: No data was saved. Error: {e}")
     
-    return redirect('home')
+    return redirect('user_timesheets')
 
 # def export_man_days_pdf(request):
 #     # Base Query

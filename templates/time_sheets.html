@@ -214,7 +214,6 @@
         </div>
     </div>
 </div>
-
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const fileInput = document.getElementById('fileInput');
@@ -222,7 +221,9 @@
         const previewData = document.getElementById('previewData');
         const fileContentPreview = document.getElementById('fileContentPreview');
         const processFileBtn = document.getElementById('processFileBtn');
+        const uploadForm = processFileBtn.closest('form');
 
+        // File selection preview (unchanged)
         fileInput.addEventListener('change', function() {
             const file = this.files[0];
             if (file) {
@@ -239,7 +240,27 @@
                 } else {
                     previewData.textContent = "✅ Excel binary file selected. Ready to process.";
                 }
+            } else {
+                processFileBtn.disabled = true;
+                fileContentPreview.style.display = 'none';
             }
+        });
+
+        // Disable button + wait 3 seconds, then submit
+        processFileBtn.addEventListener('click', function(e) {
+            e.preventDefault();                 // stop immediate submit
+
+            if (processFileBtn.disabled) return;
+
+            // Disable and give visual feedback
+            processFileBtn.disabled = true;
+            const originalText = processFileBtn.innerHTML;
+            processFileBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...';
+
+            // Wait 3 seconds, then submit the form
+            setTimeout(function() {
+                uploadForm.submit();
+            }, 3000);
         });
     });
 </script>
