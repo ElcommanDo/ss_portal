@@ -79,44 +79,192 @@ def home(request):
     })
 
 
+# @login_required
+# def timesheet_update(request, pk):
+   
+#     if request.method =="POST":
+#         data = request.POST
+#         ts = TimesheetEntry.objects.get(pk=pk)
+#         ts.task_description = data.get("task_description", ts.task_description)
+#         ts.time_start = data.get("time_start", ts.time_start)
+#         ts.time_end = data.get("time_end", ts.time_end)
+#         ts.task_type = data.get("task_type", ts.task_type)
+#         if ts.project.name != data.get("project_name"):
+#             project = get_object_or_404(Project, name=data.get("project_name"))
+#             ts.project = project
+        
+#         if ts.time_start and  ts.time_end:
+#             fmt = '%H:%M'
+#             t1 = datetime.strptime(ts.time_start, fmt)
+#             t2 = datetime.strptime(ts.time_end, fmt)
+
+#             # Calculate difference
+#             # Using absolute value to ensure it's positive regardless of order
+#             delta = abs(t2 - t1)
+            
+#             # Convert total seconds to hours (float)
+#             hours = delta.total_seconds() / 3600.0
+#         else:
+#             hours = 0
+
+#         ts.hours = hours
+#         ts.save()
+#         next_url = request.POST.get('next')
+#         if hours <= 0:
+
+#             messages.error(request, "Hours spent must be greater than zero.")
+#             return redirect(next_url)
+#         messages.success(request, 'Time Sheet Entry Updated Successffully')
+#         return redirect(next_url)
+        
+
+
+
 @login_required
 def timesheet_update(request, pk):
-   
-    if request.method =="POST":
-        data = request.POST
-        ts = TimesheetEntry.objects.get(pk=pk)
-        ts.task_description = data.get("task_description", ts.task_description)
-        ts.time_start = data.get("time_start", ts.time_start)
-        ts.time_end = data.get("time_end", ts.time_end)
-        ts.task_type = data.get("task_type", ts.task_type)
-        if ts.project.name != data.get("project_name"):
-            project = get_object_or_404(Project, name=data.get("project_name"))
-            ts.project = project
-        
-        if ts.time_start and  ts.time_end:
-            fmt = '%H:%M'
-            t1 = datetime.strptime(ts.time_start, fmt)
-            t2 = datetime.strptime(ts.time_end, fmt)
 
-            # Calculate difference
-            # Using absolute value to ensure it's positive regardless of order
-            delta = abs(t2 - t1)
-            
-            # Convert total seconds to hours (float)
-            hours = delta.total_seconds() / 3600.0
-        else:
-            hours = 0
+    if request.method == "POST":
 
-        ts.hours = hours
-        ts.save()
-        next_url = request.POST.get('next')
-        if hours <= 0:
+        ts = get_object_or_404(
+            TimesheetEntry,
+            pk=pk,
+            user=request.user
+        )
 
-            messages.error(request, "Hours spent must be greater than zero.")
+        next_url = "timesheet" if request.user.is_superuser else "user_timesheets" 
+        # =========================
+        # Get new date
+        # =========================
+        work_date_str = request.POST.get("work_date")
+
+        if not work_date_str:
+            messages.error(request, "Please select a work date.")
             return redirect(next_url)
-        messages.success(request, 'Time Sheet Entry Updated Successffully')
+
+        try:
+            new_work_date = datetime.strptime(
+                work_date_str,
+                "%Y-%m-%d"
+            ).date()
+
+        except ValueError:
+            messages.error(request, "Invalid date.")
+            return redirect(next_url)
+
+        # =========================
+        # Prevent future dates
+        # =========================
+        if new_work_date > date.today():
+            messages.error(
+                request,
+                "You cannot select a future date."
+            )
+            return redirect(next_url)
+
+        # =========================
+        # Update normal fields
+        # =========================
+        ts.task_description = request.POST.get(
+            "task_description",
+            ts.task_description
+        )
+
+        ts.task_type = request.POST.get(
+            "task_type",
+            ts.task_type
+        )
+
+        # =========================
+        # Update project
+        # Better to use PK instead of name
+        # =========================
+        project_pk = request.POST.get("project")
+
+        if project_pk:
+            project = get_object_or_404(
+                Project,
+                pk=project_pk
+            )
+
+            ts.project = project
+
+        # =========================
+        # Update times
+        # =========================
+        time_start_str = request.POST.get("time_start")
+        time_end_str = request.POST.get("time_end")
+
+        if time_start_str:
+            ts.time_start = datetime.strptime(
+                time_start_str,
+                "%H:%M"
+            ).time()
+        else:
+            ts.time_start = None
+
+        if time_end_str:
+            ts.time_end = datetime.strptime(
+                time_end_str,
+                "%H:%M"
+            ).time()
+        else:
+            ts.time_end = None
+
+        # =========================
+        # Calculate hours
+        # =========================
+        hours = 0
+
+        if ts.time_start and ts.time_end:
+
+            t1 = datetime.combine(
+                date.today(),
+                ts.time_start
+            )
+
+            t2 = datetime.combine(
+                date.today(),
+                ts.time_end
+            )
+
+            delta = t2 - t1
+
+            hours = delta.total_seconds() / 3600
+
+        if hours <= 0:
+            messages.error(
+                request,
+                "End time must be greater than start time."
+            )
+            return redirect(next_url)
+
+        # =========================
+        # Transaction
+        # =========================
+        with transaction.atomic():
+
+            # Get or create Timesheet
+            timesheet, created = Timesheet.objects.get_or_create(
+                user=ts.user,
+                date=new_work_date
+            )
+
+            # Update entry
+            ts.work_date = new_work_date
+            ts.time_sheet = timesheet
+            ts.hours = hours
+
+            ts.save()
+
+        messages.success(
+            request,
+            "Time Sheet Entry Updated Successfully."
+        )
+
         return redirect(next_url)
-        
+
+    return redirect("timesheet_list")
+
 @login_required
 def time_sheet_delete(request, pk):
     if request.method == "POST":
@@ -1405,7 +1553,8 @@ def timesheet_entries(request, pk):
         'page_obj': page_obj,
         'user_projects': user_projects,
         'status_choices': models.TimesheetEntry.STATUS_CHOICES,
-        'projects': Project.objects.filter(is_public=True, is_active=True)
+        'projects': Project.objects.filter(is_public=True, is_active=True),
+        "today": timezone.localdate(),
     }
 
     return render(request, 'mytime_sheets.html', context)
