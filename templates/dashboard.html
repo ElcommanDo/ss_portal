@@ -4,9 +4,18 @@
 {% block title %}Dashboard Overview{% endblock %}
 
 {% block content %}
+<audio id="loadingVoice" preload="auto"></audio>
+<script>
+window.addEventListener("load", function () {
+    // Block user interaction
+    document.body.style.pointerEvents = "none";
 
-<audio id="loadingVoice" autoplay playsinline preload="auto"></audio>
-
+    setTimeout(function () {
+        // Allow interaction again
+        document.body.style.pointerEvents = "auto";
+    }, 5000);
+});
+</script>
 <script>
 window.addEventListener("load", function () {
 
@@ -18,38 +27,26 @@ window.addEventListener("load", function () {
         "{% static 'audio/5.mp3' %}"
     ];
 
+    // Choose random audio
+    const randomIndex = Math.floor(Math.random() * audioFiles.length);
+
     const audio = document.getElementById("loadingVoice");
 
-    // Select random audio
-    const randomAudio =
-        audioFiles[Math.floor(Math.random() * audioFiles.length)];
+    // Set random audio
+    audio.src = audioFiles[randomIndex];
 
-    audio.src = randomAudio;
+    // Always start from the beginning
+    audio.currentTime = 0;
+
+    // Make sure it plays until the natural end
     audio.loop = false;
-    audio.volume = 1.0;
 
-    // Load the audio
-    audio.load();
+    audio.play().then(() => {
+        console.log("Playing:", audioFiles[randomIndex]);
+    }).catch(error => {
+        console.log("Autoplay blocked:", error);
+    });
 
-    // Try to play immediately
-    const playAudio = () => {
-        audio.play()
-            .then(() => {
-                console.log("Audio started:", randomAudio);
-            })
-            .catch(error => {
-                console.log("Mobile browser blocked autoplay:", error);
-            });
-    };
-
-    playAudio();
-
-    // Lock page for 5 seconds
-    document.body.style.pointerEvents = "none";
-
-    setTimeout(() => {
-        document.body.style.pointerEvents = "auto";
-    }, 5000);
 });
 </script>
 <div class="row mb-4">
