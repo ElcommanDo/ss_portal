@@ -3075,6 +3075,260 @@ def export_man_days_pdf(request):
     response.write(html.write_pdf())
     return response
 
+from django.db.models import Max, OuterRef, Subquery, Q
+
+
+from django.db.models import Sum, Q, OuterRef, Subquery
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+from django.utils import timezone
+from datetime import datetime, timedelta
+from weasyprint import HTML
+from collections import defaultdict
+import calendar
+
+EXCLUDED_ROLES = ['project-manager', 'top-manager', 'delivery-manager']
+
+def get_current_week_range(today=None):
+    """Return (start_of_week, end_of_week) where week = Sunday → Saturday"""
+    if today is None:
+        today = timezone.now().date()
+    # weekday(): Monday=0 ... Sunday=6
+    start = today - timedelta(days=(today.weekday() + 1) % 7)  # Sunday
+    end = start + timedelta(days=6)  # Saturday
+    return start, end
+
+@login_required
+def reports_last_timesheet(request):
+    today = timezone.now().date()
+    WEEKLY_TARGET = 40.0
+
+    # Current week & month
+    week_start, week_end = get_current_week_range(today)
+    current_year = today.year
+    current_month = today.month
+
+    users = CustomUser.objects.exclude(
+        role__in=EXCLUDED_ROLES
+    ).exclude(
+        username__in=["Aziz", "aziz"]
+    ).distinct().order_by('full_name')
+
+    user_pk = request.GET.get('user_pk')
+    if user_pk:
+        users = users.filter(pk=user_pk)
+
+    # Latest timesheet info
+    latest_entry_subquery = TimesheetEntry.objects.filter(
+        user=OuterRef('pk'),
+        is_scheduled=False
+    ).exclude(task_type="study").order_by('-created_at')
+
+    users = users.annotate(
+        last_work_date=Subquery(latest_entry_subquery.values('work_date')[:1]),
+        last_description=Subquery(latest_entry_subquery.values('task_description')[:1]),
+        last_uploaded_at=Subquery(latest_entry_subquery.values('created_at')[:1]),
+    ).filter(last_work_date__isnull=False)
+
+    user_ids = list(users.values_list('pk', flat=True))
+
+    # ---------- Current Week hours ----------
+    week_entries = TimesheetEntry.objects.filter(
+        user_id__in=user_ids,
+        is_scheduled=False,
+        work_date__gte=week_start,
+        work_date__lte=week_end
+    ).exclude(task_type="study").values('user_id', 'work_date', 'hours')
+
+    weekly_data = defaultdict(lambda: {'total': 0.0, 'vacation': 0.0})
+    for e in week_entries:
+        uid = e['user_id']
+        hrs = float(e['hours'] or 0)
+        weekly_data[uid]['total'] += hrs
+        if e['work_date'].weekday() in (4, 5):  # Friday & Saturday
+            weekly_data[uid]['vacation'] += hrs
+
+    # ---------- Current Month hours ----------
+    month_entries = TimesheetEntry.objects.filter(
+        user_id__in=user_ids,
+        is_scheduled=False,
+        work_date__year=current_year,
+        work_date__month=current_month
+    ).exclude(task_type="study").values('user_id').annotate(total=Sum('hours'))
+
+    monthly_data = {e['user_id']: float(e['total'] or 0) for e in month_entries}
+
+    # Monthly target (working days Sun-Thu × 8)
+    _, days_in_month = calendar.monthrange(current_year, current_month)
+    working_days = sum(
+        1 for d in range(1, days_in_month + 1)
+        if datetime(current_year, current_month, d).weekday() in (6, 0, 1, 2, 3)
+    )
+    monthly_target = working_days * 8.0
+
+    # ---------- Build final list ----------
+    refined_entries = []
+    for user in users:
+        days_diff = (today - user.last_work_date).days if user.last_work_date else None
+
+        week_total = weekly_data[user.pk]['total']
+        week_vacation = weekly_data[user.pk]['vacation']
+        week_pct = (week_total / WEEKLY_TARGET * 100) if WEEKLY_TARGET else 0
+
+        month_total = monthly_data.get(user.pk, 0.0)
+        month_pct = (month_total / monthly_target * 100) if monthly_target else 0
+
+        refined_entries.append({
+            'user': user,
+            'work_date': user.last_work_date,
+            'description': user.last_description or "—",
+            'uploaded_at': user.last_uploaded_at,
+            'days_since_work': days_diff,
+
+            # Current performance
+            'week_total': week_total,
+            'week_vacation': week_vacation,
+            'week_pct': week_pct,
+            'month_total': month_total,
+            'month_pct': month_pct,
+            'monthly_target': monthly_target,
+        })
+
+    # Sorting
+    sort = request.GET.get('sort', 'days')
+    if sort == 'days':
+        refined_entries.sort(key=lambda x: x['days_since_work'] or 0, reverse=True)
+    elif sort == 'name':
+        refined_entries.sort(key=lambda x: x['user'].full_name.lower())
+    elif sort == 'date':
+        refined_entries.sort(key=lambda x: x['work_date'] or today, reverse=True)
+
+    paginator = Paginator(refined_entries, 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    context = {
+        'page_obj': page_obj,
+        'all_users': CustomUser.objects.exclude(role__in=EXCLUDED_ROLES)
+                                      .exclude(username__in=["Aziz", "aziz"])
+                                      .order_by('full_name'),
+        'today': today,
+        'total_employees': len(refined_entries),
+        'week_start': week_start,
+        'week_end': week_end,
+    }
+    return render(request, 'last_timesheet_report.html', context)
+
+
+@login_required
+def export_last_timesheet_pdf(request):
+    today = timezone.now().date()
+    WEEKLY_TARGET = 40.0
+
+    week_start, week_end = get_current_week_range(today)
+    current_year = today.year
+    current_month = today.month
+
+    users = CustomUser.objects.exclude(
+        role__in=EXCLUDED_ROLES
+    ).exclude(username__in=["Aziz", "aziz"]).distinct().order_by('full_name')
+
+    user_pk = request.GET.get('user_pk')
+    if user_pk:
+        users = users.filter(pk=user_pk)
+
+    latest_entry_subquery = TimesheetEntry.objects.filter(
+        user=OuterRef('pk'),
+        is_scheduled=False
+    ).exclude(task_type="study").order_by('-created_at')
+
+    users = users.annotate(
+        last_work_date=Subquery(latest_entry_subquery.values('work_date')[:1]),
+        last_description=Subquery(latest_entry_subquery.values('task_description')[:1]),
+        last_uploaded_at=Subquery(latest_entry_subquery.values('created_at')[:1]),
+    ).filter(last_work_date__isnull=False)
+
+    user_ids = list(users.values_list('pk', flat=True))
+
+    # Current Week
+    week_entries = TimesheetEntry.objects.filter(
+        user_id__in=user_ids,
+        is_scheduled=False,
+        work_date__gte=week_start,
+        work_date__lte=week_end
+    ).exclude(task_type="study").values('user_id', 'work_date', 'hours')
+
+    weekly_data = defaultdict(lambda: {'total': 0.0, 'vacation': 0.0})
+    for e in week_entries:
+        uid = e['user_id']
+        hrs = float(e['hours'] or 0)
+        weekly_data[uid]['total'] += hrs
+        if e['work_date'].weekday() in (4, 5):
+            weekly_data[uid]['vacation'] += hrs
+
+    # Current Month
+    month_entries = TimesheetEntry.objects.filter(
+        user_id__in=user_ids,
+        is_scheduled=False,
+        work_date__year=current_year,
+        work_date__month=current_month
+    ).exclude(task_type="study").values('user_id').annotate(total=Sum('hours'))
+
+    monthly_data = {e['user_id']: float(e['total'] or 0) for e in month_entries}
+
+    _, days_in_month = calendar.monthrange(current_year, current_month)
+    working_days = sum(
+        1 for d in range(1, days_in_month + 1)
+        if datetime(current_year, current_month, d).weekday() in (6, 0, 1, 2, 3)
+    )
+    monthly_target = working_days * 8.0
+
+    refined_entries = []
+    for user in users:
+        days_diff = (today - user.last_work_date).days if user.last_work_date else None
+
+        week_total = weekly_data[user.pk]['total']
+        week_vacation = weekly_data[user.pk]['vacation']
+        week_pct = (week_total / WEEKLY_TARGET * 100) if WEEKLY_TARGET else 0
+
+        month_total = monthly_data.get(user.pk, 0.0)
+        month_pct = (month_total / monthly_target * 100) if monthly_target else 0
+
+        refined_entries.append({
+            'employee_name': user.full_name or user.username,
+            'work_date': user.last_work_date,
+            'description': user.last_description or "—",
+            'uploaded_at': user.last_uploaded_at,
+            'days_since_work': days_diff,
+            'week_total': week_total,
+            'week_vacation': week_vacation,
+            'week_pct': week_pct,
+            'month_total': month_total,
+            'month_pct': month_pct,
+            'monthly_target': monthly_target,
+        })
+
+    refined_entries.sort(key=lambda x: x['days_since_work'] or 0, reverse=True)
+
+    server_url = request.build_absolute_uri('/').rstrip('/')
+    context = {
+        'entries': refined_entries,
+        'today': datetime.now(),
+        'server_url': server_url,
+        'total_employees': len(refined_entries),
+        'week_start': week_start,
+        'week_end': week_end,
+    }
+
+    html_string = render_to_string('last_timesheet_pdf.html', context)
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Last_Timesheet_Report_{datetime.now().strftime("%Y%m%d")}.pdf"'
+    response.write(html.write_pdf())
+    return response
 
 @user_passes_test(lambda u: is_admin(u) or is_manager(u) or is_leader(u), login_url=reverse_lazy('home'))
 def assignement_create(request):

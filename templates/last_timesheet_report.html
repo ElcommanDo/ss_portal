@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Last Timesheet Submission Report{% endblock %}
+
+{% block content %}
+<style>
+    .bg-info-soft { background-color: #e0f7fa; color: #0dcaf0; }
+    .table thead th { font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; }
+    .card h3 { font-size: 1.8rem; font-weight: 700; }
+    .days-critical { color: #dc3545; font-weight: 700; }
+    .days-warning { color: #fd7e14; font-weight: 600; }
+    .days-ok { color: #198754; }
+    .table-hover tbody tr:hover { background-color: #f1f8ff !important; }
+</style>
+
+<div class="container-fluid py-4 animate__animated animate__fadeIn">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-primary fw-bold">
+            <i class="fas fa-history me-2"></i> Last Timesheet Submission Report
+        </h1>
+        <a href="{% url 'export_last_timesheet_pdf' %}?{{ request.GET.urlencode }}" 
+           class="btn btn-danger btn-lg shadow-sm">
+            <i class="fas fa-file-pdf me-2"></i> Export to PDF
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #0d6efd, #0dcaf0); color: white;">
+                <div class="card-body">
+                    <h6 class="text-uppercase opacity-75 small fw-bold">Employees with Timesheets</h6>
+                    <h3 class="mb-0">{{ total_employees }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #fd7e14, #ffc107); color: white;">
+                <div class="card-body">
+                    <h6 class="text-uppercase opacity-75 small fw-bold">Report Date</h6>
+                    <h3 class="mb-0">{{ today|date:"M d, Y" }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #198754, #20c997); color: white;">
+                <div class="card-body">
+                    <h6 class="text-uppercase opacity-75 small fw-bold">Excluded</h6>
+                    <h3 class="mb-0" style="font-size:1.3rem;">Top Mgmt + Delivery</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow-sm mb-4 border-0 bg-light">
+        <div class="card-body p-4">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold small">Employee</label>
+                    <select class="form-select border-0 shadow-sm" name="user_pk">
+                        <option value="">All Employees</option>
+                        {% for u in all_users %}
+                            <option value="{{ u.pk }}" {% if request.GET.user_pk == u.pk|stringformat:"s" %}selected{% endif %}>
+                                {{ u.full_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold small">Sort By</label>
+                    <select class="form-select border-0 shadow-sm" name="sort">
+                        <option value="days" {% if request.GET.sort == 'days' or not request.GET.sort %}selected{% endif %}>Days Since Work (Highest first)</option>
+                        <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>Employee Name</option>
+                        <option value="date" {% if request.GET.sort == 'date' %}selected{% endif %}>Work Date (Newest first)</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary w-100 shadow-sm">
+                        <i class="fas fa-filter"></i>
+                    </button>
+                    <a href="{% url 'reports_last_timesheet' %}" class="btn btn-secondary shadow-sm">
+                        <i class="fas fa-sync-alt"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<div class="table-responsive bg-white rounded shadow-sm">
+    <table class="table table-hover align-middle mb-0">
+        <p class="text-muted mb-0">
+    Current Week: {{ week_start|date:"M d" }} → {{ week_end|date:"M d, Y" }}
+</p>
+        <thead class="table-dark text-center">
+            <tr>
+                <th class="ps-3 text-start">Employee</th>
+                <th>Work Date</th>
+                <th>Uploaded At</th>
+                <th>Description</th>
+                <th>Days Since Work</th>
+                <th style="min-width: 150px;">Weekly Performance</th>
+                <th style="min-width: 150px;">Monthly Performance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in page_obj %}
+            <tr>
+                <td class="ps-3 fw-bold text-dark">{{ entry.user.full_name }}</td>
+                <td class="text-center fw-bold">{{ entry.work_date|date:"M d, Y" }}</td>
+                <td class="text-center text-muted">{{ entry.uploaded_at|date:"M d, Y H:i" }}</td>
+                <td class="text-start">
+                    <span class="text-truncate d-inline-block" style="max-width: 260px;" title="{{ entry.description }}">
+                        {{ entry.description }}
+                    </span>
+                </td>
+                <td class="text-center">
+                    {% if entry.days_since_work is not None %}
+                        <span class="{% if entry.days_since_work > 7 %}days-critical{% elif entry.days_since_work > 3 %}days-warning{% else %}days-ok{% endif %}">
+                            {{ entry.days_since_work }} day{{ entry.days_since_work|pluralize }}
+                        </span>
+                    {% else %}—{% endif %}
+                </td>
+
+                <!-- WEEKLY -->
+                <td>
+                    <div class="fw-bold 
+                        {% if entry.week_pct >= 100 %}text-success
+                        {% elif entry.week_pct >= 80 %}text-primary
+                        {% elif entry.week_pct >= 50 %}text-warning
+                        {% else %}text-danger{% endif %}">
+                        {{ entry.week_total|floatformat:1 }}h / 40h
+                        <small>({{ entry.week_pct|floatformat:0 }}%)</small>
+                    </div>
+                    {% if entry.week_vacation > 0 %}
+                        <div class="small text-muted mt-1">
+                            <i class="fas fa-umbrella-beach me-1"></i>
+                            Vac: {{ entry.week_vacation|floatformat:1 }}h
+                        </div>
+                    {% endif %}
+                </td>
+
+                <!-- MONTHLY -->
+                <td>
+                    <div class="fw-bold 
+                        {% if entry.month_pct >= 100 %}text-success
+                        {% elif entry.month_pct >= 80 %}text-primary
+                        {% elif entry.month_pct >= 50 %}text-warning
+                        {% else %}text-danger{% endif %}">
+                        {{ entry.month_total|floatformat:1 }}h
+                        <small>({{ entry.month_pct|floatformat:0 }}%)</small>
+                    </div>
+                    <div class="small text-muted">Target ≈ {{ entry.monthly_target|floatformat:0 }}h</div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center py-5">
+                    <i class="fas fa-search-minus fa-3x text-light mb-3"></i>
+                    <p class="text-muted">No timesheet records found.</p>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+    {% if page_obj.has_other_pages %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link shadow-sm" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">Previous</a>
+                </li>
+            {% endif %}
+            <li class="page-item disabled">
+                <span class="page-link shadow-sm">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link shadow-sm" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Next</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

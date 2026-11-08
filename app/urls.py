@@ -84,5 +84,7 @@ urlpatterns = [
     path('skills/delete/', views.delete_single_skill, name='delete_skill'),
     path('landing-page/', views.landing_page, name='landing_page'),
     path('erase_notes_from_kpis/',views.erase_notes_from_kpis, name='erase_notes_from_kpis'),
+    path('reports/last-timesheet/', views.reports_last_timesheet, name='reports_last_timesheet'),
+    path('reports/last-timesheet/export-pdf/', views.export_last_timesheet_pdf, name='export_last_timesheet_pdf'),
     
 ]
