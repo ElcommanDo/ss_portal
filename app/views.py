@@ -3074,105 +3074,186 @@ def export_man_days_pdf(request):
     response['Content-Disposition'] = f'attachment; filename="Man_Days_Report_{datetime.now().strftime("%Y%m%d")}.pdf"'
     response.write(html.write_pdf())
     return response
-
-from django.db.models import Max, OuterRef, Subquery, Q
-
-
-from django.db.models import Sum, Q, OuterRef, Subquery
+from django.db.models import Sum, Q, Max
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from weasyprint import HTML
 from collections import defaultdict
 import calendar
 
 EXCLUDED_ROLES = ['project-manager', 'top-manager', 'delivery-manager']
+STUDY_Q = Q(task_type__iexact='study')
 
-def get_current_week_range(today=None):
-    """Return (start_of_week, end_of_week) where week = Sunday → Saturday"""
-    if today is None:
-        today = timezone.now().date()
-    # weekday(): Monday=0 ... Sunday=6
-    start = today - timedelta(days=(today.weekday() + 1) % 7)  # Sunday
-    end = start + timedelta(days=6)  # Saturday
+
+def get_week_range(ref_date):
+    """Return (start, end) of the week that contains ref_date (Sunday → Saturday)"""
+    start = ref_date - timedelta(days=(ref_date.weekday() + 1) % 7)
+    end = start + timedelta(days=6)
     return start, end
+
+
+def parse_date(value, default=None):
+    if not value:
+        return default
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return default
+
 
 @login_required
 def reports_last_timesheet(request):
     today = timezone.now().date()
     WEEKLY_TARGET = 40.0
 
-    # Current week & month
-    week_start, week_end = get_current_week_range(today)
-    current_year = today.year
-    current_month = today.month
+    # ---------- Week filter ----------
+    # Options: current | previous | custom (by picking any date inside the week)
+    week_mode = request.GET.get('week_mode', 'current')
+    custom_week_date = parse_date(request.GET.get('week_date'))
 
-    users = CustomUser.objects.exclude(
-        role__in=EXCLUDED_ROLES
-    ).exclude(
-        username__in=["Aziz", "aziz"]
-    ).distinct().order_by('full_name')
+    if week_mode == 'previous':
+        ref = today - timedelta(days=7)
+    elif week_mode == 'custom' and custom_week_date:
+        ref = custom_week_date
+    else:
+        ref = today
+        week_mode = 'current'
+
+    week_start, week_end = get_week_range(ref)
+
+    # ---------- Month filter ----------
+    # Options: current | previous | specific YYYY-MM
+    month_mode = request.GET.get('month_mode', 'current')
+    month_param = request.GET.get('month')  # format: YYYY-MM
+
+    if month_mode == 'previous':
+        first_of_this_month = today.replace(day=1)
+        last_month_end = first_of_this_month - timedelta(days=1)
+        selected_year = last_month_end.year
+        selected_month = last_month_end.month
+    elif month_mode == 'custom' and month_param:
+        try:
+            selected_year, selected_month = map(int, month_param.split('-'))
+        except Exception:
+            selected_year, selected_month = today.year, today.month
+            month_mode = 'current'
+    else:
+        selected_year, selected_month = today.year, today.month
+        month_mode = 'current'
+
+    # ---------- Users ----------
+    users = (
+        CustomUser.objects
+        .exclude(role__in=EXCLUDED_ROLES)
+        .exclude(username__in=["Aziz", "aziz"])
+        .distinct()
+        .order_by('full_name')
+    )
 
     user_pk = request.GET.get('user_pk')
     if user_pk:
         users = users.filter(pk=user_pk)
 
-    # Latest timesheet info
-    latest_entry_subquery = TimesheetEntry.objects.filter(
-        user=OuterRef('pk'),
-        is_scheduled=False
-    ).exclude(task_type="study").order_by('-created_at')
-
-    users = users.annotate(
-        last_work_date=Subquery(latest_entry_subquery.values('work_date')[:1]),
-        last_description=Subquery(latest_entry_subquery.values('task_description')[:1]),
-        last_uploaded_at=Subquery(latest_entry_subquery.values('created_at')[:1]),
-    ).filter(last_work_date__isnull=False)
-
     user_ids = list(users.values_list('pk', flat=True))
 
-    # ---------- Current Week hours ----------
-    week_entries = TimesheetEntry.objects.filter(
-        user_id__in=user_ids,
-        is_scheduled=False,
-        work_date__gte=week_start,
-        work_date__lte=week_end
-    ).exclude(task_type="study").values('user_id', 'work_date', 'hours')
+    # ---------- Latest Timesheet date ----------
+    latest_dates = (
+        Timesheet.objects
+        .filter(user_id__in=user_ids)
+        .values('user_id')
+        .annotate(last_date=Max('date'))
+    )
+    last_date_map = {row['user_id']: row['last_date'] for row in latest_dates}
+
+    latest_ts_ids = {}
+    for uid, last_date in last_date_map.items():
+        ts = Timesheet.objects.filter(user_id=uid, date=last_date).order_by('-id').first()
+        if ts:
+            latest_ts_ids[uid] = ts.id
+
+    timesheet_ids = list(latest_ts_ids.values())
+
+    # ---------- Description ----------
+    desc_map = {}
+    if timesheet_ids:
+        non_study = (
+            TimesheetEntry.objects
+            .filter(time_sheet_id__in=timesheet_ids, is_scheduled=False)
+            .exclude(STUDY_Q)
+            .order_by('time_sheet_id', 'id')
+        )
+        for e in non_study:
+            if e.time_sheet_id not in desc_map:
+                desc_map[e.time_sheet_id] = e.task_description or "—"
+
+        remaining = [tid for tid in timesheet_ids if tid not in desc_map]
+        if remaining:
+            any_entry = (
+                TimesheetEntry.objects
+                .filter(time_sheet_id__in=remaining, is_scheduled=False)
+                .order_by('time_sheet_id', 'id')
+            )
+            for e in any_entry:
+                if e.time_sheet_id not in desc_map:
+                    desc_map[e.time_sheet_id] = e.task_description or "—"
+
+    # ---------- Weekly hours (selected week) ----------
+    week_entries = (
+        TimesheetEntry.objects
+        .filter(
+            user_id__in=user_ids,
+            is_scheduled=False,
+            work_date__gte=week_start,
+            work_date__lte=week_end
+        )
+        .exclude(STUDY_Q)
+        .values('user_id', 'work_date', 'hours')
+    )
 
     weekly_data = defaultdict(lambda: {'total': 0.0, 'vacation': 0.0})
     for e in week_entries:
         uid = e['user_id']
         hrs = float(e['hours'] or 0)
         weekly_data[uid]['total'] += hrs
-        if e['work_date'].weekday() in (4, 5):  # Friday & Saturday
+        if e['work_date'].weekday() in (4, 5):
             weekly_data[uid]['vacation'] += hrs
 
-    # ---------- Current Month hours ----------
-    month_entries = TimesheetEntry.objects.filter(
-        user_id__in=user_ids,
-        is_scheduled=False,
-        work_date__year=current_year,
-        work_date__month=current_month
-    ).exclude(task_type="study").values('user_id').annotate(total=Sum('hours'))
-
+    # ---------- Monthly hours (selected month) ----------
+    month_entries = (
+        TimesheetEntry.objects
+        .filter(
+            user_id__in=user_ids,
+            is_scheduled=False,
+            work_date__year=selected_year,
+            work_date__month=selected_month
+        )
+        .exclude(STUDY_Q)
+        .values('user_id')
+        .annotate(total=Sum('hours'))
+    )
     monthly_data = {e['user_id']: float(e['total'] or 0) for e in month_entries}
 
-    # Monthly target (working days Sun-Thu × 8)
-    _, days_in_month = calendar.monthrange(current_year, current_month)
+    _, days_in_month = calendar.monthrange(selected_year, selected_month)
     working_days = sum(
         1 for d in range(1, days_in_month + 1)
-        if datetime(current_year, current_month, d).weekday() in (6, 0, 1, 2, 3)
+        if date(selected_year, selected_month, d).weekday() in (6, 0, 1, 2, 3)
     )
     monthly_target = working_days * 8.0
 
-    # ---------- Build final list ----------
+    # ---------- Build list ----------
     refined_entries = []
     for user in users:
-        days_diff = (today - user.last_work_date).days if user.last_work_date else None
+        last_date = last_date_map.get(user.pk)
+        if not last_date:
+            continue
+
+        ts_id = latest_ts_ids.get(user.pk)
+        days_diff = (today - last_date).days
 
         week_total = weekly_data[user.pk]['total']
         week_vacation = weekly_data[user.pk]['vacation']
@@ -3183,12 +3264,9 @@ def reports_last_timesheet(request):
 
         refined_entries.append({
             'user': user,
-            'work_date': user.last_work_date,
-            'description': user.last_description or "—",
-            'uploaded_at': user.last_uploaded_at,
+            'work_date': last_date,
+            'description': desc_map.get(ts_id, "—"),
             'days_since_work': days_diff,
-
-            # Current performance
             'week_total': week_total,
             'week_vacation': week_vacation,
             'week_pct': week_pct,
@@ -3209,56 +3287,142 @@ def reports_last_timesheet(request):
     paginator = Paginator(refined_entries, 25)
     page_obj = paginator.get_page(request.GET.get('page'))
 
+    # Build month choices for the dropdown (last 12 months)
+    month_choices = []
+    for i in range(12):
+        d = (today.replace(day=1) - timedelta(days=i * 28)).replace(day=1)
+        month_choices.append({
+            'value': d.strftime("%Y-%m"),
+            'label': d.strftime("%B %Y")
+        })
+
     context = {
         'page_obj': page_obj,
-        'all_users': CustomUser.objects.exclude(role__in=EXCLUDED_ROLES)
-                                      .exclude(username__in=["Aziz", "aziz"])
-                                      .order_by('full_name'),
+        'all_users': (
+            CustomUser.objects
+            .exclude(role__in=EXCLUDED_ROLES)
+            .exclude(username__in=["Aziz", "aziz"])
+            .order_by('full_name')
+        ),
         'today': today,
         'total_employees': len(refined_entries),
         'week_start': week_start,
         'week_end': week_end,
+        'week_mode': week_mode,
+        'week_date': custom_week_date or today,
+        'month_mode': month_mode,
+        'selected_year': selected_year,
+        'selected_month': selected_month,
+        'selected_month_label': date(selected_year, selected_month, 1).strftime("%B %Y"),
+        'month_choices': month_choices,
+        'monthly_target': monthly_target,
     }
     return render(request, 'last_timesheet_report.html', context)
 
 
 @login_required
 def export_last_timesheet_pdf(request):
+    # Re-use the exact same logic as the web view
+    # (copy the filter + calculation part from above)
+
     today = timezone.now().date()
     WEEKLY_TARGET = 40.0
 
-    week_start, week_end = get_current_week_range(today)
-    current_year = today.year
-    current_month = today.month
+    week_mode = request.GET.get('week_mode', 'current')
+    custom_week_date = parse_date(request.GET.get('week_date'))
 
-    users = CustomUser.objects.exclude(
-        role__in=EXCLUDED_ROLES
-    ).exclude(username__in=["Aziz", "aziz"]).distinct().order_by('full_name')
+    if week_mode == 'previous':
+        ref = today - timedelta(days=7)
+    elif week_mode == 'custom' and custom_week_date:
+        ref = custom_week_date
+    else:
+        ref = today
+        week_mode = 'current'
+
+    week_start, week_end = get_week_range(ref)
+
+    month_mode = request.GET.get('month_mode', 'current')
+    month_param = request.GET.get('month')
+
+    if month_mode == 'previous':
+        first_of_this_month = today.replace(day=1)
+        last_month_end = first_of_this_month - timedelta(days=1)
+        selected_year = last_month_end.year
+        selected_month = last_month_end.month
+    elif month_mode == 'custom' and month_param:
+        try:
+            selected_year, selected_month = map(int, month_param.split('-'))
+        except Exception:
+            selected_year, selected_month = today.year, today.month
+            month_mode = 'current'
+    else:
+        selected_year, selected_month = today.year, today.month
+        month_mode = 'current'
+
+    users = (
+        CustomUser.objects
+        .exclude(role__in=EXCLUDED_ROLES)
+        .exclude(username__in=["Aziz", "aziz"])
+        .distinct()
+        .order_by('full_name')
+    )
 
     user_pk = request.GET.get('user_pk')
     if user_pk:
         users = users.filter(pk=user_pk)
 
-    latest_entry_subquery = TimesheetEntry.objects.filter(
-        user=OuterRef('pk'),
-        is_scheduled=False
-    ).exclude(task_type="study").order_by('-created_at')
-
-    users = users.annotate(
-        last_work_date=Subquery(latest_entry_subquery.values('work_date')[:1]),
-        last_description=Subquery(latest_entry_subquery.values('task_description')[:1]),
-        last_uploaded_at=Subquery(latest_entry_subquery.values('created_at')[:1]),
-    ).filter(last_work_date__isnull=False)
-
     user_ids = list(users.values_list('pk', flat=True))
 
-    # Current Week
-    week_entries = TimesheetEntry.objects.filter(
-        user_id__in=user_ids,
-        is_scheduled=False,
-        work_date__gte=week_start,
-        work_date__lte=week_end
-    ).exclude(task_type="study").values('user_id', 'work_date', 'hours')
+    latest_dates = (
+        Timesheet.objects
+        .filter(user_id__in=user_ids)
+        .values('user_id')
+        .annotate(last_date=Max('date'))
+    )
+    last_date_map = {row['user_id']: row['last_date'] for row in latest_dates}
+
+    latest_ts_ids = {}
+    for uid, last_date in last_date_map.items():
+        ts = Timesheet.objects.filter(user_id=uid, date=last_date).order_by('-id').first()
+        if ts:
+            latest_ts_ids[uid] = ts.id
+
+    timesheet_ids = list(latest_ts_ids.values())
+
+    desc_map = {}
+    if timesheet_ids:
+        non_study = (
+            TimesheetEntry.objects
+            .filter(time_sheet_id__in=timesheet_ids, is_scheduled=False)
+            .exclude(STUDY_Q)
+            .order_by('time_sheet_id', 'id')
+        )
+        for e in non_study:
+            if e.time_sheet_id not in desc_map:
+                desc_map[e.time_sheet_id] = e.task_description or "—"
+
+        remaining = [tid for tid in timesheet_ids if tid not in desc_map]
+        if remaining:
+            any_entry = (
+                TimesheetEntry.objects
+                .filter(time_sheet_id__in=remaining, is_scheduled=False)
+                .order_by('time_sheet_id', 'id')
+            )
+            for e in any_entry:
+                if e.time_sheet_id not in desc_map:
+                    desc_map[e.time_sheet_id] = e.task_description or "—"
+
+    week_entries = (
+        TimesheetEntry.objects
+        .filter(
+            user_id__in=user_ids,
+            is_scheduled=False,
+            work_date__gte=week_start,
+            work_date__lte=week_end
+        )
+        .exclude(STUDY_Q)
+        .values('user_id', 'work_date', 'hours')
+    )
 
     weekly_data = defaultdict(lambda: {'total': 0.0, 'vacation': 0.0})
     for e in week_entries:
@@ -3268,26 +3432,35 @@ def export_last_timesheet_pdf(request):
         if e['work_date'].weekday() in (4, 5):
             weekly_data[uid]['vacation'] += hrs
 
-    # Current Month
-    month_entries = TimesheetEntry.objects.filter(
-        user_id__in=user_ids,
-        is_scheduled=False,
-        work_date__year=current_year,
-        work_date__month=current_month
-    ).exclude(task_type="study").values('user_id').annotate(total=Sum('hours'))
-
+    month_entries = (
+        TimesheetEntry.objects
+        .filter(
+            user_id__in=user_ids,
+            is_scheduled=False,
+            work_date__year=selected_year,
+            work_date__month=selected_month
+        )
+        .exclude(STUDY_Q)
+        .values('user_id')
+        .annotate(total=Sum('hours'))
+    )
     monthly_data = {e['user_id']: float(e['total'] or 0) for e in month_entries}
 
-    _, days_in_month = calendar.monthrange(current_year, current_month)
+    _, days_in_month = calendar.monthrange(selected_year, selected_month)
     working_days = sum(
         1 for d in range(1, days_in_month + 1)
-        if datetime(current_year, current_month, d).weekday() in (6, 0, 1, 2, 3)
+        if date(selected_year, selected_month, d).weekday() in (6, 0, 1, 2, 3)
     )
     monthly_target = working_days * 8.0
 
     refined_entries = []
     for user in users:
-        days_diff = (today - user.last_work_date).days if user.last_work_date else None
+        last_date = last_date_map.get(user.pk)
+        if not last_date:
+            continue
+
+        ts_id = latest_ts_ids.get(user.pk)
+        days_diff = (today - last_date).days
 
         week_total = weekly_data[user.pk]['total']
         week_vacation = weekly_data[user.pk]['vacation']
@@ -3298,9 +3471,8 @@ def export_last_timesheet_pdf(request):
 
         refined_entries.append({
             'employee_name': user.full_name or user.username,
-            'work_date': user.last_work_date,
-            'description': user.last_description or "—",
-            'uploaded_at': user.last_uploaded_at,
+            'work_date': last_date,
+            'description': desc_map.get(ts_id, "—"),
             'days_since_work': days_diff,
             'week_total': week_total,
             'week_vacation': week_vacation,
@@ -3312,21 +3484,25 @@ def export_last_timesheet_pdf(request):
 
     refined_entries.sort(key=lambda x: x['days_since_work'] or 0, reverse=True)
 
-    server_url = request.build_absolute_uri('/').rstrip('/')
     context = {
         'entries': refined_entries,
         'today': datetime.now(),
-        'server_url': server_url,
+        'server_url': request.build_absolute_uri('/').rstrip('/'),
         'total_employees': len(refined_entries),
         'week_start': week_start,
         'week_end': week_end,
+        'week_mode': week_mode,
+        'selected_month_label': date(selected_year, selected_month, 1).strftime("%B %Y"),
+        'monthly_target': monthly_target,
     }
 
     html_string = render_to_string('last_timesheet_pdf.html', context)
     html = HTML(string=html_string, base_url=request.build_absolute_uri())
 
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="Last_Timesheet_Report_{datetime.now().strftime("%Y%m%d")}.pdf"'
+    response['Content-Disposition'] = (
+        f'attachment; filename="Last_Timesheet_Report_{datetime.now().strftime("%Y%m%d")}.pdf"'
+    )
     response.write(html.write_pdf())
     return response
 

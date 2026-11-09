@@ -101,9 +101,12 @@ td {
     </div>
     <div class="header-right">
         <h2 style="margin:0; color:#333; font-size: 17pt;">Last Timesheet Submission Report</h2>
-        <div class="filter-info">
-            Run Date: {{ today|date:"M d, Y H:i" }} &nbsp;|&nbsp; Excluded: Top Management + Delivery Management
-        </div>
+      <div class="filter-info">
+    Run Date: {{ today|date:"M d, Y H:i" }} &nbsp;|&nbsp;
+    Week: {{ week_start|date:"M d" }} → {{ week_end|date:"M d, Y" }} &nbsp;|&nbsp;
+    Month: {{ selected_month_label }} &nbsp;|&nbsp;
+    Excluded: Top Management + Delivery Management
+</div>
     </div>
 </div>
 
@@ -129,7 +132,7 @@ td {
         <tr>
             <th class="text-start" style="width: 18%;">Employee</th>
             <th style="width: 11%;">Work Date</th>
-            <th style="width: 13%;">Uploaded At</th>
+          
             <th class="text-start" style="width: 22%;">Description</th>
             <th style="width: 10%;">Days Since</th>
             <th style="width: 13%;">Weekly Perf.</th>
@@ -141,7 +144,7 @@ td {
         <tr>
             <td class="text-start" style="font-weight: 600;">{{ entry.employee_name }}</td>
             <td class="text-center" style="font-weight: 600;">{{ entry.work_date|date:"Y-m-d" }}</td>
-            <td class="text-center" style="color:#555;">{{ entry.uploaded_at|date:"Y-m-d H:i" }}</td>
+
             <td class="text-start desc-cell" title="{{ entry.description }}">{{ entry.description }}</td>
             <td class="text-center">
                 {% if entry.days_since_work is not None %}
