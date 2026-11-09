@@ -3148,7 +3148,7 @@ def reports_last_timesheet(request):
 
     # ---------- Users ----------
     users = (
-        CustomUser.objects
+        CustomUser.objects.filter(is_active=True)
         .exclude(role__in=EXCLUDED_ROLES)
         .exclude(username__in=["Aziz", "aziz"])
         .distinct()
@@ -3360,7 +3360,7 @@ def export_last_timesheet_pdf(request):
         month_mode = 'current'
 
     users = (
-        CustomUser.objects
+        CustomUser.objects.filter(is_active=True)
         .exclude(role__in=EXCLUDED_ROLES)
         .exclude(username__in=["Aziz", "aziz"])
         .distinct()
