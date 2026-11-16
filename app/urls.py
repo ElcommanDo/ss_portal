@@ -86,5 +86,7 @@ urlpatterns = [
     path('erase_notes_from_kpis/',views.erase_notes_from_kpis, name='erase_notes_from_kpis'),
     path('reports/last-timesheet/', views.reports_last_timesheet, name='reports_last_timesheet'),
     path('reports/last-timesheet/export-pdf/', views.export_last_timesheet_pdf, name='export_last_timesheet_pdf'),
+    path('reports/monthly-man-days/', views.reports_monthly_man_days, name='reports_monthly_man_days'),
+    path('reports/monthly-man-days/export-pdf/', views.export_monthly_man_days_pdf, name='export_monthly_man_days_pdf'),
     
 ]

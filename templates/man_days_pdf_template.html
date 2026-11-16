@@ -110,10 +110,6 @@ Run Date: {{ today|date:"M d, Y H:i" }}
 <th class="text-start" style="width: 18%;">Employee</th>
 <th style="width: 25%;">Project Breakdown</th>
 <th style="width: 10%;">Total</th>
-<th style="width: 10%;">Egypt</th>
-<th style="width: 10%;">Abroad</th>
-<th style="width: 8%;">Remote</th>
-<th style="width: 7%;">OT</th>
 </tr>
 </thead>
 <tbody>
@@ -127,24 +123,6 @@ Run Date: {{ today|date:"M d, Y H:i" }}
 {% endfor %}
 </td>
 <td class="total-cell">{{ entry.logged_hours|floatformat:1 }}h</td>
-<td>
-{% if entry.egypt_hours > 0 %}
-<span class="icon icon-office"></span> <span style="color:#0dcaf0; font-weight:bold;">{{ entry.egypt_hours|floatformat:1 }}h</span>
-{% else %}<span style="color:#ccc;">--</span>{% endif %}
-</td>
-<td>
-{% if entry.abroad_hours > 0 %}
-<span class="icon icon-plane"></span> <span style="color:#198754; font-weight:bold;">{{ entry.abroad_hours|floatformat:1 }}h</span>
-{% else %}<span style="color:#ccc;">--</span>{% endif %}
-</td>
-<td>
-{% if entry.egypt_hours == 0 and entry.abroad_hours == 0 %}
-<span class="icon icon-laptop"></span> <span style="color:#6c757d; font-size: 8.5pt;">Office</span>
-{% else %}<span style="color:#ccc;">--</span>{% endif %}
-</td>
-<td class="ot-cell">
-{% if entry.ot_hours > 0 %}+{{ entry.ot_hours|floatformat:1 }}h{% else %}<span style="color:#ccc;">--</span>{% endif %}
-</td>
 </tr>
 {% empty %}
 <tr>

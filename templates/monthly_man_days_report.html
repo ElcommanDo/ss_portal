@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Monthly Man-Days Percentage{% endblock %}
+
+{% block content %}
+<style>
+    .bg-info-soft { background-color: #e0f7fa; color: #0dcaf0; }
+    .table thead th { font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; }
+    .card h3 { font-size: 1.8rem; font-weight: 700; }
+    .pct-excellent { color: #198754; font-weight: 700; }
+    .pct-good { color: #0d6efd; font-weight: 600; }
+    .pct-warning { color: #fd7e14; font-weight: 600; }
+    .pct-danger { color: #dc3545; font-weight: 700; }
+    .table-hover tbody tr:hover { background-color: #f1f8ff !important; }
+</style>
+
+<div class="container-fluid py-4 animate__animated animate__fadeIn">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="text-primary fw-bold mb-1">
+                <i class="fas fa-calendar-check me-2"></i> Monthly Man-Days Percentage
+            </h1>
+            <p class="text-muted mb-0">
+                {{ month_name }} {{ selected_year }}
+                &nbsp;•&nbsp; Working Days: {{ working_days }} (Sun–Thu)
+                &nbsp;•&nbsp; Target: {{ monthly_target|floatformat:0 }}h
+            </p>
+        </div>
+        <a href="{% url 'export_monthly_man_days_pdf' %}?{{ request.GET.urlencode }}" 
+           class="btn btn-danger btn-lg shadow-sm">
+            <i class="fas fa-file-pdf me-2"></i> Export to PDF
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #0d6efd, #0dcaf0); color: white;">
+                <div class="card-body">
+                    <h6 class="text-uppercase opacity-75 small fw-bold">Employees</h6>
+                    <h3 class="mb-0">{{ total_employees }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #198754, #20c997); color: white;">
+                <div class="card-body">
+                    <h6 class="text-uppercase opacity-75 small fw-bold">Average %</h6>
+                    <h3 class="mb-0">{{ avg_percentage|floatformat:1 }}%</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #0dcaf0, #20c997); color: white;">
+                <div class="card-body">
+                    <h6 class="text-uppercase opacity-75 small fw-bold">Main Hours (Sun-Thu)</h6>
+                    <h3 class="mb-0">{{ total_main|floatformat:1 }}h</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #fd7e14, #ffc107); color: white;">
+                <div class="card-body">
+                    <h6 class="text-uppercase opacity-75 small fw-bold">Extra (Fri-Sat)</h6>
+                    <h3 class="mb-0">{{ total_extra|floatformat:1 }}h</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow-sm mb-4 border-0 bg-light">
+        <div class="card-body p-4">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold small">Employee</label>
+                    <select class="form-select border-0 shadow-sm" name="user_pk">
+                        <option value="">All Employees</option>
+                        {% for u in all_users %}
+                            <option value="{{ u.pk }}" {% if request.GET.user_pk == u.pk|stringformat:"s" %}selected{% endif %}>
+                                {{ u.full_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">Month</label>
+                    <select class="form-select border-0 shadow-sm" name="month">
+                        {% for m in months %}
+                            <option value="{{ m }}" {% if selected_month == m %}selected{% endif %}>
+                                {{ m|stringformat:"02d" }} - {{ m|date:"F" }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">Year</label>
+                    <select class="form-select border-0 shadow-sm" name="year">
+                        {% for y in years %}
+                            <option value="{{ y }}" {% if selected_year == y %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">Sort By</label>
+                    <select class="form-select border-0 shadow-sm" name="sort">
+                        <option value="pct" {% if request.GET.sort == 'pct' or not request.GET.sort %}selected{% endif %}>Percentage (High → Low)</option>
+                        <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>Employee Name</option>
+                        <option value="main" {% if request.GET.sort == 'main' %}selected{% endif %}>Main Hours</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary w-100 shadow-sm">
+                        <i class="fas fa-filter me-1"></i> Filter
+                    </button>
+                    <a href="{% url 'reports_monthly_man_days' %}" class="btn btn-secondary shadow-sm">
+                        <i class="fas fa-sync-alt"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive bg-white rounded shadow-sm">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark text-center">
+                <tr>
+                    <th class="ps-3 text-start">Employee</th>
+                    <th class="text-start">Username</th>
+                    <th>Main Hours<br><small>(Sun–Thu)</small></th>
+                    <th>Extra Hours<br><small>(Fri–Sat)</small></th>
+                    <th>Total Logged</th>
+                    <th>Target</th>
+                    <th>Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in page_obj %}
+                <tr>
+                    <td class="ps-3 fw-bold text-dark">{{ entry.user.full_name }}</td>
+                    <td class="text-start text-muted">{{ entry.user.username }}</td>
+                    <td class="text-center fw-bold text-primary">{{ entry.main_hours|floatformat:1 }}h</td>
+                    <td class="text-center">
+                        {% if entry.extra_hours > 0 %}
+                            <span class="text-warning fw-bold">{{ entry.extra_hours|floatformat:1 }}h</span>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">{{ entry.total_hours|floatformat:1 }}h</td>
+                    <td class="text-center text-muted">{{ entry.target|floatformat:0 }}h</td>
+                    <td class="text-center">
+                        <span class="
+                            {% if entry.percentage >= 100 %}pct-excellent
+                            {% elif entry.percentage >= 80 %}pct-good
+                            {% elif entry.percentage >= 50 %}pct-warning
+                            {% else %}pct-danger{% endif %}">
+                            {{ entry.percentage|floatformat:1 }}%
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <i class="fas fa-search-minus fa-3x text-light mb-3"></i>
+                        <p class="text-muted">No records found for the selected period.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link shadow-sm" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">Previous</a>
+                </li>
+            {% endif %}
+            <li class="page-item disabled">
+                <span class="page-link shadow-sm">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link shadow-sm" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Next</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

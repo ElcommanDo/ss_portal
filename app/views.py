@@ -5251,3 +5251,214 @@ def erase_notes_from_kpis(request):
     ).update(notes='')
     return HttpResponse("Done...")
 
+
+from django.db.models import Sum, Q, OuterRef, Subquery
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+from django.utils import timezone
+from datetime import datetime
+from weasyprint import HTML
+from collections import defaultdict
+import calendar
+
+EXCLUDED_ROLES = ['project-manager', 'top-manager', 'delivery-manager']
+
+@login_required
+def reports_monthly_man_days(request):
+    today = timezone.now().date()
+    STANDARD_DAILY = 8.0
+
+    # Filters
+    user_pk = request.GET.get('user_pk')
+    month = request.GET.get('month')
+    year = request.GET.get('year')
+
+    # Default to current month/year
+    if not month:
+        month = today.month
+    else:
+        month = int(month)
+
+    if not year:
+        year = today.year
+    else:
+        year = int(year)
+
+    # Working days (Sun=6, Mon=0, Tue=1, Wed=2, Thu=3)
+    _, days_in_month = calendar.monthrange(year, month)
+    working_days = sum(
+        1 for d in range(1, days_in_month + 1)
+        if datetime(year, month, d).weekday() in (6, 0, 1, 2, 3)
+    )
+    monthly_target = working_days * STANDARD_DAILY
+
+    # Base users
+    users = CustomUser.objects.exclude(
+        role__in=EXCLUDED_ROLES
+    ).exclude(
+        username__in=["Aziz", "aziz"]
+    ).distinct().order_by('full_name')
+
+    if user_pk:
+        users = users.filter(pk=user_pk)
+
+    user_ids = list(users.values_list('pk', flat=True))
+
+    # Get all timesheet entries for the selected month
+    entries = TimesheetEntry.objects.filter(
+        user_id__in=user_ids,
+        is_scheduled=False,
+        work_date__year=year,
+        work_date__month=month
+    ).exclude(task_type="study").values('user_id', 'work_date', 'hours')
+
+    # Aggregate per user
+    user_stats = defaultdict(lambda: {'main': 0.0, 'extra': 0.0})
+
+    for e in entries:
+        hrs = float(e['hours'] or 0)
+        wd = e['work_date']
+        if wd.weekday() in (6, 0, 1, 2, 3):  # Sun - Thu
+            user_stats[e['user_id']]['main'] += hrs
+        else:  # Fri / Sat
+            user_stats[e['user_id']]['extra'] += hrs
+
+    # Build final list
+    refined_entries = []
+    total_main = 0.0
+    total_extra = 0.0
+    percentages = []
+
+    for user in users:
+        main = user_stats[user.pk]['main']
+        extra = user_stats[user.pk]['extra']
+        pct = (main / monthly_target * 100) if monthly_target > 0 else 0
+
+        refined_entries.append({
+            'user': user,
+            'main_hours': main,
+            'extra_hours': extra,
+            'total_hours': main + extra,
+            'target': monthly_target,
+            'percentage': pct,
+            'working_days': working_days,
+        })
+
+        total_main += main
+        total_extra += extra
+        percentages.append(pct)
+
+    # Sort by percentage descending by default
+    sort = request.GET.get('sort', 'pct')
+    if sort == 'pct':
+        refined_entries.sort(key=lambda x: x['percentage'], reverse=True)
+    elif sort == 'name':
+        refined_entries.sort(key=lambda x: x['user'].full_name.lower())
+    elif sort == 'main':
+        refined_entries.sort(key=lambda x: x['main_hours'], reverse=True)
+
+    avg_pct = sum(percentages) / len(percentages) if percentages else 0
+
+    paginator = Paginator(refined_entries, 30)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    context = {
+        'page_obj': page_obj,
+        'all_users': CustomUser.objects.exclude(role__in=EXCLUDED_ROLES)
+                                      .exclude(username__in=["Aziz", "aziz"])
+                                      .order_by('full_name'),
+        'selected_month': month,
+        'selected_year': year,
+        'month_name': calendar.month_name[month],
+        'working_days': working_days,
+        'monthly_target': monthly_target,
+        'total_employees': len(refined_entries),
+        'avg_percentage': avg_pct,
+        'total_main': total_main,
+        'total_extra': total_extra,
+        'months': list(range(1, 13)),
+        'years': list(range(today.year - 3, today.year + 1)),
+    }
+    return render(request, 'monthly_man_days_report.html', context)
+
+
+@login_required
+def export_monthly_man_days_pdf(request):
+    today = timezone.now().date()
+    STANDARD_DAILY = 8.0
+
+    user_pk = request.GET.get('user_pk')
+    month = int(request.GET.get('month') or today.month)
+    year = int(request.GET.get('year') or today.year)
+
+    _, days_in_month = calendar.monthrange(year, month)
+    working_days = sum(
+        1 for d in range(1, days_in_month + 1)
+        if datetime(year, month, d).weekday() in (6, 0, 1, 2, 3)
+    )
+    monthly_target = working_days * STANDARD_DAILY
+
+    users = CustomUser.objects.exclude(
+        role__in=EXCLUDED_ROLES
+    ).exclude(username__in=["Aziz", "aziz"]).distinct().order_by('full_name')
+
+    if user_pk:
+        users = users.filter(pk=user_pk)
+
+    user_ids = list(users.values_list('pk', flat=True))
+
+    entries = TimesheetEntry.objects.filter(
+        user_id__in=user_ids,
+        is_scheduled=False,
+        work_date__year=year,
+        work_date__month=month
+    ).exclude(task_type="study").values('user_id', 'work_date', 'hours')
+
+    user_stats = defaultdict(lambda: {'main': 0.0, 'extra': 0.0})
+    for e in entries:
+        hrs = float(e['hours'] or 0)
+        if e['work_date'].weekday() in (6, 0, 1, 2, 3):
+            user_stats[e['user_id']]['main'] += hrs
+        else:
+            user_stats[e['user_id']]['extra'] += hrs
+
+    refined_entries = []
+    for user in users:
+        main = user_stats[user.pk]['main']
+        extra = user_stats[user.pk]['extra']
+        pct = (main / monthly_target * 100) if monthly_target > 0 else 0
+
+        refined_entries.append({
+            'employee_name': user.full_name or user.username,
+            'username': user.username,
+            'main_hours': main,
+            'extra_hours': extra,
+            'total_hours': main + extra,
+            'target': monthly_target,
+            'percentage': pct,
+        })
+
+    refined_entries.sort(key=lambda x: x['percentage'], reverse=True)
+
+    server_url = request.build_absolute_uri('/').rstrip('/')
+    context = {
+        'entries': refined_entries,
+        'today': datetime.now(),
+        'server_url': server_url,
+        'month_name': calendar.month_name[month],
+        'year': year,
+        'working_days': working_days,
+        'monthly_target': monthly_target,
+        'total_employees': len(refined_entries),
+    }
+
+    html_string = render_to_string('monthly_man_days_pdf.html', context)
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Monthly_ManDays_{year}_{month:02d}.pdf"'
+    response.write(html.write_pdf())
+    return response
