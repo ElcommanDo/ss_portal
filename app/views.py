@@ -178,7 +178,7 @@ def timesheet_update(request, pk):
         # Update project
         # Better to use PK instead of name
         # =========================
-        project_pk = request.POST.get("project")
+        project_pk = request.POST.get("project_name")
 
         if project_pk:
             project = get_object_or_404(

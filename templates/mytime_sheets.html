@@ -155,7 +155,7 @@
                             <label class="form-label fw-bold">Project</label>
                             <select name="project_name" class="form-select">
                                 {% for proj in projects %}
-                                    <option value="{{ proj.name }}" {% if entry.project.pk == proj.pk %}selected{% endif %}>{{ proj.name }}</option>
+                                    <option value="{{ proj.pk }}" {% if entry.project.pk == proj.pk %}selected{% endif %}>{{ proj.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
