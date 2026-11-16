@@ -55,7 +55,15 @@ td { padding: 7px 5px; border-bottom: 1px solid #eee; font-size: 9.5pt; vertical
     <div class="header-right">
         <h2 style="margin:0; color:#333; font-size: 16pt;">Monthly Man-Days Percentage</h2>
         <div class="filter-info">
-            {{ month_name }} {{ year }} &nbsp;|&nbsp; Working Days: {{ working_days }} (Sun–Thu) &nbsp;|&nbsp; Target: {{ monthly_target|floatformat:0 }}h
+            {% if is_full_year %}
+                Full Year {{ year }}
+            {% else %}
+                {{ month_name }} {{ year }}
+                {% if working_days %}
+                    &nbsp;|&nbsp; Working Days: {{ working_days|floatformat:0 }} (Sun–Thu)
+                    &nbsp;|&nbsp; Target: {{ monthly_target|floatformat:0 }}h
+                {% endif %}
+            {% endif %}
             <br>Run Date: {{ today|date:"M d, Y H:i" }}
         </div>
     </div>
@@ -63,32 +71,37 @@ td { padding: 7px 5px; border-bottom: 1px solid #eee; font-size: 9.5pt; vertical
 
 <div class="card-container">
     <div class="card bg-blue">
-        <div class="card-label">Employees</div>
+        <div class="card-label">{% if is_full_year %}Months{% else %}Employees{% endif %}</div>
         <div class="card-value">{{ total_employees }}</div>
     </div>
     <div class="card bg-green">
-        <div class="card-label">Working Days</div>
-        <div class="card-value">{{ working_days }}</div>
+        <div class="card-label">Period</div>
+        <div class="card-value" style="font-size:13pt;">
+            {% if is_full_year %}Full Year{% else %}{{ month_name }}{% endif %}
+        </div>
     </div>
     <div class="card bg-info">
-        <div class="card-label">Monthly Target</div>
-        <div class="card-value">{{ monthly_target|floatformat:0 }}h</div>
+        <div class="card-label">Year</div>
+        <div class="card-value">{{ year }}</div>
     </div>
     <div class="card bg-orange">
-        <div class="card-label">Period</div>
-        <div class="card-value" style="font-size:13pt;">{{ month_name }} {{ year }}</div>
+        <div class="card-label">Report Type</div>
+        <div class="card-value" style="font-size:12pt;">Man-Days %</div>
     </div>
 </div>
 
 <table>
     <thead>
         <tr>
-            <th class="text-start" style="width: 22%;">Employee</th>
-            <th class="text-start" style="width: 14%;">Username</th>
+            <th class="text-start" style="width: 20%;">Employee</th>
+            <th class="text-start" style="width: 12%;">Username</th>
+            {% if is_full_year %}
+                <th style="width: 11%;">Month</th>
+            {% endif %}
             <th style="width: 12%;">Main Hours<br><small>(Sun–Thu)</small></th>
-            <th style="width: 12%;">Extra Hours<br><small>(Fri–Sat)</small></th>
-            <th style="width: 11%;">Total</th>
-            <th style="width: 11%;">Target</th>
+            <th style="width: 11%;">Extra Hours<br><small>(Fri–Sat)</small></th>
+            <th style="width: 10%;">Total</th>
+            <th style="width: 10%;">Target</th>
             <th style="width: 12%;">Percentage</th>
         </tr>
     </thead>
@@ -97,6 +110,9 @@ td { padding: 7px 5px; border-bottom: 1px solid #eee; font-size: 9.5pt; vertical
         <tr>
             <td class="text-start" style="font-weight: 600;">{{ entry.employee_name }}</td>
             <td class="text-start" style="color:#555;">{{ entry.username }}</td>
+            {% if is_full_year %}
+                <td class="text-center" style="font-weight:600;">{{ entry.month_name }}</td>
+            {% endif %}
             <td class="text-center" style="font-weight:bold; color:#0d6efd;">{{ entry.main_hours|floatformat:1 }}h</td>
             <td class="text-center">
                 {% if entry.extra_hours > 0 %}
@@ -119,7 +135,7 @@ td { padding: 7px 5px; border-bottom: 1px solid #eee; font-size: 9.5pt; vertical
         </tr>
         {% empty %}
         <tr>
-            <td colspan="7" style="padding: 40px; color: #999; text-align: center;">
+            <td colspan="{% if is_full_year %}8{% else %}7{% endif %}" style="padding: 40px; color: #999; text-align: center;">
                 No records found for the selected period.
             </td>
         </tr>
@@ -128,10 +144,4 @@ td { padding: 7px 5px; border-bottom: 1px solid #eee; font-size: 9.5pt; vertical
 </table>
 
 <div style="margin-top: 35px; width: 100%;">
-    <div style="float: right; width: 220px; border-top: 1px solid #333; text-align: center; font-size: 9pt; padding-top: 6px;">
-        Department Manager Signature
-    </div>
-</div>
-
-</body>
-</html>
+    <div style="float: right; width: 220px; border-top: 1px solid #333; 

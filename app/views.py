@@ -5252,7 +5252,7 @@ def erase_notes_from_kpis(request):
     return HttpResponse("Done...")
 
 
-from django.db.models import Sum, Q, OuterRef, Subquery
+from django.db.models import Sum, Q
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -5266,40 +5266,41 @@ import calendar
 
 EXCLUDED_ROLES = ['project-manager', 'top-manager', 'delivery-manager']
 
+# Usernames to always exclude from this report
+EXCLUDED_USERNAMES = [
+    "Aziz", "aziz",
+    "m.mohamed",          # Mona Mohamed
+    "semad",             # ← CHANGE THIS to the real username of Sherief Emad El-Din
+]
+
 @login_required
 def reports_monthly_man_days(request):
     today = timezone.now().date()
     STANDARD_DAILY = 8.0
 
-    # Filters
     user_pk = request.GET.get('user_pk')
-    month = request.GET.get('month')
+    month_param = request.GET.get('month')          # "all" or 1-12
     year = request.GET.get('year')
 
-    # Default to current month/year
-    if not month:
-        month = today.month
-    else:
-        month = int(month)
-
+    # Default year
     if not year:
         year = today.year
     else:
         year = int(year)
 
-    # Working days (Sun=6, Mon=0, Tue=1, Wed=2, Thu=3)
-    _, days_in_month = calendar.monthrange(year, month)
-    working_days = sum(
-        1 for d in range(1, days_in_month + 1)
-        if datetime(year, month, d).weekday() in (6, 0, 1, 2, 3)
-    )
-    monthly_target = working_days * STANDARD_DAILY
+    # Detect Full Year mode
+    is_full_year = month_param in (None, '', 'all')
+
+    if is_full_year:
+        month = None
+    else:
+        month = int(month_param)
 
     # Base users
     users = CustomUser.objects.exclude(
         role__in=EXCLUDED_ROLES
     ).exclude(
-        username__in=["Aziz", "aziz"]
+        username__in=EXCLUDED_USERNAMES
     ).distinct().order_by('full_name')
 
     if user_pk:
@@ -5307,51 +5308,108 @@ def reports_monthly_man_days(request):
 
     user_ids = list(users.values_list('pk', flat=True))
 
-    # Get all timesheet entries for the selected month
-    entries = TimesheetEntry.objects.filter(
-        user_id__in=user_ids,
-        is_scheduled=False,
-        work_date__year=year,
-        work_date__month=month
-    ).exclude(task_type="study").values('user_id', 'work_date', 'hours')
-
-    # Aggregate per user
-    user_stats = defaultdict(lambda: {'main': 0.0, 'extra': 0.0})
-
-    for e in entries:
-        hrs = float(e['hours'] or 0)
-        wd = e['work_date']
-        if wd.weekday() in (6, 0, 1, 2, 3):  # Sun - Thu
-            user_stats[e['user_id']]['main'] += hrs
-        else:  # Fri / Sat
-            user_stats[e['user_id']]['extra'] += hrs
-
-    # Build final list
     refined_entries = []
     total_main = 0.0
     total_extra = 0.0
     percentages = []
 
-    for user in users:
-        main = user_stats[user.pk]['main']
-        extra = user_stats[user.pk]['extra']
-        pct = (main / monthly_target * 100) if monthly_target > 0 else 0
+    # ========== FULL YEAR MODE (12 months for one employee) ==========
+    if is_full_year and user_pk:
+        selected_user = users.first()
 
-        refined_entries.append({
-            'user': user,
-            'main_hours': main,
-            'extra_hours': extra,
-            'total_hours': main + extra,
-            'target': monthly_target,
-            'percentage': pct,
-            'working_days': working_days,
-        })
+        for m in range(1, 13):
+            _, days_in_month = calendar.monthrange(year, m)
+            working_days = sum(
+                1 for d in range(1, days_in_month + 1)
+                if datetime(year, m, d).weekday() in (6, 0, 1, 2, 3)
+            )
+            monthly_target = working_days * STANDARD_DAILY
 
-        total_main += main
-        total_extra += extra
-        percentages.append(pct)
+            entries = TimesheetEntry.objects.filter(
+                user_id=user_pk,
+                is_scheduled=False,
+                work_date__year=year,
+                work_date__month=m
+            ).exclude(task_type="study").values('work_date', 'hours')
 
-    # Sort by percentage descending by default
+            main = 0.0
+            extra = 0.0
+            for e in entries:
+                hrs = float(e['hours'] or 0)
+                if e['work_date'].weekday() in (6, 0, 1, 2, 3):  # Sun-Thu
+                    main += hrs
+                else:  # Fri-Sat
+                    extra += hrs
+
+            pct = (main / monthly_target * 100) if monthly_target > 0 else 0
+
+            refined_entries.append({
+                'user': selected_user,
+                'month': m,
+                'month_name': calendar.month_name[m],
+                'main_hours': main,
+                'extra_hours': extra,
+                'total_hours': main + extra,
+                'target': monthly_target,
+                'percentage': pct,
+                'working_days': working_days,
+                'is_full_year_row': True,
+            })
+
+            total_main += main
+            total_extra += extra
+            percentages.append(pct)
+
+    # ========== NORMAL MODE (single month) ==========
+    else:
+        if not month:
+            month = today.month
+
+        _, days_in_month = calendar.monthrange(year, month)
+        working_days = sum(
+            1 for d in range(1, days_in_month + 1)
+            if datetime(year, month, d).weekday() in (6, 0, 1, 2, 3)
+        )
+        monthly_target = working_days * STANDARD_DAILY
+
+        entries = TimesheetEntry.objects.filter(
+            user_id__in=user_ids,
+            is_scheduled=False,
+            work_date__year=year,
+            work_date__month=month
+        ).exclude(task_type="study").values('user_id', 'work_date', 'hours')
+
+        user_stats = defaultdict(lambda: {'main': 0.0, 'extra': 0.0})
+        for e in entries:
+            hrs = float(e['hours'] or 0)
+            if e['work_date'].weekday() in (6, 0, 1, 2, 3):
+                user_stats[e['user_id']]['main'] += hrs
+            else:
+                user_stats[e['user_id']]['extra'] += hrs
+
+        for user in users:
+            main = user_stats[user.pk]['main']
+            extra = user_stats[user.pk]['extra']
+            pct = (main / monthly_target * 100) if monthly_target > 0 else 0
+
+            refined_entries.append({
+                'user': user,
+                'month': month,
+                'month_name': calendar.month_name[month],
+                'main_hours': main,
+                'extra_hours': extra,
+                'total_hours': main + extra,
+                'target': monthly_target,
+                'percentage': pct,
+                'working_days': working_days,
+                'is_full_year_row': False,
+            })
+
+            total_main += main
+            total_extra += extra
+            percentages.append(pct)
+
+    # Sorting
     sort = request.GET.get('sort', 'pct')
     if sort == 'pct':
         refined_entries.sort(key=lambda x: x['percentage'], reverse=True)
@@ -5359,6 +5417,8 @@ def reports_monthly_man_days(request):
         refined_entries.sort(key=lambda x: x['user'].full_name.lower())
     elif sort == 'main':
         refined_entries.sort(key=lambda x: x['main_hours'], reverse=True)
+    elif sort == 'month' and is_full_year:
+        refined_entries.sort(key=lambda x: x['month'])
 
     avg_pct = sum(percentages) / len(percentages) if percentages else 0
 
@@ -5368,13 +5428,14 @@ def reports_monthly_man_days(request):
     context = {
         'page_obj': page_obj,
         'all_users': CustomUser.objects.exclude(role__in=EXCLUDED_ROLES)
-                                      .exclude(username__in=["Aziz", "aziz"])
+                                      .exclude(username__in=EXCLUDED_USERNAMES)
                                       .order_by('full_name'),
-        'selected_month': month,
+        'selected_month': month_param if month_param else 'all',
         'selected_year': year,
-        'month_name': calendar.month_name[month],
-        'working_days': working_days,
-        'monthly_target': monthly_target,
+        'month_name': calendar.month_name[month] if month else "Full Year",
+        'is_full_year': is_full_year and bool(user_pk),
+        'working_days': refined_entries[0]['working_days'] if refined_entries and not (is_full_year and user_pk) else None,
+        'monthly_target': refined_entries[0]['target'] if refined_entries and not (is_full_year and user_pk) else None,
         'total_employees': len(refined_entries),
         'avg_percentage': avg_pct,
         'total_main': total_main,
@@ -5391,55 +5452,101 @@ def export_monthly_man_days_pdf(request):
     STANDARD_DAILY = 8.0
 
     user_pk = request.GET.get('user_pk')
-    month = int(request.GET.get('month') or today.month)
+    month_param = request.GET.get('month')
     year = int(request.GET.get('year') or today.year)
 
-    _, days_in_month = calendar.monthrange(year, month)
-    working_days = sum(
-        1 for d in range(1, days_in_month + 1)
-        if datetime(year, month, d).weekday() in (6, 0, 1, 2, 3)
-    )
-    monthly_target = working_days * STANDARD_DAILY
+    is_full_year = month_param in (None, '', 'all')
 
     users = CustomUser.objects.exclude(
         role__in=EXCLUDED_ROLES
-    ).exclude(username__in=["Aziz", "aziz"]).distinct().order_by('full_name')
+    ).exclude(
+        username__in=EXCLUDED_USERNAMES
+    ).distinct().order_by('full_name')
 
     if user_pk:
         users = users.filter(pk=user_pk)
 
     user_ids = list(users.values_list('pk', flat=True))
-
-    entries = TimesheetEntry.objects.filter(
-        user_id__in=user_ids,
-        is_scheduled=False,
-        work_date__year=year,
-        work_date__month=month
-    ).exclude(task_type="study").values('user_id', 'work_date', 'hours')
-
-    user_stats = defaultdict(lambda: {'main': 0.0, 'extra': 0.0})
-    for e in entries:
-        hrs = float(e['hours'] or 0)
-        if e['work_date'].weekday() in (6, 0, 1, 2, 3):
-            user_stats[e['user_id']]['main'] += hrs
-        else:
-            user_stats[e['user_id']]['extra'] += hrs
-
     refined_entries = []
-    for user in users:
-        main = user_stats[user.pk]['main']
-        extra = user_stats[user.pk]['extra']
-        pct = (main / monthly_target * 100) if monthly_target > 0 else 0
 
-        refined_entries.append({
-            'employee_name': user.full_name or user.username,
-            'username': user.username,
-            'main_hours': main,
-            'extra_hours': extra,
-            'total_hours': main + extra,
-            'target': monthly_target,
-            'percentage': pct,
-        })
+    if is_full_year and user_pk:
+        selected_user = users.first()
+        for m in range(1, 13):
+            _, days_in_month = calendar.monthrange(year, m)
+            working_days = sum(
+                1 for d in range(1, days_in_month + 1)
+                if datetime(year, m, d).weekday() in (6, 0, 1, 2, 3)
+            )
+            monthly_target = working_days * STANDARD_DAILY
+
+            entries = TimesheetEntry.objects.filter(
+                user_id=user_pk,
+                is_scheduled=False,
+                work_date__year=year,
+                work_date__month=m
+            ).exclude(task_type="study").values('work_date', 'hours')
+
+            main = extra = 0.0
+            for e in entries:
+                hrs = float(e['hours'] or 0)
+                if e['work_date'].weekday() in (6, 0, 1, 2, 3):
+                    main += hrs
+                else:
+                    extra += hrs
+
+            pct = (main / monthly_target * 100) if monthly_target > 0 else 0
+
+            refined_entries.append({
+                'employee_name': selected_user.full_name or selected_user.username,
+                'username': selected_user.username,
+                'month_name': calendar.month_name[m],
+                'main_hours': main,
+                'extra_hours': extra,
+                'total_hours': main + extra,
+                'target': monthly_target,
+                'percentage': pct,
+                'is_full_year_row': True,
+            })
+    else:
+        month = int(month_param) if month_param and month_param != 'all' else today.month
+        _, days_in_month = calendar.monthrange(year, month)
+        working_days = sum(
+            1 for d in range(1, days_in_month + 1)
+            if datetime(year, month, d).weekday() in (6, 0, 1, 2, 3)
+        )
+        monthly_target = working_days * STANDARD_DAILY
+
+        entries = TimesheetEntry.objects.filter(
+            user_id__in=user_ids,
+            is_scheduled=False,
+            work_date__year=year,
+            work_date__month=month
+        ).exclude(task_type="study").values('user_id', 'work_date', 'hours')
+
+        user_stats = defaultdict(lambda: {'main': 0.0, 'extra': 0.0})
+        for e in entries:
+            hrs = float(e['hours'] or 0)
+            if e['work_date'].weekday() in (6, 0, 1, 2, 3):
+                user_stats[e['user_id']]['main'] += hrs
+            else:
+                user_stats[e['user_id']]['extra'] += hrs
+
+        for user in users:
+            main = user_stats[user.pk]['main']
+            extra = user_stats[user.pk]['extra']
+            pct = (main / monthly_target * 100) if monthly_target > 0 else 0
+
+            refined_entries.append({
+                'employee_name': user.full_name or user.username,
+                'username': user.username,
+                'month_name': calendar.month_name[month],
+                'main_hours': main,
+                'extra_hours': extra,
+                'total_hours': main + extra,
+                'target': monthly_target,
+                'percentage': pct,
+                'is_full_year_row': False,
+            })
 
     refined_entries.sort(key=lambda x: x['percentage'], reverse=True)
 
@@ -5448,10 +5555,11 @@ def export_monthly_man_days_pdf(request):
         'entries': refined_entries,
         'today': datetime.now(),
         'server_url': server_url,
-        'month_name': calendar.month_name[month],
+        'month_name': "Full Year" if is_full_year and user_pk else calendar.month_name[month] if not is_full_year else calendar.month_name[today.month],
         'year': year,
-        'working_days': working_days,
-        'monthly_target': monthly_target,
+        'is_full_year': is_full_year and bool(user_pk),
+        'working_days': refined_entries[0]['target'] / 8 if refined_entries and not (is_full_year and user_pk) else None,
+        'monthly_target': refined_entries[0]['target'] if refined_entries and not (is_full_year and user_pk) else None,
         'total_employees': len(refined_entries),
     }
 
@@ -5459,6 +5567,7 @@ def export_monthly_man_days_pdf(request):
     html = HTML(string=html_string, base_url=request.build_absolute_uri())
 
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="Monthly_ManDays_{year}_{month:02d}.pdf"'
+    filename = f"Monthly_ManDays_{year}_FullYear.pdf" if is_full_year and user_pk else f"Monthly_ManDays_{year}_{month:02d}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
     response.write(html.write_pdf())
     return response

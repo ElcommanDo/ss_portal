@@ -23,9 +23,15 @@
                 <i class="fas fa-calendar-check me-2"></i> Monthly Man-Days Percentage
             </h1>
             <p class="text-muted mb-0">
-                {{ month_name }} {{ selected_year }}
-                &nbsp;•&nbsp; Working Days: {{ working_days }} (Sun–Thu)
-                &nbsp;•&nbsp; Target: {{ monthly_target|floatformat:0 }}h
+                {% if is_full_year %}
+                    Full Year {{ selected_year }}
+                {% else %}
+                    {{ month_name }} {{ selected_year }}
+                    {% if working_days %}
+                        &nbsp;•&nbsp; Working Days: {{ working_days }} (Sun–Thu)
+                        &nbsp;•&nbsp; Target: {{ monthly_target|floatformat:0 }}h
+                    {% endif %}
+                {% endif %}
             </p>
         </div>
         <a href="{% url 'export_monthly_man_days_pdf' %}?{{ request.GET.urlencode }}" 
@@ -39,7 +45,9 @@
         <div class="col-md-3">
             <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(45deg, #0d6efd, #0dcaf0); color: white;">
                 <div class="card-body">
-                    <h6 class="text-uppercase opacity-75 small fw-bold">Employees</h6>
+                    <h6 class="text-uppercase opacity-75 small fw-bold">
+                        {% if is_full_year %}Months{% else %}Employees{% endif %}
+                    </h6>
                     <h3 class="mb-0">{{ total_employees }}</h3>
                 </div>
             </div>
@@ -88,8 +96,11 @@
                 <div class="col-md-2">
                     <label class="form-label fw-bold small">Month</label>
                     <select class="form-select border-0 shadow-sm" name="month">
+                        <option value="all" {% if selected_month == 'all' %}selected{% endif %}>
+                            All Months (Full Year)
+                        </option>
                         {% for m in months %}
-                            <option value="{{ m }}" {% if selected_month == m %}selected{% endif %}>
+                            <option value="{{ m }}" {% if selected_month == m|stringformat:"s" %}selected{% endif %}>
                                 {{ m|stringformat:"02d" }} - {{ m|date:"F" }}
                             </option>
                         {% endfor %}
@@ -106,9 +117,12 @@
                 <div class="col-md-2">
                     <label class="form-label fw-bold small">Sort By</label>
                     <select class="form-select border-0 shadow-sm" name="sort">
-                        <option value="pct" {% if request.GET.sort == 'pct' or not request.GET.sort %}selected{% endif %}>Percentage (High → Low)</option>
+                        <option value="pct" {% if request.GET.sort == 'pct' or not request.GET.sort %}selected{% endif %}>Percentage</option>
                         <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>Employee Name</option>
                         <option value="main" {% if request.GET.sort == 'main' %}selected{% endif %}>Main Hours</option>
+                        {% if is_full_year %}
+                            <option value="month" {% if request.GET.sort == 'month' %}selected{% endif %}>Month</option>
+                        {% endif %}
                     </select>
                 </div>
                 <div class="col-md-3 d-flex align-items-end gap-2">
@@ -130,6 +144,9 @@
                 <tr>
                     <th class="ps-3 text-start">Employee</th>
                     <th class="text-start">Username</th>
+                    {% if is_full_year %}
+                        <th>Month</th>
+                    {% endif %}
                     <th>Main Hours<br><small>(Sun–Thu)</small></th>
                     <th>Extra Hours<br><small>(Fri–Sat)</small></th>
                     <th>Total Logged</th>
@@ -142,6 +159,9 @@
                 <tr>
                     <td class="ps-3 fw-bold text-dark">{{ entry.user.full_name }}</td>
                     <td class="text-start text-muted">{{ entry.user.username }}</td>
+                    {% if is_full_year %}
+                        <td class="text-center fw-bold">{{ entry.month_name }}</td>
+                    {% endif %}
                     <td class="text-center fw-bold text-primary">{{ entry.main_hours|floatformat:1 }}h</td>
                     <td class="text-center">
                         {% if entry.extra_hours > 0 %}
@@ -164,7 +184,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="text-center py-5">
+                    <td colspan="{% if is_full_year %}8{% else %}7{% endif %}" class="text-center py-5">
                         <i class="fas fa-search-minus fa-3x text-light mb-3"></i>
                         <p class="text-muted">No records found for the selected period.</p>
                     </td>
