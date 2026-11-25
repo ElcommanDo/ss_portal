@@ -13,7 +13,8 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('app.urls')), 
+    path('api/v1/', include('app.api_urls')),  # JSON API for the Smart System Timesheet mobile app
+    path('', include('app.urls')),
 ]
 handler404 = 'app.views.custom_404_view'
 if settings.DEBUG:
